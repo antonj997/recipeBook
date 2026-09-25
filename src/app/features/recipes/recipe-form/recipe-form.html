@@ -1,0 +1,267 @@
+<section class="form-page page page--narrow">
+  <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
+  <h1>
+    {{ editingId ? 'Edit Recipe' : 'Add a Recipe' }}
+  </h1>
+
+  <p>
+    {{ editingId ? 'Update your saved recipe.' : 'Save a new recipe to your cookbook.' }}
+  </p>
+
+  @if (loading()) {
+    <app-loading-state label="Loading recipe…" />
+  } @else if (loadError()) {
+    <p class="error" role="alert">
+      {{ loadError() }}
+    </p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="recipe-form" novalidate>
+      <!-- Photo controls use the existing image processing and removal handlers. -->
+      <div class="image-field">
+        <span id="photo-label">Recipe photo</span>
+        <div
+          class="image-preview"
+          [class.image-preview--empty]="!imageDataUrl() && !importImageUrl"
+        >
+          @if (imageDataUrl() || importImageUrl) {
+            <img [src]="imageDataUrl() || importImageUrl" alt="Recipe photo preview" />
+            <button
+              type="button"
+              class="photo-action remove-image"
+              [disabled]="processingImage() || importingImage() || saving()"
+              (click)="removeImage()"
+            >
+              <app-icon name="trash" />Remove photo
+            </button>
+          } @else {
+            <app-food-placeholder [seed]="editingId || 'new-recipe'" />
+            <button
+              type="button"
+              class="photo-action"
+              [disabled]="processingImage() || importingImage() || saving()"
+              (click)="photoInput.click()"
+            >
+              <app-icon name="plus" />Add photo
+            </button>
+          }
+        </div>
+        <input
+          #photoInput
+          id="recipe-image"
+          type="file"
+          hidden
+          aria-labelledby="photo-label"
+          accept="image/jpeg,image/png,image/webp"
+          [disabled]="processingImage() || importingImage() || saving()"
+          (change)="onImageSelected($event)"
+        />
+        @if (importingImage()) {
+          <p role="status">Downloading photo…</p>
+        }
+        @if (processingImage()) {
+          <p role="status">Processing photo…</p>
+        }
+        @if (imageError()) {
+          <p class="error" role="alert">{{ imageError() }}</p>
+          @if (importImageUrl && !importingImage() && !processingImage()) {
+            <button type="button" [disabled]="saving()" (click)="photoInput.click()">
+              Add photo manually
+            </button>
+          }
+        }
+      </div>
+
+      <!-- Recipe title -->
+
+      <div class="field">
+        <label for="title">Recipe name</label>
+
+        <input
+          id="title"
+          type="text"
+          formControlName="title"
+          [attr.aria-invalid]="form.controls.title.touched && form.controls.title.invalid"
+          [attr.aria-describedby]="
+            form.controls.title.touched && form.controls.title.invalid ? 'title-error' : null
+          "
+          placeholder="e.g. Pasta Carbonara"
+        />
+
+        @if (form.controls.title.touched && form.controls.title.invalid) {
+          <small id="title-error" class="error"> Please enter a recipe name. </small>
+        }
+      </div>
+
+      <!-- Servings -->
+
+      <div class="field">
+        <label for="servings">Servings</label>
+
+        <input
+          id="servings"
+          type="number"
+          min="1"
+          step="1"
+          formControlName="servings"
+          [attr.aria-invalid]="form.controls.servings.touched && form.controls.servings.invalid"
+          [attr.aria-describedby]="
+            form.controls.servings.touched && form.controls.servings.invalid
+              ? 'servings-error'
+              : null
+          "
+        />
+
+        @if (form.controls.servings.touched && form.controls.servings.invalid) {
+          <small id="servings-error" class="error"> Enter a valid number of servings. </small>
+        }
+      </div>
+
+      <!-- Ingredients -->
+
+      <div class="form-section" formArrayName="ingredients">
+        <div class="section-heading">
+          <h2>Ingredients</h2>
+
+          <button
+            type="button"
+            class="secondary"
+            (click)="addIngredient()"
+            aria-label="Add ingredient"
+          >
+            + Add
+          </button>
+        </div>
+
+        @for (control of ingredients.controls; track control; let i = $index) {
+          <div class="field">
+            <div class="input-row">
+              <input
+                [id]="'ingredient-' + i"
+                [attr.aria-invalid]="control.touched && control.invalid"
+                [attr.aria-describedby]="
+                  control.touched && control.invalid ? 'ingredient-error-' + i : null
+                "
+                [attr.aria-label]="'Ingredient ' + (i + 1)"
+                type="text"
+                [formControlName]="i"
+                placeholder="e.g. 400 g spaghetti"
+              />
+
+              <button
+                type="button"
+                class="remove"
+                [disabled]="ingredients.length === 1"
+                (click)="removeIngredient(i)"
+                [attr.aria-label]="'Remove ingredient ' + (i + 1)"
+              >
+                Remove
+              </button>
+            </div>
+
+            @if (control.touched && control.invalid) {
+              <small [id]="'ingredient-error-' + i" class="error">
+                Please enter an ingredient.
+              </small>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Instructions -->
+
+      <div class="form-section" formArrayName="instructions">
+        <div class="section-heading">
+          <h2>Instructions</h2>
+
+          <button
+            type="button"
+            class="secondary"
+            (click)="addInstruction()"
+            aria-label="Add instruction"
+          >
+            + Add
+          </button>
+        </div>
+
+        @for (control of instructions.controls; track control; let i = $index) {
+          <div class="field">
+            <label [for]="'instruction-' + i"> Step {{ i + 1 }} </label>
+
+            <textarea
+              [id]="'instruction-' + i"
+              [attr.aria-invalid]="control.touched && control.invalid"
+              [attr.aria-describedby]="
+                control.touched && control.invalid ? 'instruction-error-' + i : null
+              "
+              [formControlName]="i"
+              placeholder="Describe this step..."
+              rows="3"
+            ></textarea>
+
+            <button
+              type="button"
+              class="remove"
+              [disabled]="instructions.length === 1"
+              (click)="removeInstruction(i)"
+              [attr.aria-label]="'Remove step ' + (i + 1)"
+            >
+              Remove step
+            </button>
+
+            @if (control.touched && control.invalid) {
+              <small [id]="'instruction-error-' + i" class="error">
+                Please enter an instruction.
+              </small>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Submit -->
+
+      @if (saveError()) {
+        <p class="error" role="alert">
+          {{ saveError() }}
+        </p>
+      }
+
+      @if (importSourceUrl) {
+        <div class="import-source">
+          <p>
+            Imported from:
+            <a [href]="importSourceUrl" target="_blank" rel="noopener noreferrer">
+              Original recipe <app-icon name="external" />
+            </a>
+          </p>
+
+          <small> Review the ingredients, quantities and instructions before saving. </small>
+        </div>
+      }
+
+      <div class="form-actions">
+        <button
+          type="submit"
+          class="primary"
+          [attr.aria-busy]="saving() || processingImage() || importingImage()"
+          [disabled]="saving() || processingImage() || importingImage()"
+        >
+          @if (saving() || processingImage() || importingImage()) {
+            <app-food-doodle [animate]="true" />
+          }
+          {{
+            saving()
+              ? 'Saving...'
+              : processingImage() || importingImage()
+                ? 'Preparing photo…'
+                : editingId
+                  ? 'Save Changes'
+                  : 'Save Recipe'
+          }}
+        </button>
+        <a class="button secondary" [routerLink]="editingId ? ['/recipes', editingId] : ['/']"
+          >Cancel</a
+        >
+      </div>
+    </form>
+  }
+</section>

@@ -1,0 +1,70 @@
+<section class="settings-page page page--narrow">
+  <!-- Header -->
+  <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
+
+  <h1>Settings</h1>
+
+  <p class="description">Manage your cookbook and keep your recipes safe.</p>
+
+  <!-- Export -->
+  <div class="settings-card">
+    <h2>Export cookbook</h2>
+
+    <p>
+      Download a backup containing all your saved recipes. Keep this file somewhere safe so you can
+      restore your cookbook later.
+    </p>
+
+    <button
+      type="button"
+      class="primary"
+      [disabled]="exporting() || importing()"
+      (click)="exportBackup()"
+    >
+      {{ exporting() ? 'Exporting...' : 'Download backup' }}
+    </button>
+  </div>
+
+  <!-- Import -->
+  <div class="settings-card">
+    <h2>Import cookbook</h2>
+
+    <p>
+      Restore recipes from a previously exported Recipebook backup file. Existing recipes with
+      matching IDs will not be overwritten.
+    </p>
+
+    <!-- Hidden native file input -->
+    <input
+      #backupFile
+      type="file"
+      accept=".json,application/json"
+      (change)="onFileSelected($event)"
+      [disabled]="importing() || exporting()"
+      hidden
+    />
+
+    <!-- Opens the file picker -->
+    <button
+      type="button"
+      class="secondary"
+      [disabled]="importing() || exporting()"
+      (click)="backupFile.click()"
+    >
+      {{ importing() ? 'Importing...' : 'Choose backup file' }}
+    </button>
+  </div>
+
+  <!-- Feedback -->
+  @if (message()) {
+    <div class="message success" role="status">
+      {{ message() }}
+    </div>
+  }
+
+  @if (error()) {
+    <div class="message error" role="alert">
+      {{ error() }}
+    </div>
+  }
+</section>

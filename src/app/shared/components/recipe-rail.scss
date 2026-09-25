@@ -1,0 +1,203 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.collection-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+.collection-heading h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+.collection-heading__actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.recipe-count {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+.rail-controls {
+  display: flex;
+  gap: 4px;
+}
+.rail-arrow {
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+}
+.rail-arrow svg {
+  width: 22px;
+  height: 22px;
+}
+.rail-arrow:disabled {
+  opacity: 0.3;
+}
+.rail-window {
+  --edge-width: 40px;
+  position: relative;
+  margin-inline: calc(-1 * var(--page-gutter));
+}
+.filter-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.recipe-rail {
+  --card-width: clamp(240px, 27vw, 340px);
+  display: flex;
+  gap: 28px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 5px var(--page-gutter) 24px;
+  scroll-padding-inline: var(--page-gutter);
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--edge-width),
+    #000 calc(100% - var(--edge-width)),
+    transparent
+  );
+}
+.recipe-rail::-webkit-scrollbar {
+  display: none;
+}
+.recipe-rail:focus-visible {
+  outline-offset: -3px;
+}
+.recipe-card {
+  flex: 0 0 var(--card-width);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  color: var(--color-ink);
+  text-decoration: none;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+.recipe-card__media {
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: var(--radius-surface);
+  overflow: hidden;
+  background: var(--color-beige);
+  transition:
+    filter 220ms,
+    transform 300ms var(--ease-out);
+}
+.recipe-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.recipe-card__content {
+  padding: 22px 0 14px;
+  border-bottom: 1px solid var(--color-border);
+  flex: 1;
+}
+.recipe-card h3 {
+  margin: 0 0 14px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.55rem;
+  font-weight: 400;
+  line-height: 1.17;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+.recipe-card p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+.recipe-card:focus-visible {
+  outline-offset: 3px;
+  border-radius: var(--radius-surface);
+}
+.edge-glass {
+  position: absolute;
+  top: 0;
+  bottom: 20px;
+  width: var(--edge-width);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  background: linear-gradient(90deg, var(--color-canvas), transparent);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  mask-image: linear-gradient(90deg, #000, transparent);
+  transition: opacity 250ms;
+}
+.edge-glass--start {
+  left: 0;
+}
+.edge-glass--end {
+  right: 0;
+  transform: rotate(180deg);
+}
+.has-previous .edge-glass--start,
+.has-next .edge-glass--end {
+  opacity: 1;
+}
+@media (hover: hover) {
+  .recipe-card:hover .recipe-card__media {
+    transform: translateY(-3px);
+    filter: saturate(1.08);
+  }
+  .recipe-card:hover h3 {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+  }
+}
+@media (max-width: 600px) {
+  .collection-heading {
+    margin-bottom: 20px;
+    gap: 8px;
+  }
+  .collection-heading__actions {
+    gap: 12px;
+  }
+  .rail-window {
+    --edge-width: 24px;
+  }
+  .recipe-rail {
+    --card-width: 78vw;
+    gap: 18px;
+    padding-inline: calc((100% - var(--card-width)) / 2);
+    scroll-padding-inline: calc((100% - var(--card-width)) / 2);
+  }
+  .recipe-card {
+    scroll-snap-align: center;
+  }
+  .recipe-card h3 {
+    font-size: 1.45rem;
+  }
+  .recipe-card__content {
+    padding-top: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .edge-glass {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none;
+  }
+  .recipe-card:hover .recipe-card__media {
+    transform: none;
+    filter: none;
+  }
+}

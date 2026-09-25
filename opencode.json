@@ -1,0 +1,34 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "manual",
+  "autoupdate": "notify",
+  "formatter": true,
+  "lsp": true,
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp"],
+      "enabled": true
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
+    }
+  },
+  "permission": {
+    "bash": {
+      "*": "ask",
+      "npm test": "allow",
+      "npm run build": "allow",
+      "npm start": "allow",
+      "git status": "allow",
+      "git diff": "allow"
+    }
+  },
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "tail_turns": 10
+  }
+}

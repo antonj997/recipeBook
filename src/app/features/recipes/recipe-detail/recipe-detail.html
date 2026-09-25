@@ -1,0 +1,140 @@
+<article class="recipe-detail page">
+  <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
+  @if (loading()) {
+    <app-loading-state label="Loading recipe…" />
+  } @else if (error()) {
+    <p role="alert">{{ error() }}</p>
+  } @else {
+    @if (recipe(); as selectedRecipe) {
+      <div class="recipe-overview" [class.has-photo]="!!selectedRecipe.imageDataUrl">
+        @if (selectedRecipe.imageDataUrl) {
+          <img
+            class="recipe-hero"
+            [src]="selectedRecipe.imageDataUrl"
+            [alt]="selectedRecipe.title"
+          />
+        }
+        <header class="recipe-summary">
+          <h1>{{ selectedRecipe.title }}</h1>
+          @if (selectedRecipe.servings) {
+            <p class="servings">{{ selectedRecipe.servings }} servings</p>
+          }
+        </header>
+      </div>
+      <div class="section-switch" role="group" aria-label="Recipe section">
+        <button
+          type="button"
+          [attr.aria-pressed]="activeSection() === 'ingredients'"
+          aria-controls="ingredients-panel"
+          (click)="activeSection.set('ingredients')"
+        >
+          Ingredients
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="activeSection() === 'instructions'"
+          aria-controls="instructions-panel"
+          (click)="activeSection.set('instructions')"
+        >
+          Instructions
+        </button>
+      </div>
+      <div class="recipe-body">
+        <section
+          id="ingredients-panel"
+          [class.mobile-hidden]="activeSection() !== 'ingredients'"
+          class="ingredients"
+          aria-labelledby="ingredients-heading"
+        >
+          <h2 id="ingredients-heading">Ingredients</h2>
+          <ul>
+            @for (ingredient of selectedRecipe.ingredients; track $index) {
+              <li>{{ ingredient }}</li>
+            }
+          </ul>
+        </section>
+        <section
+          id="instructions-panel"
+          [class.mobile-hidden]="activeSection() !== 'instructions'"
+          class="instructions"
+          aria-labelledby="instructions-heading"
+        >
+          <h2 id="instructions-heading">Instructions</h2>
+          <ol>
+            @for (step of selectedRecipe.instructions; track $index) {
+              <li class="cooking-step" [class.completed]="completedSteps().has($index)">
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="completedSteps().has($index)"
+                    (change)="toggleStep($index)"
+                    [attr.aria-label]="'Step ' + ($index + 1) + ': ' + step"
+                  />
+                  <span class="step-copy"
+                    ><span class="step-number">{{ $index + 1 }}.</span> {{ step }}</span
+                  >
+                </label>
+              </li>
+            }
+          </ol>
+        </section>
+      </div>
+      <div class="recipe-actions">
+        <a class="button edit-button" [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
+          >Edit Recipe</a
+        >
+        <button
+          type="button"
+          class="delete-button"
+          [disabled]="deleting()"
+          (click)="openDeleteDialog()"
+        >
+          {{ deleting() ? 'Deleting...' : 'Delete Recipe' }}
+        </button>
+      </div>
+      @if (selectedRecipe.sourceUrl) {
+        <a
+          class="source-link"
+          [href]="selectedRecipe.sourceUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Original recipe <app-icon name="external"
+        /></a>
+      }
+    } @else {
+      <h1>Recipe not found</h1>
+      <p>The requested recipe does not exist.</p>
+    }
+  }
+</article>
+<dialog
+  #deleteDialog
+  class="delete-dialog"
+  aria-labelledby="delete-heading"
+  aria-describedby="delete-description"
+  (cancel)="onDialogCancel($event)"
+  (close)="confirmOpen.set(false)"
+>
+  @if (confirmOpen()) {
+    <app-food-doodle kind="discard" />
+  }
+  <h2 id="delete-heading">Delete recipe?</h2>
+  <p id="delete-description">“{{ recipe()?.title }}” will be permanently deleted.</p>
+  @if (deleteError()) {
+    <p role="alert">{{ deleteError() }}</p>
+  }
+  <div class="dialog-actions">
+    <button type="button" autofocus [disabled]="deleting()" (click)="closeDeleteDialog()">
+      Keep</button
+    ><button
+      type="button"
+      class="delete-button"
+      [attr.aria-busy]="deleting()"
+      [class.is-busy]="deleting()"
+      [disabled]="deleting()"
+      (click)="deleteRecipe()"
+    >
+      Delete
+    </button>
+  </div>
+</dialog>

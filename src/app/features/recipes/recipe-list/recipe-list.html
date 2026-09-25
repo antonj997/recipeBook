@@ -1,0 +1,66 @@
+<section class="recipe-list page">
+  <div class="home-tools">
+    <div class="search-field" role="search">
+      <app-icon name="search" />
+      <input
+        type="search"
+        aria-label="Search recipes"
+        placeholder="Search recipes"
+        [value]="query()"
+        (input)="onSearch($event)"
+      />
+      @if (query()) {
+        <button type="button" aria-label="Clear search" (click)="query.set('')">
+          <app-icon name="close" />
+        </button>
+      }
+    </div>
+    <div class="add-control">
+      <button
+        type="button"
+        class="primary"
+        aria-label="Add recipe"
+        popovertarget="add-recipe-options"
+      >
+        <app-icon name="plus" /><span class="add-label">Add recipe</span>
+      </button>
+      <div id="add-recipe-options" popover #addOptions>
+        <a routerLink="/recipes/new" (click)="addOptions.hidePopover()"
+          ><app-icon name="book" />Write a recipe</a
+        >
+        <a routerLink="/recipes/import" (click)="addOptions.hidePopover()"
+          ><app-icon name="link" />Import from a link</a
+        >
+      </div>
+    </div>
+  </div>
+  @if (loading()) {
+    <app-loading-state />
+  } @else if (error()) {
+    <p role="alert">{{ error() }}</p>
+  } @else if (recipes().length === 0) {
+    <div class="empty-state">
+      <app-food-doodle />
+      <h2>No recipes yet</h2>
+      <a class="button primary" routerLink="/recipes/new">Add recipe<app-icon name="plus" /></a>
+    </div>
+  } @else if (filteredRecipes().length === 0) {
+    <div class="empty-state">
+      <app-food-doodle />
+      <h2>No matching recipes</h2>
+      <button type="button" (click)="query.set('')">Clear search</button>
+    </div>
+  } @else {
+    <app-recipe-rail
+      [title]="query().trim() ? 'Search results' : 'All recipes'"
+      railId="all-recipes-rail"
+      [recipes]="filteredRecipes()"
+    />
+  }
+  <span class="sr-only" role="status">{{
+    !loading() && query().trim()
+      ? filteredRecipes().length +
+        (filteredRecipes().length === 1 ? ' recipe found' : ' recipes found')
+      : ''
+  }}</span>
+</section>

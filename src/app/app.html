@@ -1,0 +1,26 @@
+<a class="skip-link" href="#main-content" (click)="$event.preventDefault(); mainContent.focus()"
+  >Skip to content</a
+>
+<header class="app-header">
+  <a class="brand" routerLink="/" aria-label="Recipebook home">Recipebook</a>
+  <a
+    class="settings-link"
+    routerLink="/settings"
+    routerLinkActive="active"
+    ariaCurrentWhenActive="page"
+    aria-label="Settings"
+    title="Settings"
+    ><app-icon name="settings"
+  /></a>
+</header>
+<main #mainContent id="main-content" tabindex="-1"><router-outlet /></main>
+<div class="toast-region" role="status" aria-live="polite">
+  @if (feedback.message()) {
+    <div class="toast">
+      <app-icon name="check" /><span>{{ feedback.message() }}</span
+      ><button type="button" aria-label="Dismiss notification" (click)="feedback.dismiss()">
+        <app-icon name="close" />
+      </button>
+    </div>
+  }
+</div>

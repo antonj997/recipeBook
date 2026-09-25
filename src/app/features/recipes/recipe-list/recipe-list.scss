@@ -1,0 +1,180 @@
+.page-intro {
+  margin-bottom: 40px;
+}
+.page-intro h1 {
+  margin: 0;
+}
+.home-tools {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  justify-content: space-between;
+  margin-bottom: 56px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--color-border);
+}
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  max-width: 600px;
+  border-bottom: 1px solid var(--color-green);
+}
+.search-field input {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 0;
+  min-width: 0;
+}
+.search-field button {
+  border: 0;
+  padding: 10px;
+}
+.search-field:focus-within {
+  border-color: var(--color-green);
+}
+.add-control {
+  flex-shrink: 0;
+}
+.add-control > button {
+  anchor-name: --add-button;
+}
+#add-recipe-options {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(300px, calc(100vw - 40px));
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: 0 12px 32px #14141318;
+}
+#add-recipe-options a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 12px;
+  text-decoration: none;
+  border-radius: 4px;
+}
+#add-recipe-options a:hover {
+  background: var(--color-beige);
+}
+#add-recipe-options:popover-open {
+  animation: menu-in 180ms var(--ease-out);
+}
+@supports (position-anchor: --add-button) {
+  #add-recipe-options {
+    position-anchor: --add-button;
+    inset: auto;
+    top: anchor(bottom);
+    right: anchor(right);
+    margin: 8px 0 0;
+    position-try-fallbacks: flip-inline;
+  }
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.empty-state {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 24px;
+  padding: 36px 0 64px;
+}
+.empty-state h2 {
+  margin: 0;
+}
+.empty-state app-food-doodle {
+  width: 160px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .page-intro {
+    margin-bottom: 24px;
+  }
+  .home-tools {
+    gap: 12px;
+    flex-wrap: nowrap;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+  }
+  .search-field {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+  }
+  .add-control {
+    margin-left: auto;
+  }
+  .add-control > button {
+    min-height: 44px;
+    padding: 10px;
+    gap: 6px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Keep a single clear control and a shared keyboard focus indicator. */
+.search-field input {
+  appearance: none;
+}
+.search-field input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.search-field:focus-within {
+  box-shadow: 0 2px 0 var(--color-green);
+}
+.search-field input::-webkit-search-cancel-button,
+.search-field input::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+@media (max-width: 600px) {
+  .search-field {
+    gap: 6px;
+  }
+  .search-field input {
+    width: 100%;
+    font-size: 16px;
+  }
+  .search-field button {
+    padding: 8px;
+  }
+  .add-label {
+    max-width: 90px;
+    opacity: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    transition:
+      max-width 200ms var(--ease-out),
+      opacity 150ms;
+  }
+  .home-tools:has(.search-field:focus-within) .add-label {
+    max-width: 0;
+    opacity: 0;
+  }
+  .home-tools:has(.search-field:focus-within) .add-control > button {
+    gap: 0;
+  }
+}

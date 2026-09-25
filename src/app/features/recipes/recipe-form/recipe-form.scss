@@ -1,0 +1,125 @@
+.form-page > p {
+  margin-bottom: 32px;
+}
+.recipe-form {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.field,
+.image-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.image-field {
+  gap: 12px;
+}
+.image-field small {
+  color: var(--color-muted);
+}
+.image-preview {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-surface);
+  background: var(--color-surface);
+}
+.image-preview img {
+  display: block;
+  width: 100%;
+  max-height: 350px;
+  object-fit: contain;
+}
+.remove-image {
+  align-self: flex-start;
+}
+#servings {
+  max-width: 140px;
+}
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-border);
+}
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.section-heading h2 {
+  margin: 0;
+}
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.input-row input {
+  flex: 1;
+  min-width: 0;
+}
+.input-row .remove {
+  align-self: center;
+}
+.import-source {
+  padding: 20px;
+  background: var(--color-surface);
+  border-radius: var(--radius-surface);
+}
+.import-source p {
+  margin-bottom: 8px;
+}
+.import-source small {
+  color: var(--color-muted);
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+}
+.form-actions .primary {
+  min-width: 180px;
+}
+@media (max-width: 600px) {
+  .form-actions .button,
+  .form-actions .primary {
+    flex: 1;
+  }
+}
+
+.image-preview {
+  position: relative;
+}
+.image-preview--empty {
+  display: grid;
+  place-items: center;
+  min-height: 250px;
+  background: var(--color-beige);
+}
+.image-preview--empty > app-food-placeholder {
+  min-height: 250px;
+  padding-top: 36px;
+}
+.photo-action {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 10px #14141312;
+  padding: 8px 12px;
+  min-height: 44px;
+}
+.photo-action:hover {
+  background: var(--color-canvas);
+}
+.image-field input[hidden] {
+  display: none;
+}

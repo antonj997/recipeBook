@@ -1,0 +1,45 @@
+<section class="import-page page page--narrow">
+  <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
+
+  <h1>Import Recipe</h1>
+
+  <p>
+    Paste a link to a recipe website. We'll extract the ingredients and instructions so you can save
+    your own copy.
+  </p>
+
+  <form (submit)="importRecipe($event)">
+    <label for="recipe-url"> Recipe URL </label>
+
+    <input
+      id="recipe-url"
+      type="url"
+      autocomplete="url"
+      inputmode="url"
+      autocapitalize="off"
+      spellcheck="false"
+      aria-describedby="import-hint"
+      required
+      [value]="url"
+      (input)="url = $any($event.target).value"
+      placeholder="https://www.ica.se/recept/..."
+    />
+
+    @if (error()) {
+      <p class="error" role="alert">
+        {{ error() }}
+      </p>
+    }
+
+    <button class="primary" [attr.aria-busy]="importing()" type="submit" [disabled]="importing()">
+      {{ importing() ? 'Importing...' : 'Import Recipe' }}
+    </button>
+  </form>
+
+  @if (importing()) {
+    <app-loading-state label="Importing recipe…" />
+  }
+  <p id="import-hint" class="hint">
+    You'll be able to review and edit the recipe before saving it.
+  </p>
+</section>
