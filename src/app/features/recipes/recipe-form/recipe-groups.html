@@ -1,0 +1,188 @@
+<section
+  class="group-editor"
+  [style.--drag-height]="dragHeight() + 'px'"
+  [attr.aria-label]="kind() === 'step' ? 'Instructions editor' : 'Ingredients editor'"
+  (dragover)="dragOver($event)"
+  (dragleave)="dragLeave($event)"
+  (drop)="drop($event)"
+>
+  <div class="editor-heading">
+    <h2>{{ kind() === 'step' ? 'Instructions' : 'Ingredients' }}</h2>
+    <button type="button" class="quiet-button" (click)="createGroup()">
+      <app-icon name="plus" />Create group
+    </button>
+  </div>
+  @for (group of groups(); track group.id) {
+    <section class="item-group" [attr.data-group-id]="group.id">
+      <header>
+        @if (group.ungrouped) {
+          <h3>{{ groups().length > 1 ? 'Ungrouped' : '' }}</h3>
+        } @else {
+          <input
+            class="group-name"
+            [formControl]="group.name"
+            (input)="updateNames()"
+            (change)="rename(group)"
+            [attr.aria-label]="kind() + ' group name ' + group.id"
+          />
+        }
+        <div class="group-actions">
+          <button
+            type="button"
+            class="add-move"
+            [attr.aria-label]="
+              (group.ungrouped ? 'Add ' : 'Add or move ') +
+              kind() +
+              ' to ' +
+              (group.name.value || 'Ungrouped')
+            "
+            [attr.aria-expanded]="group.ungrouped ? null : addingTo() === group.id"
+            (click)="group.ungrouped ? add(group.id) : openMenu(group.id)"
+          >
+            <app-icon name="plus" /><span>{{ group.ungrouped ? 'Add' : 'Add / move' }}</span>
+          </button>
+          @if (!group.ungrouped) {
+            <button
+              type="button"
+              class="icon-button"
+              [attr.aria-label]="'Remove ' + kind() + ' group ' + group.name.value"
+              (click)="removeGroup(group.id)"
+            >
+              <app-icon name="close" />
+            </button>
+          }
+        </div>
+      </header>
+      @if (addingTo() === group.id) {
+        <div class="add-menu" (keydown.escape)="addingTo.set(null)">
+          <button type="button" (click)="add(group.id)">
+            <app-icon name="plus" />New {{ kind() }}
+          </button>
+          @if (candidates(group.id).length) {
+            <p>Select {{ kind() === 'step' ? 'steps' : 'ingredients' }} to move here</p>
+          }
+          <div class="candidate-list">
+            @for (item of candidates(group.id); track item.control) {
+              <label class="check-control candidate">
+                <input
+                  type="checkbox"
+                  [checked]="selected().has(item.control)"
+                  (change)="select(item.control)"
+                />
+                <app-checkbox-mark />
+                <span class="candidate-text">{{ item.control.value || 'Empty ' + kind() }}</span>
+                <small>{{ item.group }}</small>
+              </label>
+            }
+          </div>
+          <div class="selection-actions">
+            <button
+              type="button"
+              class="primary"
+              [disabled]="!selected().size"
+              (click)="moveSelected(group.id)"
+            >
+              Move selected ({{ selected().size }})
+            </button>
+            <button type="button" (click)="addingTo.set(null)">Cancel</button>
+          </div>
+        </div>
+      }
+      @for (control of group.rows; track control) {
+        <div class="drop-slot" [class.active]="isSlot(group, control)" aria-hidden="true"></div>
+        <div
+          class="editor-row"
+          [class.dragging]="dragging() === control"
+          [class.step-row]="kind() === 'step'"
+        >
+          <span
+            class="drag-handle"
+            draggable="true"
+            (dragstart)="startDrag($event, control)"
+            (dragend)="endDrag()"
+            [title]="'Drag ' + kind()"
+            aria-hidden="true"
+            ><svg viewBox="0 0 20 24" fill="currentColor">
+              <circle cx="7" cy="6" r="1" />
+              <circle cx="13" cy="6" r="1" />
+              <circle cx="7" cy="12" r="1" />
+              <circle cx="13" cy="12" r="1" />
+              <circle cx="7" cy="18" r="1" />
+              <circle cx="13" cy="18" r="1" /></svg
+          ></span>
+          <div class="row-content">
+            @if (kind() === 'step') {
+              <label [for]="'step-text-' + number(control)">Step {{ number(control) }}</label>
+              <textarea
+                [id]="'step-text-' + number(control)"
+                [formControl]="control"
+                rows="3"
+                placeholder="Describe this step"
+                [attr.aria-invalid]="control.touched && control.invalid"
+              ></textarea>
+              @if (photo(control); as photo) {
+                <details class="step-photo">
+                  <summary class="disclosure">Photo<app-icon name="chevron" /></summary>
+                  <img
+                    [src]="photo"
+                    [alt]="'Photo for step ' + number(control)"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  /><button type="button" [disabled]="photosBusy()" (click)="removePhoto(control)">
+                    Remove photo
+                  </button>
+                </details>
+              }
+            } @else {
+              <input
+                [formControl]="control"
+                [attr.aria-label]="'Ingredient ' + number(control)"
+                placeholder="Add an ingredient"
+                [attr.aria-invalid]="control.touched && control.invalid"
+              />
+            }
+          </div>
+          <div class="row-actions">
+            <button
+              type="button"
+              class="icon-button up"
+              [attr.aria-label]="'Move ' + kind() + ' ' + number(control) + ' up'"
+              [disabled]="number(control) === 1"
+              (click)="shift(control, -1)"
+            >
+              <app-icon name="chevron" />
+            </button>
+            <button
+              type="button"
+              class="icon-button down"
+              [attr.aria-label]="'Move ' + kind() + ' ' + number(control) + ' down'"
+              [disabled]="number(control) === items().length"
+              (click)="shift(control, 1)"
+            >
+              <app-icon name="chevron" />
+            </button>
+            <button
+              type="button"
+              class="icon-button"
+              [attr.aria-label]="'Remove ' + kind() + ' ' + number(control)"
+              (click)="remove(control)"
+            >
+              <app-icon name="close" />
+            </button>
+          </div>
+        </div>
+      }
+      <div class="drop-slot" [class.active]="isSlot(group, null)" aria-hidden="true"></div>
+      @if (!group.rows.length && !isSlot(group, null)) {
+        <p class="empty-group">
+          {{ group.ungrouped ? 'Use Add to add an item.' : 'Use Add / move to fill this group.' }}
+        </p>
+      }
+    </section>
+  }
+  <p class="move-hint">
+    Drag the dotted handle to reorder. Use a group’s Add / move button to move
+    {{ kind() === 'step' ? 'steps' : 'ingredients' }} into it.
+  </p>
+  <p class="sr-only" role="status">{{ message() }}</p>
+</section>

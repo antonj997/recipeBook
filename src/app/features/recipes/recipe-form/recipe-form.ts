@@ -1,7 +1,24 @@
+import { RecipeGroupsComponent } from './recipe-groups';
+import { RecipeCollectionsComponent } from './recipe-collections';
+import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
+import { RECIPE_TAGS } from '../../../core/models/recipe-tag.model';
+import {
+  RecipeExtraFieldsComponent,
+  createMetadataForm,
+  populateMetadataForm,
+  metadataFromForm,
+} from './recipe-extra-fields';
+import {
+  readRecipeMetadata,
+  instructionText,
+  type RecipeStepDetail,
+  type RecipeMetadata,
+} from '../../../core/models/recipe-metadata';
+import { downloadStepPhoto } from '../../../core/services/step-photo';
 import { FoodPlaceholderComponent } from '../../../shared/components/food-placeholder';
 import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
 import { IconComponent } from '../../../shared/components/icon';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, viewChildren } from '@angular/core';
 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
@@ -20,6 +37,9 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
     FoodDoodleComponent,
     IconComponent,
     ReactiveFormsModule,
+    RecipeExtraFieldsComponent,
+    RecipeGroupsComponent,
+    RecipeCollectionsComponent,
     RouterLink,
     LoadingStateComponent,
   ],
@@ -27,6 +47,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
   styleUrl: './recipe-form.scss',
 })
 export class RecipeFormComponent implements OnInit {
+  private groupEditors = viewChildren(RecipeGroupsComponent);
   private fb = inject(FormBuilder);
   private feedback = inject(FeedbackService);
   private recipeService = inject(RecipeService);
@@ -36,7 +57,9 @@ export class RecipeFormComponent implements OnInit {
   // An ID means we're editing an existing recipe.
   editingId = this.route.snapshot.paramMap.get('id');
 
-  loading = signal(!!this.editingId);
+  loading = signal(true);
+  collections = signal<RecipeCollection[]>([]);
+  collectionIds = this.fb.nonNullable.control<string[]>([]);
   loadError = signal('');
 
   saving = signal(false);
@@ -50,6 +73,72 @@ export class RecipeFormComponent implements OnInit {
 
   importImageUrl = '';
   importingImage = signal(false);
+
+  metadataForm = createMetadataForm(this.fb);
+  ingredientSections = this.fb.array([this.fb.nonNullable.control('')]);
+  stepDetails = this.fb.array([this.createStepDetail()]);
+  importingStepImages = signal(false);
+  stepImageMessage = signal('');
+
+  private createStepDetail(detail: RecipeStepDetail = {}) {
+    return this.fb.nonNullable.group({
+      section: detail.section ?? '',
+      imageUrl: detail.imageUrl ?? '',
+      imageDataUrl: detail.imageDataUrl ?? '',
+    });
+  }
+  private loadMetadata(recipe: RecipeMetadata): void {
+    const metadata = readRecipeMetadata(recipe);
+    const legacyIds = (recipe as Recipe).tagIds ?? [];
+    metadata.tags = [
+      ...new Set([
+        ...(metadata.tags ?? []),
+        ...RECIPE_TAGS.filter((tag) => legacyIds.includes(tag.id)).map((tag) => tag.label),
+      ]),
+    ];
+    populateMetadataForm(this.metadataForm, metadata);
+    this.ingredientSections.clear();
+    this.ingredients.controls.forEach((_, i) =>
+      this.ingredientSections.push(
+        this.fb.nonNullable.control(metadata.ingredientSections?.[i] ?? ''),
+      ),
+    );
+    this.stepDetails.clear();
+    this.instructions.controls.forEach((_, i) =>
+      this.stepDetails.push(this.createStepDetail(metadata.stepDetails?.[i])),
+    );
+  }
+  removeStepPhoto(index: number): void {
+    this.stepDetails.at(index).patchValue({ imageUrl: '', imageDataUrl: '' });
+  }
+  private async saveStepPhotos(): Promise<void> {
+    const pending = this.stepDetails.controls.filter(
+      (control) => control.value.imageUrl && !control.value.imageDataUrl,
+    );
+    if (!pending.length) return;
+    this.importingStepImages.set(true);
+    let failed = 0;
+    // Two downloads at a time avoids saturating a mobile connection.
+    for (let i = 0; i < pending.length; i += 2) {
+      await Promise.all(
+        pending.slice(i, i + 2).map(async (control) => {
+          try {
+            control.patchValue({
+              imageDataUrl: await downloadStepPhoto(control.getRawValue().imageUrl),
+            });
+          } catch {
+            failed++;
+          }
+        }),
+      );
+    }
+    this.stepImageMessage.set(
+      failed
+        ? failed + ' step photo(s) could not be saved offline. Their original links are kept.'
+        : '',
+    );
+    this.importingStepImages.set(false);
+  }
 
   // Our reactive form.
   form = this.fb.nonNullable.group({
@@ -73,33 +162,44 @@ export class RecipeFormComponent implements OnInit {
 
   // Create a text control with an optional initial value.
   private createTextControl(value = '') {
-    return this.fb.nonNullable.control(value, [Validators.required, Validators.pattern(/\S/)]);
+    return this.fb.nonNullable.control(value);
   }
 
   // Add and remove ingredients.
   addIngredient() {
     this.ingredients.push(this.createTextControl());
+    this.ingredientSections.push(this.fb.nonNullable.control(''));
   }
 
   removeIngredient(index: number) {
     if (this.ingredients.length > 1) {
       this.ingredients.removeAt(index);
+      this.ingredientSections.removeAt(index);
     }
   }
 
   // Add and remove instructions.
   addInstruction() {
     this.instructions.push(this.createTextControl());
+    this.stepDetails.push(this.createStepDetail());
   }
 
   removeInstruction(index: number) {
     if (this.instructions.length > 1) {
       this.instructions.removeAt(index);
+      this.stepDetails.removeAt(index);
     }
   }
 
   // Runs when the component initializes.
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    try {
+      this.collections.set(await this.recipeService.getCollections());
+    } catch {
+      this.loadError.set('Could not load collections. Please reload the page.');
+      this.loading.set(false);
+      return;
+    }
     // Editing an existing recipe.
     if (this.editingId) {
       void this.loadRecipe(this.editingId);
@@ -112,6 +212,7 @@ export class RecipeFormComponent implements OnInit {
     if (isImport) {
       this.loadImportDraft();
     }
+    this.loading.set(false);
   }
 
   // Load an existing recipe into the form.
@@ -142,8 +243,10 @@ export class RecipeFormComponent implements OnInit {
       // Populate instructions.
       this.instructions.clear();
 
-      for (const instruction of recipe.instructions) {
-        this.instructions.push(this.createTextControl(instruction));
+      for (const [index, instruction] of recipe.instructions.entries()) {
+        this.instructions.push(
+          this.createTextControl(instructionText(instruction, recipe.stepDetails?.[index])),
+        );
       }
 
       // Keep at least one field in each array.
@@ -155,6 +258,11 @@ export class RecipeFormComponent implements OnInit {
         this.addInstruction();
       }
 
+      this.loadMetadata(recipe);
+      this.collectionIds.setValue(
+        recipe.collectionIds ??
+          this.recipeService.matchCollections(recipe.category, this.collections()),
+      );
       this.form.markAsPristine();
     } catch (error) {
       console.error('Failed to load recipe:', error);
@@ -244,6 +352,11 @@ export class RecipeFormComponent implements OnInit {
         }
       }
 
+      this.loadMetadata(recipe);
+      this.collectionIds.setValue(
+        this.recipeService.matchCollections(recipe.category, this.collections()),
+      );
+      void this.saveStepPhotos();
       this.form.markAsPristine();
     } catch (error) {
       console.error('Could not load import:', error);
@@ -258,20 +371,36 @@ export class RecipeFormComponent implements OnInit {
       this.saving() ||
       this.loading() ||
       this.importingImage() ||
+      this.importingStepImages() ||
       this.processingImage() ||
       this.loadError()
     ) {
       return;
     }
 
-    if (this.form.invalid) {
+    if (this.form.invalid || this.metadataForm.invalid) {
+      this.metadataForm.markAllAsTouched();
       this.form.markAllAsTouched();
       return;
     }
 
+    for (const editor of this.groupEditors()) editor.pruneEmpty();
     const data = this.form.getRawValue();
 
     const recipeData = {
+      ...metadataFromForm(this.metadataForm),
+      collectionIds: this.collectionIds.value,
+      tagIds: RECIPE_TAGS.filter((tag) =>
+        this.metadataForm.controls.tags.value.some(
+          (label) => label.toLocaleLowerCase() === tag.label.toLocaleLowerCase(),
+        ),
+      ).map((tag) => tag.id),
+      ingredientSections: this.ingredientSections.getRawValue().map((s) => s.trim()),
+      stepDetails: this.stepDetails.getRawValue().map((detail) => ({
+        section: detail.section.trim() || undefined,
+        imageUrl: detail.imageUrl || undefined,
+        imageDataUrl: detail.imageDataUrl || undefined,
+      })),
       title: data.title.trim(),
 
       servings: data.servings,

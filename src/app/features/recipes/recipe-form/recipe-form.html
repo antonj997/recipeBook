@@ -116,108 +116,27 @@
         }
       </div>
 
-      <!-- Ingredients -->
+      <app-recipe-extra-fields [form]="metadataForm" />
 
-      <div class="form-section" formArrayName="ingredients">
-        <div class="section-heading">
-          <h2>Ingredients</h2>
-
-          <button
-            type="button"
-            class="secondary"
-            (click)="addIngredient()"
-            aria-label="Add ingredient"
-          >
-            + Add
-          </button>
-        </div>
-
-        @for (control of ingredients.controls; track control; let i = $index) {
-          <div class="field">
-            <div class="input-row">
-              <input
-                [id]="'ingredient-' + i"
-                [attr.aria-invalid]="control.touched && control.invalid"
-                [attr.aria-describedby]="
-                  control.touched && control.invalid ? 'ingredient-error-' + i : null
-                "
-                [attr.aria-label]="'Ingredient ' + (i + 1)"
-                type="text"
-                [formControlName]="i"
-                placeholder="e.g. 400 g spaghetti"
-              />
-
-              <button
-                type="button"
-                class="remove"
-                [disabled]="ingredients.length === 1"
-                (click)="removeIngredient(i)"
-                [attr.aria-label]="'Remove ingredient ' + (i + 1)"
-              >
-                Remove
-              </button>
-            </div>
-
-            @if (control.touched && control.invalid) {
-              <small [id]="'ingredient-error-' + i" class="error">
-                Please enter an ingredient.
-              </small>
-            }
-          </div>
-        }
-      </div>
-
-      <!-- Instructions -->
-
-      <div class="form-section" formArrayName="instructions">
-        <div class="section-heading">
-          <h2>Instructions</h2>
-
-          <button
-            type="button"
-            class="secondary"
-            (click)="addInstruction()"
-            aria-label="Add instruction"
-          >
-            + Add
-          </button>
-        </div>
-
-        @for (control of instructions.controls; track control; let i = $index) {
-          <div class="field">
-            <label [for]="'instruction-' + i"> Step {{ i + 1 }} </label>
-
-            <textarea
-              [id]="'instruction-' + i"
-              [attr.aria-invalid]="control.touched && control.invalid"
-              [attr.aria-describedby]="
-                control.touched && control.invalid ? 'instruction-error-' + i : null
-              "
-              [formControlName]="i"
-              placeholder="Describe this step..."
-              rows="3"
-            ></textarea>
-
-            <button
-              type="button"
-              class="remove"
-              [disabled]="instructions.length === 1"
-              (click)="removeInstruction(i)"
-              [attr.aria-label]="'Remove step ' + (i + 1)"
-            >
-              Remove step
-            </button>
-
-            @if (control.touched && control.invalid) {
-              <small [id]="'instruction-error-' + i" class="error">
-                Please enter an instruction.
-              </small>
-            }
-          </div>
-        }
-      </div>
+      <app-recipe-collections [control]="collectionIds" [collections]="collections()" />
+      <app-recipe-groups [items]="ingredients" [sections]="ingredientSections" />
+      <app-recipe-groups
+        kind="step"
+        [items]="instructions"
+        [stepDetails]="stepDetails"
+        [photosBusy]="importingStepImages()"
+      />
 
       <!-- Submit -->
+      @if (importingStepImages()) {
+        <p role="status">Saving step photos for offline use…</p>
+      }
+      @if (stepImageMessage()) {
+        <p role="status">{{ stepImageMessage() }}</p>
+      }
+      @if (metadataForm.invalid && metadataForm.touched) {
+        <p class="error" role="alert">Check the values in Recipe details before saving.</p>
+      }
 
       @if (saveError()) {
         <p class="error" role="alert">
@@ -242,16 +161,18 @@
         <button
           type="submit"
           class="primary"
-          [attr.aria-busy]="saving() || processingImage() || importingImage()"
-          [disabled]="saving() || processingImage() || importingImage()"
+          [attr.aria-busy]="
+            saving() || processingImage() || importingImage() || importingStepImages()
+          "
+          [disabled]="saving() || processingImage() || importingImage() || importingStepImages()"
         >
-          @if (saving() || processingImage() || importingImage()) {
+          @if (saving() || processingImage() || importingImage() || importingStepImages()) {
             <app-food-doodle [animate]="true" />
           }
           {{
             saving()
               ? 'Saving...'
-              : processingImage() || importingImage()
+              : processingImage() || importingImage() || importingStepImages()
                 ? 'Preparing photo…'
                 : editingId
                   ? 'Save Changes'

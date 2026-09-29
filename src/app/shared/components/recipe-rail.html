@@ -14,15 +14,7 @@
           [disabled]="!canScrollPrevious()"
           (click)="scrollByCard(-1)"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            aria-hidden="true"
-          >
-            <path d="m15 6-6 6 6 6" />
-          </svg>
+          <app-icon name="chevron" />
         </button>
         <button
           type="button"
@@ -32,15 +24,7 @@
           [disabled]="!canScrollNext()"
           (click)="scrollByCard(1)"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            aria-hidden="true"
-          >
-            <path d="m9 6 6 6-6 6" />
-          </svg>
+          <app-icon name="chevron" class="next-chevron" />
         </button>
       </div>
     </div>
@@ -107,8 +91,13 @@
           </div>
           <div class="recipe-card__content">
             <h3>{{ recipe.title }}</h3>
-            @if (recipe.servings) {
-              <p>{{ recipe.servings }} servings</p>
+            @if (recipe.servings || recipe.totalTime != null) {
+              <p>
+                {{ recipe.servings ? recipe.servings + ' servings' : '' }}
+                @if (recipe.totalTime != null) {
+                  <span>{{ recipe.servings ? ' · ' : '' }}{{ formatTime(recipe.totalTime!) }}</span>
+                }
+              </p>
             }
           </div>
         </a>

@@ -48,7 +48,7 @@ import { Component, input } from '@angular/core';
         <path d="M14 3h7v7m0-7L11 13M10 4H4v16h16v-6" />
       }
       @case ('arrow') {
-        <path d="M4 12h15m-6-6 6 6-6 6" />
+        <path d="m7 5 7 7-7 7" />
       }
       @case ('trash') {
         <path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7" />

@@ -8,6 +8,12 @@ import { RecipeImportComponent } from './features/recipes/recipe-import/recipe-i
 
 export const routes: Routes = [
   {
+    path: 'card-demo',
+    loadComponent: () =>
+      import('./features/recipes/card-demo/card-demo').then((m) => m.CardDemoComponent),
+    title: 'Recipe card demo',
+  },
+  {
     path: '',
     component: RecipeListComponent,
     title: 'My Recipes',

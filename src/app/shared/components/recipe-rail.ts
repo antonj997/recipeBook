@@ -1,3 +1,5 @@
+import { IconComponent } from './icon';
+import { formatRecipeTime } from '../../core/models/recipe-metadata';
 import {
   afterNextRender,
   Component,
@@ -15,12 +17,13 @@ import { FoodPlaceholderComponent } from './food-placeholder';
 
 @Component({
   selector: 'app-recipe-rail',
-  imports: [RouterLink, FoodPlaceholderComponent],
+  imports: [RouterLink, FoodPlaceholderComponent, IconComponent],
   templateUrl: './recipe-rail.html',
   styleUrl: './recipe-rail.scss',
   host: { '(window:resize)': 'onResize()' },
 })
 export class RecipeRailComponent implements OnDestroy {
+  formatTime = formatRecipeTime;
   title = input.required<string>();
   recipes = input.required<Recipe[]>();
   railId = input.required<string>();

@@ -57,6 +57,15 @@
       [recipes]="filteredRecipes()"
     />
   }
+  @if (!loading() && !error() && !query().trim()) {
+    @for (collection of collectionRails(); track collection.id) {
+      <app-recipe-rail
+        [title]="collection.name"
+        [railId]="'collection-' + collection.id"
+        [recipes]="collection.recipes"
+      />
+    }
+  }
   <span class="sr-only" role="status">{{
     !loading() && query().trim()
       ? filteredRecipes().length +

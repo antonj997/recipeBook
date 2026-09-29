@@ -1,0 +1,245 @@
+:host {
+  display: block;
+}
+.editor-heading,
+.item-group header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.editor-heading {
+  padding-bottom: 20px;
+}
+.editor-heading h2 {
+  margin: 0;
+}
+.item-group {
+  padding-block: 12px 24px;
+  border-top: 1px solid var(--color-border);
+}
+.item-group header {
+  margin-bottom: 8px;
+}
+.item-group h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+.group-name {
+  font-weight: 600;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 10px 0;
+}
+.group-name:focus {
+  background: var(--color-surface);
+}
+.group-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+}
+.quiet-button,
+.icon-button,
+.add-move {
+  background: transparent;
+  border-color: transparent;
+}
+.quiet-button,
+.add-move {
+  padding-inline: 8px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.add-move {
+  gap: 4px;
+}
+.icon-button {
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.icon-button:hover,
+.quiet-button:hover,
+.add-move:hover {
+  background: var(--color-surface);
+}
+.editor-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-block: 4px;
+}
+.row-content {
+  flex: 1;
+  min-width: 0;
+}
+.row-content input,
+.row-content textarea {
+  width: 100%;
+  border-color: var(--color-border);
+}
+.row-content label {
+  display: block;
+  font-weight: 400;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+.drag-handle {
+  width: 20px;
+  flex: 0 0 20px;
+  cursor: grab;
+  color: var(--color-muted);
+}
+.drag-handle svg {
+  display: block;
+  width: 20px;
+  height: 24px;
+}
+.dragging {
+  opacity: 0.35;
+}
+.row-actions {
+  display: flex;
+}
+.up app-icon {
+  transform: rotate(90deg);
+}
+.down app-icon {
+  transform: rotate(-90deg);
+}
+.step-row {
+  align-items: flex-start;
+  padding-block: 12px;
+}
+.step-row .drag-handle {
+  margin-top: 38px;
+}
+.step-row .row-actions {
+  flex-direction: column;
+  margin-top: 24px;
+}
+.drop-slot {
+  height: 0;
+  transition: height 160ms var(--ease-out);
+}
+.drop-slot.active {
+  height: var(--drag-height, 52px);
+}
+.empty-group,
+.move-hint {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  margin: 8px 0;
+}
+.add-menu {
+  padding: 8px;
+  margin-bottom: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+.add-menu button {
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  gap: 12px;
+}
+.candidate-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.add-menu small {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+.add-menu p {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  padding-inline: 12px;
+  margin: 12px 0 4px;
+}
+.step-photo summary {
+  justify-content: flex-start;
+  width: fit-content;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+.step-photo img {
+  display: block;
+  width: min(100%, 320px);
+  border-radius: var(--radius-control);
+  margin-block: 12px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 600px) {
+  .row-actions .up,
+  .row-actions .down {
+    display: none;
+  }
+  .editor-row {
+    gap: 4px;
+  }
+  .row-actions {
+    flex-shrink: 0;
+  }
+  .add-move {
+    padding-inline: 4px;
+    font-size: 0.8rem;
+  }
+  .item-group header {
+    gap: 8px;
+  }
+}
+.drag-handle svg {
+  pointer-events: none;
+}
+.candidate {
+  padding: 6px 12px;
+  min-height: 44px;
+  font-weight: 400;
+}
+.candidate small {
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.selection-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+}
+.selection-actions .primary {
+  background: var(--color-ink);
+  color: var(--color-surface);
+}
+
+.candidate-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+.selection-actions button {
+  width: auto;
+}
+.selection-actions .primary {
+  flex: 1;
+  justify-content: center;
+}

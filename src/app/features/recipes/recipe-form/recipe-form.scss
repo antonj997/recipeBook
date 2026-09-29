@@ -123,3 +123,56 @@
 .image-field input[hidden] {
   display: none;
 }
+
+.row-details {
+  margin-top: 8px;
+}
+.row-details summary {
+  min-height: 44px;
+  padding-block: 10px;
+  cursor: pointer;
+  color: var(--color-muted);
+}
+.row-details label {
+  display: block;
+  margin-block: 12px 6px;
+}
+.step-photo-preview {
+  display: block;
+  width: min(100%, 320px);
+  border-radius: var(--radius-surface);
+  margin-block: 16px;
+}
+
+.step-options {
+  border: 0;
+  margin-top: 0;
+}
+.step-options summary.disclosure {
+  justify-content: flex-start;
+  width: fit-content;
+  padding-block: 6px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+.step-options summary app-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.step-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.step-remove {
+  background: transparent;
+  border-color: transparent;
+  padding: 8px;
+  min-width: 44px;
+}
+.step-remove:hover {
+  background: var(--color-surface);
+}

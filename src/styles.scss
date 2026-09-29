@@ -74,7 +74,7 @@ small {
 }
 :focus-visible {
   outline: 2px solid var(--color-ink);
-  outline-offset: 5px;
+  outline-offset: 0;
 }
 .page {
   width: 100%;
@@ -328,4 +328,147 @@ app-root.touch-input :focus {
   [tabindex] {
     -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* Shared disclosure chevrons use the same line icon as the back link. */
+summary.disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  min-height: 44px;
+  padding-block: 14px;
+  list-style: none;
+}
+summary.disclosure::-webkit-details-marker {
+  display: none;
+}
+summary.disclosure::marker {
+  content: '';
+}
+summary.disclosure > app-icon {
+  transform: rotate(-90deg);
+  transition: transform 160ms ease;
+}
+details[open] > summary.disclosure > app-icon {
+  transform: rotate(90deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  summary.disclosure > app-icon {
+    transition: none;
+  }
+}
+
+.check-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.check-control input[type='checkbox'] {
+  position: absolute;
+  inset: auto;
+  opacity: 0;
+  width: var(--checkbox-size, 24px);
+  height: var(--checkbox-size, 24px);
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+app-checkbox-mark {
+  display: block;
+  flex: 0 0 var(--checkbox-size, 24px);
+  width: var(--checkbox-size, 24px);
+  height: var(--checkbox-size, 24px);
+  color: var(--color-muted);
+}
+app-checkbox-mark svg {
+  display: block;
+  width: var(--checkbox-size, 24px);
+  height: var(--checkbox-size, 24px);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.checkbox-frame {
+  transition: stroke 180ms;
+}
+.checkbox-tick {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 180ms var(--ease-out);
+}
+.check-control input:checked + app-checkbox-mark {
+  color: var(--color-ink);
+}
+.check-control input:checked + app-checkbox-mark .checkbox-tick {
+  stroke-dashoffset: 0;
+}
+.check-control input:focus-visible + app-checkbox-mark {
+  outline: 2px solid var(--color-ink);
+  outline-offset: -2px;
+  border-radius: 5px;
+}
+app-root.touch-input .check-control input:focus + app-checkbox-mark {
+  outline: none;
+}
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-green);
+}
+.search-field input[type='search'] {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 0;
+  min-width: 0;
+  width: 100%;
+}
+.search-field input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.search-field:focus-within {
+  box-shadow: 0 2px 0 var(--color-green);
+}
+.search-field input::-webkit-search-cancel-button,
+.search-field input::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+@media (forced-colors: active) {
+  app-checkbox-mark {
+    color: CanvasText;
+  }
+  .check-control input:checked + app-checkbox-mark {
+    color: Highlight;
+  }
+}
+
+.search-field button {
+  border: 0;
+  padding: 10px;
+  flex-shrink: 0;
+}
+
+.checkbox-number {
+  fill: currentColor;
+  stroke: none;
+  font:
+    9px Arial,
+    Helvetica,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+  transition: opacity 100ms;
+}
+.check-control input:checked + app-checkbox-mark .checkbox-number {
+  opacity: 0;
+}
+.check-control input:checked + app-checkbox-mark:has(.checkbox-number) .checkbox-tick {
+  transition-delay: 70ms;
 }

@@ -1,0 +1,95 @@
+<section
+  class="study"
+  [class.glass]="treatment() === 'glass'"
+  [class.phone]="phone()"
+  [class.with-graphic]="graphic()"
+  [attr.data-backdrop]="backdrop()"
+  [style.--glass-opacity]="strength() / 100"
+>
+  <div class="study-heading">
+    <h2>{{ treatment() === 'color' ? 'Color block' : 'Liquid glass' }}</h2>
+    <span>{{ recipes().length }} recipes</span>
+  </div>
+  <div class="stage">
+    <div class="backdrop" aria-hidden="true">
+      <div class="wash wash-blue"></div>
+      <div class="wash wash-green"></div>
+      <div class="wash wash-clay"></div>
+      <svg class="contours" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice">
+        <g fill="none" stroke="currentColor" stroke-width="1.2">
+          <ellipse cx="970" cy="205" rx="245" ry="155" transform="rotate(-28 970 205)" />
+          <ellipse cx="970" cy="205" rx="217" ry="127" transform="rotate(-28 970 205)" />
+          <path d="M-70 375C130 70 190 460 400 210S630 15 690 80" />
+          @if (backdrop() === 'lines') {
+            <ellipse cx="320" cy="285" rx="210" ry="125" transform="rotate(18 320 285)" />
+            <ellipse cx="320" cy="285" rx="185" ry="100" transform="rotate(18 320 285)" />
+            <path d="M470-30C780 60 510 320 800 520M505-30C815 60 545 320 835 520" />
+          }
+        </g>
+      </svg>
+    </div>
+    <div
+      #rail
+      class="demo-rail"
+      tabindex="0"
+      role="region"
+      [attr.aria-label]="
+        treatment() === 'color' ? 'Color block recipe carousel' : 'Liquid glass recipe carousel'
+      "
+      (scroll)="updatePosition()"
+      (keydown)="keyboard($event)"
+    >
+      @for (recipe of recipes(); track recipe.id; let i = $index) {
+        <article class="demo-card" [style.--card-color]="colors[i % colors.length]">
+          <div class="glass-surface" aria-hidden="true"></div>
+          <div class="card-media">
+            @if (recipe.imageDataUrl) {
+              <img [src]="recipe.imageDataUrl" alt="" loading="lazy" decoding="async" />
+            } @else {
+              <app-food-placeholder [seed]="recipe.id" />
+            }
+          </div>
+          <div class="card-copy">
+            <h3>{{ recipe.title }}</h3>
+            @if (recipe.servings || recipe.totalTime != null) {
+              <p>
+                @if (recipe.servings) {
+                  {{ recipe.servings }} servings
+                }
+                @if (recipe.servings && recipe.totalTime != null) {
+                  <span aria-hidden="true"> · </span>
+                }
+                @if (recipe.totalTime != null) {
+                  {{ formatTime(recipe.totalTime!) }}
+                }
+              </p>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+  <div class="rail-footer">
+    <span class="position" aria-live="polite"
+      >{{ active() + 1 }}<span> / {{ recipes().length }}</span></span
+    >
+    <div class="arrows">
+      <button
+        type="button"
+        [disabled]="active() === 0"
+        [attr.aria-label]="'Previous ' + treatment() + ' card'"
+        (click)="go(-1)"
+      >
+        <app-icon name="chevron" />
+      </button>
+      <button
+        type="button"
+        [disabled]="active() === recipes().length - 1"
+        [attr.aria-label]="'Next ' + treatment() + ' card'"
+        (click)="go(1)"
+      >
+        <app-icon class="next" name="chevron" />
+      </button>
+    </div>
+  </div>
+</section>

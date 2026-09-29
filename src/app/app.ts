@@ -1,11 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IconComponent } from './shared/components/icon';
 import { FeedbackService } from './core/services/feedback.service';
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent],
+  imports: [RouterOutlet, RouterLink, IconComponent],
   selector: 'app-root',
   host: {
     '[class.touch-input]': 'touchInput()',
@@ -16,6 +17,22 @@ import { FeedbackService } from './core/services/feedback.service';
   templateUrl: './app.html',
 })
 export class App {
+  private router = inject(Router);
+  protected readonly onSettings = signal(false);
+  protected readonly settingsTarget = signal('/settings');
+  private lastPage = '/';
+  private settingsReturn = '/';
+
+  constructor() {
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (!(event instanceof NavigationEnd)) return;
+      const settings = event.urlAfterRedirects.split(/[?#]/)[0] === '/settings';
+      if (settings && !this.onSettings()) this.settingsReturn = this.lastPage;
+      this.onSettings.set(settings);
+      this.settingsTarget.set(settings ? this.settingsReturn : '/settings');
+      if (!settings) this.lastPage = event.urlAfterRedirects;
+    });
+  }
   protected readonly touchInput = signal(false);
 
   protected onPointerDown(event: PointerEvent): void {

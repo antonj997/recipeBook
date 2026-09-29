@@ -14,26 +14,12 @@
   border-bottom: 1px solid var(--color-border);
 }
 .search-field {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   flex: 1;
   max-width: 600px;
-  border-bottom: 1px solid var(--color-green);
-}
-.search-field input {
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  padding: 12px 0;
-  min-width: 0;
 }
 .search-field button {
   border: 0;
   padding: 10px;
-}
-.search-field:focus-within {
-  border-color: var(--color-green);
 }
 .add-control {
   flex-shrink: 0;
@@ -132,22 +118,6 @@
     gap: 6px;
     font-size: 0.85rem;
   }
-}
-
-/* Keep a single clear control and a shared keyboard focus indicator. */
-.search-field input {
-  appearance: none;
-}
-.search-field input:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-.search-field:focus-within {
-  box-shadow: 0 2px 0 var(--color-green);
-}
-.search-field input::-webkit-search-cancel-button,
-.search-field input::-webkit-search-decoration {
-  -webkit-appearance: none;
 }
 
 @media (max-width: 600px) {

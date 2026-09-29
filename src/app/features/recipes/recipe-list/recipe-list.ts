@@ -1,3 +1,4 @@
+import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
@@ -29,6 +30,17 @@ export class RecipeListComponent implements OnInit {
 
   recipes = signal<Recipe[]>([]);
   query = signal('');
+  collections = signal<RecipeCollection[]>([]);
+  collectionRails = computed(() =>
+    this.collections()
+      .map((collection) => ({
+        ...collection,
+        recipes: this.filteredRecipes().filter((recipe) =>
+          recipe.collectionIds?.includes(collection.id),
+        ),
+      }))
+      .filter((collection) => collection.recipes.length),
+  );
   // Filter the loaded recipes; the database and stored objects stay unchanged.
   filteredRecipes = computed(() => {
     const words = this.query().trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
@@ -56,7 +68,11 @@ export class RecipeListComponent implements OnInit {
 
   private async loadRecipes(): Promise<void> {
     try {
-      const result = await this.recipeService.getRecipes();
+      const [result, collections] = await Promise.all([
+        this.recipeService.getRecipes(),
+        this.recipeService.getCollections(),
+      ]);
+      this.collections.set(collections);
 
       this.recipes.set(result);
     } catch (error) {

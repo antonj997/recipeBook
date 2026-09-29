@@ -5,11 +5,10 @@
   <a class="brand" routerLink="/" aria-label="Recipebook home">Recipebook</a>
   <a
     class="settings-link"
-    routerLink="/settings"
-    routerLinkActive="active"
-    ariaCurrentWhenActive="page"
-    aria-label="Settings"
-    title="Settings"
+    [routerLink]="settingsTarget()"
+    [class.active]="onSettings()"
+    [attr.aria-label]="onSettings() ? 'Back from settings' : 'Settings'"
+    [title]="onSettings() ? 'Back from settings' : 'Settings'"
     ><app-icon name="settings"
   /></a>
 </header>

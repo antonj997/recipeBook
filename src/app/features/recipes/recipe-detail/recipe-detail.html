@@ -16,8 +16,9 @@
         }
         <header class="recipe-summary">
           <h1>{{ selectedRecipe.title }}</h1>
-          @if (selectedRecipe.servings) {
-            <p class="servings">{{ selectedRecipe.servings }} servings</p>
+          <app-recipe-summary-details [recipe]="selectedRecipe" />
+          @if (collectionNames().length) {
+            <p class="collection-names">{{ collectionNames().join(' · ') }}</p>
           }
         </header>
       </div>
@@ -47,11 +48,16 @@
           aria-labelledby="ingredients-heading"
         >
           <h2 id="ingredients-heading">Ingredients</h2>
-          <ul>
-            @for (ingredient of selectedRecipe.ingredients; track $index) {
-              <li>{{ ingredient }}</li>
+          @for (group of ingredientGroups(); track $index) {
+            @if (group.section) {
+              <h3 class="group-heading">{{ group.section }}</h3>
             }
-          </ul>
+            <ul>
+              @for (ingredient of group.ingredients; track $index) {
+                <li>{{ ingredient }}</li>
+              }
+            </ul>
+          }
         </section>
         <section
           id="instructions-panel"
@@ -63,22 +69,59 @@
           <ol>
             @for (step of selectedRecipe.instructions; track $index) {
               <li class="cooking-step" [class.completed]="completedSteps().has($index)">
-                <label>
+                @if (selectedRecipe.stepDetails?.[$index]?.section; as section) {
+                  @if (
+                    $index === 0 || section !== selectedRecipe.stepDetails?.[$index - 1]?.section
+                  ) {
+                    <h3 class="group-heading">{{ section }}</h3>
+                  }
+                }
+                <label class="check-control">
                   <input
                     type="checkbox"
                     [checked]="completedSteps().has($index)"
                     (change)="toggleStep($index)"
                     [attr.aria-label]="'Step ' + ($index + 1) + ': ' + step"
                   />
+                  <app-checkbox-mark [number]="$index + 1" />
                   <span class="step-copy"
-                    ><span class="step-number">{{ $index + 1 }}.</span> {{ step }}</span
-                  >
+                    >{{ step
+                    }}<svg
+                      class="step-strike"
+                      viewBox="0 0 300 12"
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                    >
+                      <path pathLength="1" d="M0 6 Q150 5 300 6" /></svg
+                  ></span>
                 </label>
+                @if (!completedSteps().has($index) && !failedStepPhotos().has($index)) {
+                  @if (
+                    selectedRecipe.stepDetails?.[$index]?.imageDataUrl ||
+                      selectedRecipe.stepDetails?.[$index]?.imageUrl;
+                    as photo
+                  ) {
+                    <img
+                      class="step-photo"
+                      [src]="photo"
+                      [alt]="
+                        'Step ' +
+                        ($index + 1) +
+                        ': ' +
+                        (selectedRecipe.stepDetails?.[$index]?.title || step)
+                      "
+                      loading="lazy"
+                      referrerpolicy="no-referrer"
+                      (error)="hideStepPhoto($index)"
+                    />
+                  }
+                }
               </li>
             }
           </ol>
         </section>
       </div>
+      <app-recipe-extra-details [recipe]="selectedRecipe" />
       <div class="recipe-actions">
         <a class="button edit-button" [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
           >Edit Recipe</a

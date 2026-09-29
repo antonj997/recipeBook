@@ -1,3 +1,4 @@
+import type { RecipeCollection } from '../models/recipe-collection.model';
 import { readRecipeMetadata, isHttpsUrl } from '../models/recipe-metadata';
 import { Injectable } from '@angular/core';
 import type { Recipe } from '../models/recipe.model';
@@ -8,6 +9,7 @@ export interface RecipeBackup {
   version: 1;
   exportedAt: string;
   recipes: Recipe[];
+  collections?: RecipeCollection[];
 }
 
 export interface ImportResult {
@@ -29,6 +31,31 @@ function isNonEmptyString(value: unknown): value is string {
   providedIn: 'root',
 })
 export class RecipeService {
+  getCollections(): Promise<RecipeCollection[]> {
+    return db.collections.orderBy('sortOrder').toArray();
+  }
+  async createCollection(name: string): Promise<RecipeCollection> {
+    return db.transaction('rw', db.collections, async () => {
+      const collections = await this.getCollections();
+      const existing = collections.find(
+        (c) => c.name.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase(),
+      );
+      if (existing) return existing;
+      const collection = {
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        sortOrder: Math.max(-1, ...collections.map((c) => c.sortOrder)) + 1,
+      };
+      await db.collections.add(collection);
+      return collection;
+    });
+  }
+  matchCollections(category: string | undefined, collections: RecipeCollection[]): string[] {
+    const names = (category ?? '').split(/[,;]/).map((name) => name.trim().toLocaleLowerCase());
+    return collections
+      .filter((c) => names.includes(c.name.trim().toLocaleLowerCase()))
+      .map((c) => c.id);
+  }
   // Retrieve all recipes, sorted by title.
   getRecipes(): Promise<Recipe[]> {
     return db.recipes.orderBy('title').toArray();
@@ -51,11 +78,19 @@ export class RecipeService {
     return newRecipe;
   }
 
-  async updateRecipe(
-    id: string,
-    changes: Partial<Omit<Recipe, 'id'>>,
-  ): Promise<void> {
-    const updated = await db.recipes.update(id, changes);
+  async updateRecipe(id: string, changes: Partial<Omit<Recipe, 'id'>>): Promise<void> {
+    const updated = await db.recipes.update(id, {
+      ...changes,
+      sourceRating: undefined,
+      difficulty: undefined,
+      prepTime: undefined,
+      cookTime: undefined,
+      tips: undefined,
+      yieldText: undefined,
+      category: undefined,
+      cuisine: undefined,
+      dietaryNotes: undefined,
+    } as Partial<Recipe>);
 
     if (updated === 0) {
       throw new Error('Recipe not found');
@@ -73,7 +108,23 @@ export class RecipeService {
       app: 'recipiebook',
       version: 1,
       exportedAt: new Date().toISOString(),
-      recipes,
+      collections: await this.getCollections(),
+      recipes: recipes.map((recipe) => {
+        const clean = { ...recipe } as Recipe & Record<string, unknown>;
+        for (const key of [
+          'sourceRating',
+          'difficulty',
+          'prepTime',
+          'cookTime',
+          'tips',
+          'yieldText',
+          'category',
+          'cuisine',
+          'dietaryNotes',
+        ])
+          delete clean[key];
+        return { ...clean, ...readRecipeMetadata(recipe) };
+      }),
     };
   }
 
@@ -90,6 +141,24 @@ export class RecipeService {
       throw new Error('Invalid or unsupported backup file.');
     }
 
+    const collections: RecipeCollection[] = [];
+    if (data['collections'] !== undefined) {
+      if (!Array.isArray(data['collections'])) throw new Error('Invalid collections in backup.');
+      const seen = new Set<string>();
+      for (const item of data['collections']) {
+        if (
+          !isObject(item) ||
+          !isNonEmptyString(item['id']) ||
+          !isNonEmptyString(item['name']) ||
+          typeof item['sortOrder'] !== 'number' ||
+          !Number.isFinite(item['sortOrder']) ||
+          seen.has(item['id'])
+        )
+          throw new Error('Invalid collection in backup.');
+        seen.add(item['id']);
+        collections.push({ id: item['id'], name: item['name'], sortOrder: item['sortOrder'] });
+      }
+    }
     const recipes: Recipe[] = [];
     const ids = new Set<string>();
 
@@ -103,10 +172,8 @@ export class RecipeService {
         !Number.isSafeInteger(item['servings']) ||
         item['servings'] < 1 ||
         !Array.isArray(item['ingredients']) ||
-        item['ingredients'].length === 0 ||
         !item['ingredients'].every(isNonEmptyString) ||
         !Array.isArray(item['instructions']) ||
-        item['instructions'].length === 0 ||
         !item['instructions'].every(isNonEmptyString) ||
         (item['sourceUrl'] !== undefined && !isHttpsUrl(item['sourceUrl']))
       ) {
@@ -157,7 +224,8 @@ export class RecipeService {
       for (const key of ['tagIds', 'collectionIds'] as const) {
         const values = item[key];
         if (values !== undefined) {
-          if (!Array.isArray(values) || !values.every(isNonEmptyString)) throw new Error('Invalid recipe details.');
+          if (!Array.isArray(values) || !values.every(isNonEmptyString))
+            throw new Error('Invalid recipe details.');
           recipe[key] = values;
         }
       }
@@ -169,6 +237,7 @@ export class RecipeService {
       version: 1,
       exportedAt: data['exportedAt'],
       recipes,
+      collections,
     };
   }
 
@@ -176,12 +245,17 @@ export class RecipeService {
     // Validate the entire backup first.
     const backup = this.validateBackup(data);
 
-    if (backup.recipes.length === 0) {
+    if (backup.recipes.length === 0 && !backup.collections?.length) {
       return { added: 0, skipped: 0 };
     }
 
     // Run database operations inside a transaction.
-    return db.transaction('rw', db.recipes, async () => {
+    return db.transaction('rw', db.recipes, db.collections, async () => {
+      const savedCollections = await this.getCollections();
+      const newCollections = (backup.collections ?? []).filter(
+        (c) => !savedCollections.some((existing) => existing.id === c.id),
+      );
+      if (newCollections.length) await db.collections.bulkAdd(newCollections);
       const ids = backup.recipes.map((recipe) => recipe.id);
 
       // Look up existing recipes in one operation.

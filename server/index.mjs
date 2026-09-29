@@ -1,3 +1,4 @@
+import { extractIngredients, extractInstructions, extractMetadata } from './recipe-metadata.mjs';
 import express from 'express';
 import * as cheerio from 'cheerio';
 
@@ -15,7 +16,6 @@ const allowedHosts = new Set([
   'www.elinaomickesmat.se',
   'recept.se',
   'www.kokaihop.se',
-  '',
 ]);
 
 const MAX_HTML_BYTES = 2 * 1024 * 1024;
@@ -87,32 +87,6 @@ function findRecipe(data) {
   }
 
   return findRecipe(data['@graph']) || findRecipe(data.mainEntity);
-}
-
-// Convert different instruction formats into strings.
-function extractSteps(value) {
-  if (Array.isArray(value)) {
-    return value.flatMap(extractSteps);
-  }
-
-  if (typeof value === 'string') {
-    const text = cleanText(value);
-    return text ? [text] : [];
-  }
-
-  if (!value || typeof value !== 'object') {
-    return [];
-  }
-
-  if (value.itemListElement) {
-    return extractSteps(value.itemListElement);
-  }
-
-  if (typeof value.text === 'string') {
-    return extractSteps(value.text);
-  }
-
-  return [];
 }
 
 // Convert recipeYield into a number.
@@ -277,12 +251,10 @@ app.post('/api/import', async (req, res) => {
     });
   }
 
-  const ingredients = Array.isArray(recipe.recipeIngredient)
-    ? recipe.recipeIngredient.map(cleanText).filter(Boolean)
-    : [];
-
-  const instructions = extractSteps(recipe.recipeInstructions);
-
+  const ingredientItems = extractIngredients(recipe.recipeIngredient);
+  const stepItems = extractInstructions(recipe.recipeInstructions, url.toString());
+  const ingredients = ingredientItems.map((item) => item.text);
+  const instructions = stepItems.map((item) => item.text);
   const title = cleanText(recipe.name);
 
   if (!title || ingredients.length === 0 || instructions.length === 0) {
@@ -293,6 +265,7 @@ app.post('/api/import', async (req, res) => {
 
   // Return a recipe draft.
   return res.json({
+    ...extractMetadata(recipe, html, url.toString(), ingredientItems, stepItems),
     imageUrl: extractRecipeImageUrl(recipe, html, url.toString()),
     title,
     servings: extractServings(recipe.recipeYield),
@@ -303,6 +276,7 @@ app.post('/api/import', async (req, res) => {
 });
 
 // Keep the development API local to your computer.
-app.listen(3000, '127.0.0.1', () => {
-  console.log('Recipe importer running on http://127.0.0.1:3000');
+const port = Number(process.env.PORT) || 3000;
+app.listen(port, '127.0.0.1', () => {
+  console.log('Recipe importer running on http://127.0.0.1:' + port);
 });
