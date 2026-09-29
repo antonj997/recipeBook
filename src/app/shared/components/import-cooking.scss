@@ -1,0 +1,90 @@
+:host {
+  display: block;
+}
+.cooking-card {
+  display: grid;
+  justify-items: center;
+  padding: 20px 24px 32px;
+  background: var(--cooking-background, var(--color-sage));
+  border-radius: 14px;
+}
+svg {
+  width: min(100%, 360px);
+  display: block;
+}
+span {
+  font-size: 0.9rem;
+}
+.spoon {
+  transform-origin: 122px 110px;
+  animation: stir 1800ms cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.steam path {
+  animation: steam-rise 2600ms ease-in-out infinite;
+}
+.steam path:nth-child(2) {
+  animation-delay: -1300ms;
+}
+.recipe-check {
+  stroke-dasharray: 35;
+  stroke-dashoffset: 35;
+  transition: stroke-dashoffset 340ms var(--ease-out);
+}
+.ready .recipe-check {
+  stroke-dashoffset: 0;
+}
+.ready .spoon {
+  animation-play-state: paused;
+}
+@keyframes stir {
+  0%,
+  100% {
+    transform: rotate(-9deg) translateX(-2px);
+  }
+  50% {
+    transform: rotate(9deg) translateX(2px);
+  }
+}
+@keyframes steam-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  30%,
+  65% {
+    opacity: 0.65;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+@media (max-width: 600px) {
+  :host {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+  }
+  .cooking-card {
+    min-height: 100dvh;
+    height: 100%;
+    align-content: center;
+    border-radius: 0;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(32px, env(safe-area-inset-bottom));
+  }
+  svg {
+    width: min(100%, 420px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spoon,
+  .steam path {
+    animation: none;
+  }
+  .steam {
+    opacity: 0.65;
+  }
+  .recipe-check {
+    transition: none;
+  }
+}

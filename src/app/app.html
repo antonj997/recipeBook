@@ -2,15 +2,36 @@
   >Skip to content</a
 >
 <header class="app-header">
-  <a class="brand" routerLink="/" aria-label="Recipebook home">Recipebook</a>
-  <a
-    class="settings-link"
-    [routerLink]="settingsTarget()"
-    [class.active]="onSettings()"
-    [attr.aria-label]="onSettings() ? 'Back from settings' : 'Settings'"
-    [title]="onSettings() ? 'Back from settings' : 'Settings'"
-    ><app-icon name="settings"
-  /></a>
+  <a class="brand" routerLink="/" aria-label="Recipebook home">
+    <span class="brand-word" aria-hidden="true">Recipebook</span>
+    <svg
+      class="hover-outline brand-outline"
+      viewBox="0 0 180 48"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        pathLength="1"
+        d="M11 38C3 34 4 11 13 8Q23 3 31 9C44 12 43 7 58 10S73 8 86 10S103 6 113 9S127 7 139 10Q156 6 169 14C178 20 178 34 168 39Q146 45 127 40Q119 47 110 40Q82 44 59 40Q30 43 11 38Z"
+      />
+    </svg>
+  </a>
+  @if (!hideSettings()) {
+    <a
+      class="settings-link"
+      [routerLink]="settingsTarget()"
+      [class.active]="onSettings()"
+      [attr.aria-label]="onSettings() ? 'Back from settings' : 'Settings'"
+      [title]="onSettings() ? 'Back from settings' : 'Settings'"
+      ><app-icon name="settings" />
+      <svg class="hover-outline settings-outline" viewBox="0 0 48 48" aria-hidden="true">
+        <path
+          pathLength="1"
+          d="M24 5Q29 3 32 9Q39 9 40 16Q46 20 42 26Q44 34 36 37Q33 45 25 42Q18 46 14 39Q5 38 7 30Q1 24 7 18Q5 10 14 10Q17 3 24 5Z"
+        />
+      </svg>
+    </a>
+  }
 </header>
 <main #mainContent id="main-content" tabindex="-1"><router-outlet /></main>
 <div class="toast-region" role="status" aria-live="polite">
@@ -23,3 +44,5 @@
     </div>
   }
 </div>
+
+<app-leave-confirmation />

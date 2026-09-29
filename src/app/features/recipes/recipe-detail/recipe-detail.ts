@@ -1,3 +1,5 @@
+import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
+import { LeaveConfirmationService } from '../../../core/services/leave-confirmation.service';
 import { instructionText } from '../../../core/models/recipe-metadata';
 import { RecipeSummaryDetailsComponent, RecipeExtraDetailsComponent } from './recipe-metadata-view';
 import { IconComponent } from '../../../shared/components/icon';
@@ -13,6 +15,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
 
 @Component({
   selector: 'app-recipe-detail',
+  host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
   imports: [
     CheckboxMarkComponent,
     RecipeSummaryDetailsComponent,
@@ -27,6 +30,48 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
 })
 export class RecipeDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  readonly drafts = inject(RecipeDraftService);
+  private confirmation = inject(LeaveConfirmationService);
+  readonly isDraft = !!this.route.snapshot.data['draft'];
+  savingDraft = signal(false);
+  saveDraftError = signal('');
+  private leaving = false;
+
+  async canLeave(): Promise<boolean> {
+    if (!this.isDraft || this.leaving) return true;
+    if (this.savingDraft()) return false;
+    const leave = await this.confirmation.confirm('This recipe has not been saved. Discard it?');
+    if (leave) this.drafts.clear();
+    return leave;
+  }
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.isDraft && !this.leaving) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  }
+  async editDraft(): Promise<void> {
+    this.leaving = true;
+    await this.router.navigate(['/recipes/new/edit']);
+  }
+  async saveDraft(): Promise<void> {
+    const draft = this.recipe();
+    if (!draft?.title.trim() || this.savingDraft()) return;
+    this.savingDraft.set(true);
+    this.saveDraftError.set('');
+    try {
+      const { id, imageUrl, ...data } = this.drafts.getOrCreate();
+      const saved = await this.recipeService.addRecipe(data);
+      this.leaving = true;
+      this.drafts.clear();
+      this.feedback.show('Recipe saved');
+      await this.router.navigate(['/recipes', saved.id]);
+    } catch {
+      this.saveDraftError.set('Could not save your recipe. Please try again.');
+    } finally {
+      this.savingDraft.set(false);
+    }
+  }
   private recipeService = inject(RecipeService);
   private router = inject(Router);
   private feedback = inject(FeedbackService);
@@ -84,6 +129,20 @@ export class RecipeDetailComponent implements OnInit {
   private async loadRecipe(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id');
 
+    if (this.isDraft) {
+      const draft = this.drafts.getOrCreate();
+      this.recipe.set(draft);
+      try {
+        const collections = await this.recipeService.getCollections();
+        this.collectionNames.set(
+          collections.filter((c) => draft.collectionIds?.includes(c.id)).map((c) => c.name),
+        );
+      } catch {
+        this.error.set('Could not load your collections. Reload to try again.');
+      }
+      this.loading.set(false);
+      return;
+    }
     if (!id) {
       this.loading.set(false);
       return;

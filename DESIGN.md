@@ -14,6 +14,9 @@ colors:
   green: "#7d8d5f"
   blue: "#bbd0cb"
   danger: "#923f35"
+  sage: "#c8cdb8"
+  clay: "#d7b7a5"
+  butter: "#e9dfb7"
 typography:
   display:
     fontFamily: "Arial, Helvetica, sans-serif"
@@ -83,61 +86,34 @@ components:
     width: "160px"
 ---
 
-# Design System: Recipebook
+# Recipebook design guide
 
-## Overview
+Use the owner's Anthropic references: off-white surfaces, near-black text, thin rules, generous space and simple food line drawings. Keep labels short and factual. Body and controls use Arial/Helvetica; recipe titles use Georgia. No external font or animation package is needed.
 
-Follow the owner's supplied Anthropic references: off-white backgrounds, near-black type, thin rules, generous whitespace, and muted beige, blue and green. Keep labels factual and brief. Sparse food doodles add recognition without competing with recipes.
+## Layout and controls
 
-This document records the implemented September 22, 2026 design. Global primitives live in `src/styles.scss`; shared visual components live in `src/app/shared/components`. Keep changes understandable within the existing Angular structure.
+The header and pages share a centered 1360px maximum width and `--page-gutter`. Forms use an 800px maximum. Mobile pages start with 20px top padding. Search and Add recipe share a row; focusing search condenses Add to its icon. Search fields share the green underline. Empty libraries show centered Create recipe, Import recipe and Import cookbook actions instead of the toolbar.
 
-**Key Characteristics:**
-- Off-white surfaces and near-black text.
-- Thin dividers and generous whitespace.
-- Serif recipe titles with sans-serif controls.
-- Native horizontal scrolling with mandatory snapping.
-- Editable inline SVG food doodles.
+Primary controls are dark, secondary controls outlined, destructive controls use `--color-danger`. Keyboard focus hugs each element with a 2px outline; touch input suppresses the ring without affecting keyboard navigation. Use the shared SVG checkbox everywhere. Recipe step boxes show their number until checked; completion draws a restrained line over the text and collapses it to one line.
 
-## Colors
+## Recipe cards and carousel
 
-The frontmatter preserves the global CSS token values. Ink and action carry primary emphasis. Beige, muted blue and green support recipe placeholders and feedback; accent is the existing subdued lavender token. Canvas is the page background; surface is the lighter field and overlay background. Muted supports secondary copy, border separates content, and control-border outlines interactive fields. Danger identifies errors and destructive actions. Do not use supporting fills as substitutes for legible text contrast.
+Cards have a flush 4:3 photo over a padded color block within a 16px radius. Photo cards rotate blue, clay, sage, lavender, beige and washed yellow. Missing-photo cards share the exact stable background choice with their food drawing. Card metadata shows total time when available. Titles never gain an underline on hover.
 
-## Typography
+Desktop cards are 240–340px wide with 28px gaps. Mobile cards are 78vw with 18px gaps and centered snapping. Preserve native horizontal scrolling, mandatory snap and `scroll-snap-stop: always`. Edge masks soften clipped neighbors; blur/displacement are optional enhancements that never intercept input. Arrow and keyboard navigation move by card. Compact centered dots expand smoothly with carousel position, hover and focus. Duplicate clamped desktop end positions share one dot.
 
-Arial, Helvetica and sans-serif fallbacks serve body copy, headings and controls. Georgia with Times New Roman and serif fallbacks distinguishes recipe titles. Page titles use the fluid display role; collection headings are smaller (1.15rem, weight 500). Recipe titles reduce to 1.45rem on mobile. Body descriptions and hints have a maximum measure of 65ch. No external font dependency is required.
+## Motion
 
-## Layout
+The wordmark is upright medium-weight sans-serif. Hover quickly draws one soft perimeter around the entire word, without entering letter gaps. The settings icon uses the same perimeter effect, with no hover fill. Card surfaces tilt up to a few degrees toward the mouse; scroll velocity adds a small temporary tilt that settles to zero. Arrow hover nudges its chevron, section controls gently change fill, and checkbox/search hover remains slight. Restrict hover effects to devices that support hover.
 
-Pages and the header share a centered maximum width of 1360px and the fluid page gutter. Narrow form pages use 800px. Standard page padding is 60px above and 88px below; at 600px and below it becomes 32px and 56px. The home search and add controls sit below the page title; on mobile search takes a full row and add aligns right.
+Import feedback shows a stirring pot, independently rising steam and a recipe-sheet check. Successful imports stay visible for at least three seconds, then finish the check before review opens. On mobile the illustration fills the viewport with one randomly chosen muted palette color. No falling ingredients. The existing paper-and-bin delete animation stays intact.
 
-Recipe rails span the page gutters. Desktop cards use their frontmatter width and a 28px gap. Mobile cards use 78vw and an 18px gap, with centered snapping and neighboring cards visible. Preserve native touch scrolling, `scroll-snap-type: x mandatory`, and `scroll-snap-stop: always`. Desktop cards align to the start. Arrow controls and keyboard left/right movement advance by card; disabled arrows identify the ends.
+Reduced motion removes transitions, continuous loops and tilt, and makes carousel scrolling immediate. Feedback and completed states remain visible.
 
-## Elevation & Depth
+## Recipe review and overlays
 
-Most content is flat and separated by thin rules. Only transient overlays receive restrained shadows: the toast and add menu. Recipe rails retain a soft CSS mask at their edges (40px desktop, 24px mobile). Edge blur and SVG displacement are progressive enhancements; navigation and snapping must remain usable when a browser cannot render them. Edge layers never intercept pointer input.
+Unsaved recipes reuse the saved recipe view. A compact floating action bar provides looks good!, cancel and edit. Approval alone saves to Dexie. Hide settings during review and editing. A shared native dialog protects discard and navigation; native browser warnings protect refresh and tab closing. Only floating controls, menus, dialogs and feedback use restrained shadows.
 
-## Shapes
+## Maintainability
 
-Controls use the control radius; recipe images use the larger surface radius. Recipe media has a 4:3 aspect ratio and cover cropping. Card text sits directly on the canvas with a bottom rule rather than a raised enclosure. Settings uses a circular 44px target. Doodles use rounded SVG strokes and editable paths.
-
-## Components
-
-- **Buttons:** dark primary, outlined secondary and danger variants. The base minimum height is 44px; the mobile home add button currently overrides this to 42px. Hover uses beige for outlined controls and a darker gray for primary controls. Press scales to 0.97; disabled buttons reduce opacity.
-- **Fields:** light surface, thin control border, visible labels and muted placeholders. Invalid fields use danger borders with error text. The home search is a transparent field with a bottom rule. Keyboard focus uses a near-black 2px outline with a 5px offset globally; the rail and cards adjust the offset locally.
-- **Navigation:** the header contains the Recipebook home link and settings icon. Active settings has a muted blue fill. Search and add remain home controls; the add menu offers the existing recipe creation routes. The menu uses a native popover, anchored when supported and centered otherwise.
-- **Recipe rail:** reusable title, count, previous/next controls and linked cards. Real recipe photos take priority; missing photos show the bowl doodle on alternating muted fills. Card hover lifts media by 3px and underlines its title.
-- **Food doodle and loading state:** the shared SVG exposes bowl/discard variants and an optional loading animation. Loading includes a readable status label. Steam loops at 1.8s; discard motion lasts 950ms. These drawings remain small, editable and secondary to content.
-- **Feedback:** compact dark toast with dismiss action and polite live status; form messages use muted blue for success and danger for error. Busy buttons retain text and add a small indicator.
-
-Motion supports state changes: controls use 180ms transitions, fields 220ms and toast entry 300ms. Reduced motion removes animations/transitions, uses immediate arrow scrolling, disables edge backdrop effects and removes media hover movement. Native snapping remains available.
-
-## Do's and Don'ts
-
-- Do keep factual labels, readable contrast and visible keyboard focus.
-- Do preserve native mobile scrolling, mandatory snapping and reduced-motion support.
-- Do reuse global tokens and small editable SVG drawings.
-- Do keep search and add on home, with settings in the header.
-- Don't add slogans or decorative copy.
-- Don't replace thin rules and whitespace with a dense collection of raised panels.
-- Don't make navigation depend on glass distortion or animation.
-- Don't add packages merely to reproduce these styles or interactions.
+Reuse semantic global colors and existing shared icons/components. Keep recipes, images, collections and offline storage intact. Avoid slogans, dense raised panels and decorative copy. Navigation must work independently of animation and glass effects.

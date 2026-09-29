@@ -278,3 +278,44 @@ li::marker {
   border-radius: var(--radius-surface);
   margin-bottom: 24px;
 }
+
+.draft-preview {
+  padding-bottom: 160px;
+}
+.draft-actions {
+  position: fixed;
+  z-index: 10;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 32px);
+  padding: 8px;
+  background: var(--color-surface);
+  border-radius: 12px;
+  box-shadow: 0 6px 28px #14141320;
+}
+.draft-actions > div {
+  display: flex;
+  gap: 8px;
+}
+.draft-actions p {
+  margin: 4px 8px 12px;
+  max-width: 36ch;
+}
+.draft-actions :where(button, .button) {
+  white-space: nowrap;
+}
+@media (max-width: 400px) {
+  .draft-actions :where(button, .button) {
+    padding-inline: 14px;
+  }
+}
+@media (hover: hover) {
+  .section-switch button:hover:not([aria-pressed='true']) {
+    background: var(--color-sage);
+  }
+  .section-switch button:hover[aria-pressed='true'] {
+    background: #363630;
+  }
+}

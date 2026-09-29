@@ -29,9 +29,7 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ]
+            "styles": ["src/styles.scss"]
           },
           "configurations": {
             "production": {
@@ -53,6 +51,14 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "pages": {
+              "fileReplacements": [
+                {
+                  "replace": "src/app/core/runtime-config.ts",
+                  "with": "src/app/core/runtime-config.pages.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"

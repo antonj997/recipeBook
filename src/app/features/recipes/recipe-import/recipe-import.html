@@ -3,43 +3,47 @@
 
   <h1>Import Recipe</h1>
 
-  <p>
-    Paste a link to a recipe website. We'll extract the ingredients and instructions so you can save
-    your own copy.
-  </p>
+  @if (localOnly) {
+    <p>Link import is available when Recipebook runs locally with its import server.</p>
+    <a class="button primary" routerLink="/recipes/new">Create recipe</a>
+    <a class="button" routerLink="/settings" fragment="import-cookbook">Import cookbook</a>
+  } @else {
+    <p>
+      Paste a link to a recipe website. We'll extract the ingredients and instructions so you can
+      save your own copy.
+    </p>
 
-  <form (submit)="importRecipe($event)">
-    <label for="recipe-url"> Recipe URL </label>
+    <form (submit)="importRecipe($event)">
+      <label for="recipe-url"> Recipe URL </label>
 
-    <input
-      id="recipe-url"
-      type="url"
-      autocomplete="url"
-      inputmode="url"
-      autocapitalize="off"
-      spellcheck="false"
-      aria-describedby="import-hint"
-      required
-      [value]="url"
-      (input)="url = $any($event.target).value"
-      placeholder="https://www.ica.se/recept/..."
-    />
+      <input
+        id="recipe-url"
+        type="url"
+        autocomplete="url"
+        inputmode="url"
+        autocapitalize="off"
+        spellcheck="false"
+        aria-describedby="import-hint"
+        required
+        [value]="url"
+        (input)="updateUrl($event)"
+        placeholder="https://www.ica.se/recept/..."
+      />
 
-    @if (error()) {
-      <p class="error" role="alert">
-        {{ error() }}
-      </p>
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+
+      <button class="primary" [attr.aria-busy]="importing()" type="submit" [disabled]="importing()">
+        {{ importing() ? 'Importing...' : 'Import Recipe' }}
+      </button>
+    </form>
+
+    @if (importing()) {
+      <app-import-cooking [ready]="ready()" />
     }
-
-    <button class="primary" [attr.aria-busy]="importing()" type="submit" [disabled]="importing()">
-      {{ importing() ? 'Importing...' : 'Import Recipe' }}
-    </button>
-  </form>
-
-  @if (importing()) {
-    <app-loading-state label="Importing recipe…" />
+    <p id="import-hint" class="hint">
+      You'll be able to review and edit the recipe before saving it.
+    </p>
   }
-  <p id="import-hint" class="hint">
-    You'll be able to review and edit the recipe before saving it.
-  </p>
 </section>

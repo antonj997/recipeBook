@@ -1,4 +1,4 @@
-<article class="recipe-detail page">
+<article class="recipe-detail page" [class.draft-preview]="isDraft">
   <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
   @if (loading()) {
     <app-loading-state label="Loading recipe…" />
@@ -6,16 +6,22 @@
     <p role="alert">{{ error() }}</p>
   } @else {
     @if (recipe(); as selectedRecipe) {
-      <div class="recipe-overview" [class.has-photo]="!!selectedRecipe.imageDataUrl">
-        @if (selectedRecipe.imageDataUrl) {
+      <div
+        class="recipe-overview"
+        [class.has-photo]="
+          !!(selectedRecipe.imageDataUrl || (isDraft && drafts.recipe()?.imageUrl))
+        "
+      >
+        @if (selectedRecipe.imageDataUrl || (isDraft && drafts.recipe()?.imageUrl); as photo) {
           <img
             class="recipe-hero"
-            [src]="selectedRecipe.imageDataUrl"
+            [src]="photo"
+            referrerpolicy="no-referrer"
             [alt]="selectedRecipe.title"
           />
         }
         <header class="recipe-summary">
-          <h1>{{ selectedRecipe.title }}</h1>
+          <h1>{{ selectedRecipe.title || 'New recipe' }}</h1>
           <app-recipe-summary-details [recipe]="selectedRecipe" />
           @if (collectionNames().length) {
             <p class="collection-names">{{ collectionNames().join(' · ') }}</p>
@@ -122,19 +128,24 @@
         </section>
       </div>
       <app-recipe-extra-details [recipe]="selectedRecipe" />
-      <div class="recipe-actions">
-        <a class="button edit-button" [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
-          >Edit Recipe</a
-        >
-        <button
-          type="button"
-          class="delete-button"
-          [disabled]="deleting()"
-          (click)="openDeleteDialog()"
-        >
-          {{ deleting() ? 'Deleting...' : 'Delete Recipe' }}
-        </button>
-      </div>
+      @if (!isDraft) {
+        <div class="recipe-actions">
+          <a class="button edit-button" [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
+            >Edit Recipe</a
+          >
+          <button
+            type="button"
+            class="delete-button"
+            [disabled]="deleting()"
+            (click)="openDeleteDialog()"
+          >
+            {{ deleting() ? 'Deleting...' : 'Delete Recipe' }}
+          </button>
+        </div>
+      }
+      @if (isDraft && drafts.photoNotice()) {
+        <p role="status">{{ drafts.photoNotice() }}</p>
+      }
       @if (selectedRecipe.sourceUrl) {
         <a
           class="source-link"
@@ -181,3 +192,24 @@
     </button>
   </div>
 </dialog>
+
+@if (isDraft && recipe()) {
+  <div class="draft-actions" aria-label="Review recipe">
+    @if (saveDraftError()) {
+      <p role="alert">{{ saveDraftError() }}</p>
+    }
+    <div>
+      <button
+        type="button"
+        class="primary"
+        [disabled]="savingDraft() || !recipe()?.title?.trim()"
+        [attr.aria-busy]="savingDraft()"
+        (click)="saveDraft()"
+      >
+        {{ savingDraft() ? 'Saving…' : 'looks good!' }}
+      </button>
+      <a class="button" routerLink="/">cancel</a>
+      <button type="button" [disabled]="savingDraft()" (click)="editDraft()">edit</button>
+    </div>
+  </div>
+}

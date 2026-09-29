@@ -1,46 +1,63 @@
-import { Routes } from '@angular/router';
+import type { Routes } from '@angular/router';
+import { confirmBeforeLeaving } from './core/services/leave-confirmation.service';
 
-import { RecipeListComponent } from './features/recipes/recipe-list/recipe-list';
-import { RecipeDetailComponent } from './features/recipes/recipe-detail/recipe-detail';
-import { RecipeFormComponent } from './features/recipes/recipe-form/recipe-form';
-import { SettingsComponent } from './features/settings/settings';
-import { RecipeImportComponent } from './features/recipes/recipe-import/recipe-import';
+const detail = () =>
+  import('./features/recipes/recipe-detail/recipe-detail').then((m) => m.RecipeDetailComponent);
+const form = () =>
+  import('./features/recipes/recipe-form/recipe-form').then((m) => m.RecipeFormComponent);
+const editing = { hideSettings: true };
 
 export const routes: Routes = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./features/recipes/recipe-list/recipe-list').then((m) => m.RecipeListComponent),
+    title: 'My Recipes',
+    pathMatch: 'full',
+  },
+  {
+    path: 'recipes/new/edit',
+    loadComponent: form,
+    title: 'Edit draft',
+    data: editing,
+    canDeactivate: [confirmBeforeLeaving],
+  },
+  {
+    path: 'recipes/new',
+    loadComponent: detail,
+    title: 'Review recipe',
+    data: { ...editing, draft: true },
+    canDeactivate: [confirmBeforeLeaving],
+  },
+  {
+    path: 'recipes/import',
+    loadComponent: () =>
+      import('./features/recipes/recipe-import/recipe-import').then((m) => m.RecipeImportComponent),
+    title: 'Import Recipe',
+  },
+  {
+    path: 'recipes/:id/edit',
+    loadComponent: form,
+    title: 'Edit Recipe',
+    data: editing,
+    canDeactivate: [confirmBeforeLeaving],
+  },
+  {
+    path: 'recipes/:id',
+    loadComponent: detail,
+    title: 'Recipe Details',
+    canDeactivate: [confirmBeforeLeaving],
+  },
+  {
+    path: 'settings',
+    loadComponent: () => import('./features/settings/settings').then((m) => m.SettingsComponent),
+    title: 'Settings',
+  },
   {
     path: 'card-demo',
     loadComponent: () =>
       import('./features/recipes/card-demo/card-demo').then((m) => m.CardDemoComponent),
     title: 'Recipe card demo',
   },
-  {
-    path: '',
-    component: RecipeListComponent,
-    title: 'My Recipes',
-  },
-  {
-    path: 'recipes/new',
-    component: RecipeFormComponent,
-    title: 'Add Recipe',
-  },
-  {
-    path: 'recipes/import',
-    component: RecipeImportComponent,
-    title: 'Import Recipe',
-  },
-  {
-    path: 'recipes/:id/edit',
-    component: RecipeFormComponent,
-    title: 'Edit Recipe',
-  },
-  {
-    path: 'recipes/:id',
-    component: RecipeDetailComponent,
-    title: 'Recipe Details',
-  },
-  {
-    path: 'settings',
-    component: SettingsComponent,
-    title: 'Settings',
-  },
+  { path: '**', redirectTo: '' },
 ];

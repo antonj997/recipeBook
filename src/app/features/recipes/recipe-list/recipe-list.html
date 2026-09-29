@@ -1,48 +1,56 @@
 <section class="recipe-list page">
-  <div class="home-tools">
-    <div class="search-field" role="search">
-      <app-icon name="search" />
-      <input
-        type="search"
-        aria-label="Search recipes"
-        placeholder="Search recipes"
-        [value]="query()"
-        (input)="onSearch($event)"
-      />
-      @if (query()) {
-        <button type="button" aria-label="Clear search" (click)="query.set('')">
-          <app-icon name="close" />
+  @if (!loading() && !error() && recipes().length > 0) {
+    <div class="home-tools">
+      <div class="search-field" role="search">
+        <app-icon name="search" />
+        <input
+          type="search"
+          aria-label="Search recipes"
+          placeholder="Search recipes"
+          [value]="query()"
+          (input)="onSearch($event)"
+        />
+        @if (query()) {
+          <button type="button" aria-label="Clear search" (click)="query.set('')">
+            <app-icon name="close" />
+          </button>
+        }
+      </div>
+      <div class="add-control">
+        <button
+          type="button"
+          class="primary"
+          aria-label="Add recipe"
+          popovertarget="add-recipe-options"
+        >
+          <app-icon name="plus" /><span class="add-label">Add recipe</span>
         </button>
-      }
-    </div>
-    <div class="add-control">
-      <button
-        type="button"
-        class="primary"
-        aria-label="Add recipe"
-        popovertarget="add-recipe-options"
-      >
-        <app-icon name="plus" /><span class="add-label">Add recipe</span>
-      </button>
-      <div id="add-recipe-options" popover #addOptions>
-        <a routerLink="/recipes/new" (click)="addOptions.hidePopover()"
-          ><app-icon name="book" />Write a recipe</a
-        >
-        <a routerLink="/recipes/import" (click)="addOptions.hidePopover()"
-          ><app-icon name="link" />Import from a link</a
-        >
+        <div id="add-recipe-options" popover #addOptions>
+          <a routerLink="/recipes/new" (click)="addOptions.hidePopover()"
+            ><app-icon name="book" />Write a recipe</a
+          >
+          <a routerLink="/recipes/import" (click)="addOptions.hidePopover()"
+            ><app-icon name="link" />Import from a link</a
+          >
+        </div>
       </div>
     </div>
-  </div>
+  }
   @if (loading()) {
     <app-loading-state />
   } @else if (error()) {
     <p role="alert">{{ error() }}</p>
   } @else if (recipes().length === 0) {
-    <div class="empty-state">
+    <div class="empty-state empty-state--library">
       <app-food-doodle />
       <h2>No recipes yet</h2>
-      <a class="button primary" routerLink="/recipes/new">Add recipe<app-icon name="plus" /></a>
+      <div class="empty-actions">
+        <a class="button primary" routerLink="/recipes/new"
+          >Create recipe<app-icon name="plus"
+        /></a>
+        <a class="button" routerLink="/recipes/import">Import recipe<app-icon name="link" /></a>
+        <a class="button" routerLink="/settings" fragment="import-cookbook">Import cookbook</a>
+      </div>
     </div>
   } @else if (filteredRecipes().length === 0) {
     <div class="empty-state">

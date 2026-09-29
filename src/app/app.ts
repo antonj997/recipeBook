@@ -1,3 +1,4 @@
+import { LeaveConfirmationComponent } from './shared/components/leave-confirmation';
 import { Component, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 
@@ -6,7 +7,7 @@ import { IconComponent } from './shared/components/icon';
 import { FeedbackService } from './core/services/feedback.service';
 
 @Component({
-  imports: [RouterOutlet, RouterLink, IconComponent],
+  imports: [RouterOutlet, RouterLink, IconComponent, LeaveConfirmationComponent],
   selector: 'app-root',
   host: {
     '[class.touch-input]': 'touchInput()',
@@ -17,6 +18,7 @@ import { FeedbackService } from './core/services/feedback.service';
   templateUrl: './app.html',
 })
 export class App {
+  protected readonly hideSettings = signal(false);
   private router = inject(Router);
   protected readonly onSettings = signal(false);
   protected readonly settingsTarget = signal('/settings');
@@ -26,11 +28,17 @@ export class App {
   constructor() {
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (!(event instanceof NavigationEnd)) return;
+      let route = this.router.routerState.snapshot.root;
+      while (route.firstChild) route = route.firstChild;
+      this.hideSettings.set(!!route.data['hideSettings']);
       const settings = event.urlAfterRedirects.split(/[?#]/)[0] === '/settings';
       if (settings && !this.onSettings()) this.settingsReturn = this.lastPage;
       this.onSettings.set(settings);
       this.settingsTarget.set(settings ? this.settingsReturn : '/settings');
       if (!settings) this.lastPage = event.urlAfterRedirects;
+      requestAnimationFrame(() =>
+        document.getElementById('main-content')?.focus({ preventScroll: true }),
+      );
     });
   }
   protected readonly touchInput = signal(false);
@@ -46,5 +54,4 @@ export class App {
   }
 
   readonly feedback = inject(FeedbackService);
-  protected readonly title = signal('recipiebook');
 }

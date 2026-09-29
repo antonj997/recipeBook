@@ -122,17 +122,6 @@ function perPortionNutrition(source) {
 function pageExtras($, sourceUrl, ingredients) {
   const result = {};
   if (new URL(sourceUrl).hostname === 'www.ica.se') {
-    const tips = [],
-      dietary = [];
-    $('.ingredients-list-group-extra').each((_, el) => {
-      const heading = text($(el).find('.accordion__label__title__text__title').first().text());
-      const body = text($(el).find('.ingredients-list-group-extra__card__ingr').first().html());
-      if (!body) return;
-      if (/^tips$/i.test(heading)) tips.push(body);
-      if (/^(för alla|klimatanpassa)$/i.test(heading)) dietary.push(heading + ': ' + body);
-    });
-    result.tips = tips.join('\n\n') || undefined;
-    result.dietaryNotes = dietary.join('\n\n') || undefined;
     const health = $('.health-section').first();
     const serving = text(health.find('h2').first().text());
     if (serving) {
@@ -171,18 +160,6 @@ function pageExtras($, sourceUrl, ingredients) {
     ) {
       result.ingredientSections = groups.map((g) => g.section);
     }
-    const steps = $('.cooking-steps').first();
-    const notes = [];
-    steps.find('h2, h3, h4, strong').each((_, el) => {
-      if (/^tips!?$/i.test(text($(el).text()))) {
-        const content = $(el)
-          .nextAll('p')
-          .map((_, p) => text($(p).text()))
-          .get();
-        notes.push(...content);
-      }
-    });
-    if (notes.length) result.tips = unique(notes).join('\n\n');
   }
   return result;
 }
@@ -206,22 +183,26 @@ export function extractMetadata(recipe, html, sourceUrl, ingredients, steps) {
     v.replace(/^https?:\/\/schema.org\//, '').replace(/([a-z])([A-Z])/g, '$1 $2'),
   );
   const extras = pageExtras($, sourceUrl, ingredients);
+  // ICA's conditional allergy substitutions and climate advice are not recipe details.
+  // Also guard JSON fields when a publisher appends the same labelled blocks there.
+  const recipeText = (value) => {
+    const cleaned = text(value);
+    return new URL(sourceUrl).hostname === 'www.ica.se'
+      ? cleaned.split(/(?:för alla|klimatanpassa)\s*:/i)[0].trim()
+      : cleaned;
+  };
   return {
     description:
       unique(
-        [
-          text(recipe.description),
-          text(recipe.tips) || extras.tips,
-          text(recipe.substitutions),
-          extras.dietaryNotes,
-        ].filter(Boolean),
+        [recipeText(recipe.description), recipeText(recipe.substitutions)].filter(Boolean),
       ).join('\n\n') || undefined,
     totalTime: minutes(recipe.totalTime),
     category: category || undefined,
     cuisine: cuisine || undefined,
     tags: unique(list(recipe.keywords)),
     nutrition: perPortionNutrition(extras.nutrition || nutrition),
-    dietaryNotes: [...diet, text(recipe.dietaryNotes)].filter(Boolean).join('\n') || undefined,
+    dietaryNotes:
+      [...diet, recipeText(recipe.dietaryNotes)].filter(Boolean).join('\n') || undefined,
     ingredientSections: extras.ingredientSections || ingredients.map((i) => i.section),
     stepDetails: steps.map(({ section, imageUrl }) => ({ section, imageUrl })),
   };

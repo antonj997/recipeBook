@@ -148,3 +148,17 @@
     gap: 0;
   }
 }
+
+.empty-state--library {
+  min-height: calc(100svh - 164px);
+  padding-block: 32px;
+  align-content: center;
+}
+.empty-actions {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 260px);
+}
+.empty-actions .button {
+  justify-content: center;
+}

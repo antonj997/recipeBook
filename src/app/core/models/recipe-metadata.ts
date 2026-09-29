@@ -131,7 +131,6 @@ export function readRecipeMetadata(value: unknown, strict = false): RecipeMetada
 export function combinedDescription(value: unknown): string | undefined {
   if (!object(value)) return undefined;
   const description = typeof value['description'] === 'string' ? value['description'].trim() : '';
-  const tips = typeof value['tips'] === 'string' ? value['tips'].trim() : '';
   const substitutions =
     typeof value['substitutions'] === 'string' ? value['substitutions'].trim() : '';
   const oldNotes =
@@ -140,7 +139,7 @@ export function combinedDescription(value: unknown): string | undefined {
       ? value['dietaryNotes'].trim()
       : '';
   return (
-    [description, tips, substitutions, oldNotes]
+    [description, substitutions, oldNotes]
       .filter(
         (part, index, all) =>
           part && !all.slice(0, index).some((previous) => previous.includes(part)),

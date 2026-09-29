@@ -66,6 +66,7 @@
       #recipeRail
       [id]="railId()"
       class="recipe-rail"
+      [style.--swipe-tilt]="swipeTilt() + 'deg'"
       role="region"
       [attr.aria-label]="title() + ', horizontal scrolling'"
       tabindex="0"
@@ -74,8 +75,17 @@
       (wheel)="interruptScroll()"
       (keydown)="onKeydown($event)"
     >
-      @for (recipe of recipes(); track recipe.id) {
-        <a class="recipe-card" [routerLink]="['/recipes', recipe.id]">
+      @for (recipe of recipes(); track recipe.id; let i = $index) {
+        <a
+          class="recipe-card"
+          appCardTilt
+          [routerLink]="['/recipes', recipe.id]"
+          [style.--card-color]="
+            recipe.imageDataUrl
+              ? 'var(--color-' + cardColors[i % cardColors.length] + ')'
+              : placeholderBackground(recipe.id)
+          "
+        >
           <div class="recipe-card__media">
             @if (recipe.imageDataUrl) {
               <img
@@ -91,13 +101,8 @@
           </div>
           <div class="recipe-card__content">
             <h3>{{ recipe.title }}</h3>
-            @if (recipe.servings || recipe.totalTime != null) {
-              <p>
-                {{ recipe.servings ? recipe.servings + ' servings' : '' }}
-                @if (recipe.totalTime != null) {
-                  <span>{{ recipe.servings ? ' · ' : '' }}{{ formatTime(recipe.totalTime!) }}</span>
-                }
-              </p>
+            @if (recipe.totalTime != null) {
+              <p><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</p>
             }
           </div>
         </a>
@@ -114,4 +119,26 @@
       [style.backdrop-filter]="'url(#' + filterId() + ') blur(2px)'"
     ></div>
   </div>
+  @if (stops().length > 1) {
+    <div
+      #progressControls
+      class="carousel-progress"
+      role="group"
+      [attr.aria-label]="title() + ' carousel position'"
+    >
+      @for (stop of stops(); track stop.recipeIndex; let i = $index) {
+        <button
+          type="button"
+          class="progress-dot"
+          [attr.aria-label]="'Show ' + recipes()[stop.recipeIndex].title"
+          [attr.aria-controls]="railId()"
+          [attr.aria-current]="currentStop() === i ? 'true' : null"
+          [style.--dot-strength]="dotStrength(i)"
+          (click)="scrollToCard(stop.recipeIndex)"
+        >
+          <span aria-hidden="true"></span>
+        </button>
+      }
+    </div>
+  }
 </section>

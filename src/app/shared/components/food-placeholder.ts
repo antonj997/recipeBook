@@ -25,6 +25,11 @@ function hash(seed: string): number {
   return value >>> 0;
 }
 
+// Cards and their missing-photo artwork share one stable color choice.
+export function foodPlaceholderBackground(seed: string): string {
+  return 'var(--color-' + colors[hash('color:' + seed) % colors.length] + ')';
+}
+
 @Component({
   selector: 'app-food-placeholder',
   imports: [FoodDoodleComponent],
@@ -37,7 +42,5 @@ function hash(seed: string): number {
 export class FoodPlaceholderComponent {
   seed = input.required<string>();
   kind = computed(() => kinds[hash('food:' + this.seed()) % kinds.length]);
-  background = computed(
-    () => 'var(--color-' + colors[hash('color:' + this.seed()) % colors.length] + ')',
-  );
+  background = computed(() => foodPlaceholderBackground(this.seed()));
 }

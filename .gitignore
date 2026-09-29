@@ -26,11 +26,9 @@ yarn-error.log
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
-!.vscode/mcp.json
 .history/*
 
 # Miscellaneous
-*.md
 /.angular/cache
 .sass-cache/
 /connect.lock
@@ -43,3 +41,23 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Local tools, private configuration and generated review artifacts
+.codex/
+.impeccable/
+opencode.json
+.vscode/mcp.json
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+*-report.md
+*-preview.html
+docs/superpowers/
+
+AI suggestions.md
+src/app/features/recipes/card-demo/README.md

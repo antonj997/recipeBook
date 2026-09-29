@@ -56,11 +56,12 @@
 }
 .recipe-rail {
   --card-width: clamp(240px, 27vw, 340px);
+  position: relative;
   display: flex;
   gap: 28px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 5px var(--page-gutter) 24px;
+  padding: 12px var(--page-gutter) 24px;
   scroll-padding-inline: var(--page-gutter);
   scroll-snap-type: x mandatory;
   overscroll-behavior-inline: contain;
@@ -88,11 +89,16 @@
   text-decoration: none;
   scroll-snap-align: start;
   scroll-snap-stop: always;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--card-color);
+  transform: perspective(1000px) rotateX(var(--tilt-x, 0deg))
+    rotateY(calc(var(--tilt-y, 0deg) + var(--swipe-tilt, 0deg)));
+  transition: transform 260ms var(--ease-out);
 }
 .recipe-card__media {
   width: 100%;
   aspect-ratio: 4/3;
-  border-radius: var(--radius-surface);
   overflow: hidden;
   background: var(--color-beige);
   transition:
@@ -106,8 +112,10 @@
   object-fit: cover;
 }
 .recipe-card__content {
-  padding: 22px 0 14px;
-  border-bottom: 1px solid var(--color-border);
+  padding: 22px 22px 24px;
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
   flex: 1;
 }
 .recipe-card h3 {
@@ -120,9 +128,16 @@
   overflow-wrap: anywhere;
 }
 .recipe-card p {
-  margin: 0;
+  margin: auto 0 0;
   font-size: 0.8rem;
-  color: var(--color-muted);
+  color: var(--color-ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.recipe-card p app-icon {
+  width: 16px;
+  height: 16px;
 }
 .recipe-card:focus-visible {
   outline-offset: 0;
@@ -154,14 +169,18 @@
   opacity: 1;
 }
 @media (hover: hover) {
-  .recipe-card:hover .recipe-card__media {
-    transform: translateY(-3px);
-    filter: saturate(1.08);
+  .rail-arrow:hover:not(:disabled) {
+    border-color: var(--color-ink);
+    background: var(--color-surface);
   }
-  .recipe-card:hover h3 {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 4px;
+  .rail-arrow app-icon {
+    transition: transform 180ms var(--ease-out);
+  }
+  .rail-arrow:hover:not(:disabled) app-icon {
+    transform: translateX(-3px);
+  }
+  .rail-arrow:hover:not(:disabled) .next-chevron {
+    transform: translateX(3px) rotate(180deg);
   }
 }
 @media (max-width: 600px) {
@@ -196,7 +215,7 @@
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none;
   }
-  .recipe-card:hover .recipe-card__media {
+  .recipe-card {
     transform: none;
     filter: none;
   }
@@ -204,4 +223,63 @@
 
 .next-chevron {
   transform: rotate(180deg);
+}
+
+.carousel-progress {
+  position: relative;
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  margin: -12px auto 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.carousel-progress::-webkit-scrollbar {
+  display: none;
+}
+.progress-dot {
+  flex: 0 0 auto;
+  width: calc(24px + 20px * var(--dot-strength, 0));
+  min-width: 24px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  transition: width 220ms var(--ease-out);
+}
+.progress-dot span {
+  width: calc(6px + 20px * var(--dot-strength, 0));
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  opacity: calc(0.55 + 0.45 * var(--dot-strength, 0));
+  transition:
+    width 180ms var(--ease-out),
+    opacity 180ms ease-out;
+}
+.progress-dot:focus-visible span {
+  width: 26px;
+  opacity: 1;
+}
+.progress-dot:focus-visible {
+  width: 44px;
+}
+@media (hover: hover) {
+  .progress-dot:hover {
+    background: transparent;
+    width: 44px;
+  }
+  .progress-dot:hover span {
+    width: 26px;
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress-dot,
+  .progress-dot span {
+    transition: none;
+  }
 }

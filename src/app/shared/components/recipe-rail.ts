@@ -1,3 +1,4 @@
+import { CardTiltDirective } from './card-tilt';
 import { IconComponent } from './icon';
 import { formatRecipeTime } from '../../core/models/recipe-metadata';
 import {
@@ -13,17 +14,19 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { Recipe } from '../../core/models/recipe.model';
-import { FoodPlaceholderComponent } from './food-placeholder';
+import { FoodPlaceholderComponent, foodPlaceholderBackground } from './food-placeholder';
 
 @Component({
   selector: 'app-recipe-rail',
-  imports: [RouterLink, FoodPlaceholderComponent, IconComponent],
+  imports: [RouterLink, FoodPlaceholderComponent, IconComponent, CardTiltDirective],
   templateUrl: './recipe-rail.html',
   styleUrl: './recipe-rail.scss',
   host: { '(window:resize)': 'onResize()' },
 })
 export class RecipeRailComponent implements OnDestroy {
   formatTime = formatRecipeTime;
+  placeholderBackground = foodPlaceholderBackground;
+  cardColors = ['blue', 'clay', 'sage', 'accent', 'beige', 'butter'];
   title = input.required<string>();
   recipes = input.required<Recipe[]>();
   railId = input.required<string>();
@@ -32,9 +35,20 @@ export class RecipeRailComponent implements OnDestroy {
   canScrollPrevious = signal(false);
   canScrollNext = signal(false);
   activeIndex = signal(0);
+  stops = signal<{ recipeIndex: number; left: number }[]>([]);
+  progress = signal(0);
+  currentStop = computed(() => Math.round(this.progress()));
+  progressControls = viewChild<ElementRef<HTMLDivElement>>('progressControls');
+  swipeTilt = signal(0);
+  private lastScroll = 0;
+  private lastScrollTime = 0;
   private frame = 0;
   private targetIndex: number | null = null;
   private settleTimer?: ReturnType<typeof setTimeout>;
+
+  dotStrength(index: number): number {
+    return Math.max(0, 1 - Math.abs(this.progress() - index));
+  }
 
   constructor() {
     afterNextRender(() => this.updateArrowState());
@@ -45,6 +59,8 @@ export class RecipeRailComponent implements OnDestroy {
       if (rail) {
         this.targetIndex = null;
         rail.scrollTo({ left: 0, behavior: 'instant' });
+        this.lastScroll = 0;
+        this.swipeTilt.set(0);
         this.queueUpdate();
       }
     });
@@ -52,14 +68,12 @@ export class RecipeRailComponent implements OnDestroy {
   private positions(): number[] {
     const rail = this.rail()?.nativeElement;
     if (!rail) return [];
-    const rect = rail.getBoundingClientRect();
     const mobile = window.matchMedia('(max-width: 600px)').matches;
     const padding = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
     const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
     return Array.from(rail.querySelectorAll<HTMLElement>('.recipe-card')).map((card) => {
-      const box = card.getBoundingClientRect();
-      const align = mobile ? (rail.clientWidth - box.width) / 2 : padding;
-      return Math.max(0, Math.min(max, rail.scrollLeft + box.left - rect.left - align));
+      const align = mobile ? (rail.clientWidth - card.offsetWidth) / 2 : padding;
+      return Math.max(0, Math.min(max, card.offsetLeft - align));
     });
   }
   updateArrowState(): void {
@@ -69,6 +83,45 @@ export class RecipeRailComponent implements OnDestroy {
     this.canScrollPrevious.set(rail.scrollLeft > 2);
     this.canScrollNext.set(rail.scrollLeft < max - 2);
     const positions = this.positions();
+    // A desktop rail shows several cards at once; duplicate end positions share one dot.
+    const stops = positions.flatMap((left, recipeIndex) =>
+      recipeIndex === 0 || Math.abs(left - positions[recipeIndex - 1]) > 2
+        ? [{ recipeIndex, left }]
+        : [],
+    );
+    if (
+      stops.length !== this.stops().length ||
+      stops.some(
+        (stop, i) =>
+          stop.recipeIndex !== this.stops()[i].recipeIndex ||
+          Math.abs(stop.left - this.stops()[i].left) > 1,
+      )
+    ) {
+      this.stops.set(stops);
+    }
+    let progress = 0;
+    for (let i = 1; i < stops.length; i++) {
+      if (rail.scrollLeft >= stops[i].left) progress = i;
+      else {
+        progress =
+          i -
+          1 +
+          Math.max(0, (rail.scrollLeft - stops[i - 1].left) / (stops[i].left - stops[i - 1].left));
+        break;
+      }
+    }
+    const previousStop = this.currentStop();
+    this.progress.set(progress);
+    // Keep the active dot visible for larger collections without scrolling the page.
+    if (previousStop !== this.currentStop()) {
+      const controls = this.progressControls()?.nativeElement;
+      const dot = controls?.children[this.currentStop()] as HTMLElement | undefined;
+      if (controls && dot)
+        controls.scrollTo({
+          left: dot.offsetLeft - controls.clientWidth / 2 + dot.offsetWidth / 2,
+          behavior: 'instant',
+        });
+    }
     let nearest = 0;
     positions.forEach((p, i) => {
       if (Math.abs(p - rail.scrollLeft) < Math.abs(positions[nearest] - rail.scrollLeft))
@@ -78,13 +131,24 @@ export class RecipeRailComponent implements OnDestroy {
   }
   queueUpdate(): void {
     cancelAnimationFrame(this.frame);
-    this.frame = requestAnimationFrame(() => this.updateArrowState());
+    this.frame = requestAnimationFrame(() => {
+      const rail = this.rail()?.nativeElement;
+      const now = performance.now();
+      if (rail && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const speed = (rail.scrollLeft - this.lastScroll) / Math.max(16, now - this.lastScrollTime);
+        this.swipeTilt.set(Math.max(-4, Math.min(4, speed * -2.5)));
+        this.lastScroll = rail.scrollLeft;
+        this.lastScrollTime = now;
+      }
+      this.updateArrowState();
+    });
   }
   onScroll(): void {
     this.queueUpdate();
     clearTimeout(this.settleTimer);
     this.settleTimer = setTimeout(() => {
       this.targetIndex = null;
+      this.swipeTilt.set(0);
       this.updateArrowState();
     }, 180);
   }
@@ -108,9 +172,15 @@ export class RecipeRailComponent implements OnDestroy {
       Math.abs(positions[next] - rail.scrollLeft) < 2
     )
       next += direction;
-    this.targetIndex = next;
+    this.scrollToCard(next);
+  }
+  scrollToCard(index: number): void {
+    const rail = this.rail()?.nativeElement;
+    const positions = this.positions();
+    if (!rail || positions[index] == null) return;
+    this.targetIndex = index;
     rail.scrollTo({
-      left: positions[next],
+      left: positions[index],
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'instant'
         : 'smooth',

@@ -1,59 +1,26 @@
-# Recipiebook
+# Recipebook
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.8.
+A personal Angular recipe collection. Recipes, photos and collections are stored locally in Dexie (IndexedDB). No account or remote database is used.
 
-## Development server
+## Run locally
 
-To start a local development server, run:
+Use Node.js 24 and install dependencies with `npm install`, then run `npm run dev`. This starts Angular and the Node recipe importer. If Windows reports a certificate error during link import, run the importer with `node --use-system-ca server/index.mjs` and Angular with `npm start -- --proxy-config src/proxy.conf.json`.
 
-```bash
-ng serve
-```
+Link imports are reviewed before saving. Drafts remain in the current browser tab until approved or discarded. Uploaded and downloaded photos are compressed for offline storage. Cookbook backup import/export is available in Settings.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Build and publish
 
-## Code scaffolding
+Run `npm run build` for the normal production build. Run `npm run build -- --configuration production,pages --base-href /recipeBook/` for GitHub Pages. The Pages build uses hash routing so opening or refreshing recipe links works without server rewrites.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+The `Publish Recipebook` workflow builds and deploys `main` to GitHub Pages. Set the repository's Pages source to GitHub Actions. Only compiled browser assets are published.
 
-```bash
-ng generate component component-name
-```
+GitHub Pages is static hosting: link import requires the local Node server and is unavailable on the published site. Manual recipe creation and cookbook import work there. Dexie data belongs to its browser and origin: to move local recipes to the published app, export a cookbook locally and import it on the published site. Keep backups before clearing browser data.
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Project structure
 
-```bash
-ng generate --help
-```
+- `src/app/features`: recipe list, saved/unsaved recipe view, editor, importer and settings.
+- `src/app/shared/components`: icons, food drawings, carousel and confirmation dialog.
+- `src/app/core`: Dexie database, recipe metadata, photos, draft and feedback services.
+- `server`: local link extraction and normalization; never a database.
 
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+`DESIGN.md` documents the visual style and `IMPORTING.md` documents import behavior. Local tool configuration, credentials, logs and generated previews are ignored by Git.
