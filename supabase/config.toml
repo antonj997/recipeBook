@@ -16,10 +16,13 @@ enabled = true
 site_url = "https://antonj997.github.io/recipeBook/"
 additional_redirect_urls = ["http://127.0.0.1:4300/", "http://localhost:4300/", "http://localhost:4200/"]
 enable_signup = true
+minimum_password_length = 8
+password_requirements = ""
 
 [auth.email]
 enable_signup = true
 enable_confirmations = true
+secure_password_change = true
 otp_length = 6
 
 [functions.import-recipe]

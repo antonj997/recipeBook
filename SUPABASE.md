@@ -4,7 +4,7 @@ Project: `qlveyumspzdlscsgudex` — `https://qlveyumspzdlscsgudex.supabase.co`
 
 Recipes and collections belong to the signed-in user. Every exposed table has an ownership policy. Photos live in a private Storage bucket. The browser only receives the project URL and a **publishable** key; a service-role or secret key must never be included in the app.
 
-Dexie remains the offline cache. Each account gets a separate database; the original `RecipebookDB` stays intact. Use **Settings → Copy device recipes** after signing in to copy the original cookbook to an account. Copying skips existing IDs and does not remove the device copy. Downloads and backup imports still include photos.
+Dexie remains the offline cache. Each account gets a separate database; the original `RecipebookDB` stays intact. Use **Settings → Copy to my account** after signing in to copy the original cookbook to an account. Copying skips existing IDs and does not remove the device copy. Downloads and backup imports still include photos.
 
 Edits are saved locally with an outbox entry in the same transaction. Reconnect or use **Sync now** to upload them and fetch the cloud cookbook. Changing an item on two devices uses the last successful upload; this is not collaborative editing. Deletion markers tell other devices which cached items to remove. Signing out returns to the original device cookbook; pending account edits remain in that account's cache until it signs in again.
 
@@ -24,7 +24,13 @@ npx.cmd --yes supabase@2.118.0 functions deploy import-recipe --project-ref qlve
 npx.cmd --yes supabase@2.118.0 db advisors --project-ref qlveyumspzdlscsgudex
 ```
 
-The migration adds recipes, collections, private image policies, and an atomic import quota. The deployed project uses the Pages URL and Supabase's default sign-in emails. Recipebook supports both magic links and email codes; its app initializer consumes a sign-in callback before the hash router starts. There is no password stored by Recipebook. The free default sender only delivers to project organization members, with a low sending limit. Template customization requires custom SMTP or a paid plan. Configure custom SMTP before opening email sign-in to other people; the optional six-digit template is in `supabase/templates/magic-link.html`. Do not disable email confirmation.
+The migration adds recipes, collections, private image policies, and an atomic import quota. Recipebook supports in-app account creation and email/password sign-in. The minimum password length is eight characters, with no required character combinations. Supabase hashes passwords; Recipebook does not store passwords in its own database or backups. Apply the Auth configuration to the hosted project as well as committing it locally.
+
+Email confirmation stays enabled. **Forgot password?** sends a recovery link that opens a new-password form; the app initializer consumes the callback before hash routing. Password-change protection requires a recent authenticated session. Recovery changes the password on the existing account and leaves cookbook ownership intact. Password recovery remains necessary for ordinary password accounts; there is no separate migration flow for earlier email-only accounts.
+
+The default sender is retained. It only delivers to project team addresses and currently permits two emails per hour. Everyday password sign-in does not send email, but confirmation and recovery still depend on email delivery. Configure custom SMTP before inviting friends outside the project team; do not disable email confirmation to bypass delivery limits.
+
+Signing out waits for the current synchronization attempt and warns when changes remain queued. Queued changes and account caches are retained. A successful sync status is only shown after a complete upload/download cycle succeeds.
 
 ## Configure the app and Pages
 

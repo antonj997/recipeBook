@@ -9,7 +9,9 @@
   <div class="settings-card" id="account">
     <h2>Account</h2>
     @if (auth.configured()) {
-      @if (auth.user(); as user) {
+      @if (auth.passwordRecovery()) {
+        <app-account-access [blocked]="importing() || exporting()" />
+      } @else if (auth.user(); as user) {
         <p>{{ user.email }}</p>
         <p role="status" aria-live="polite">
           {{
@@ -19,11 +21,18 @@
                 ? 'Syncing…'
                 : cloud.pending()
                   ? cloud.pending() + ' changes waiting to sync'
-                  : 'Your cookbook is synced'
+                  : cloud.error()
+                    ? 'Saved on this device · sync needs attention'
+                    : cloud.lastSynced()
+                      ? 'Your cookbook is synced'
+                      : 'Checking your cloud cookbook…'
           }}
         </p>
         @if (cloud.error()) {
           <p class="error" role="alert">{{ cloud.error() }}</p>
+        }
+        @if (auth.callbackNotice()) {
+          <p role="status">{{ auth.callbackNotice() }}</p>
         }
         <p class="privacy-note">
           Signing out keeps this account’s offline copy and unsynced changes on this device. On a
@@ -37,12 +46,13 @@
           >
             Sync now
           </button>
+
           <button
             type="button"
-            (click)="copyDeviceRecipes()"
-            [disabled]="accountBusy() || cloud.syncing() || importing() || exporting()"
+            (click)="requestPasswordReset()"
+            [disabled]="accountBusy() || importing() || exporting()"
           >
-            Copy device recipes
+            Reset password
           </button>
           <button
             type="button"
@@ -52,55 +62,24 @@
             Sign out
           </button>
         </div>
-      } @else {
-        <p>Sign in to save your cookbook across devices and import recipe links.</p>
-        <form class="account-form" (submit)="signIn($event)">
-          <label for="account-email">Email</label>
-          <input
-            id="account-email"
-            type="email"
-            autocomplete="email"
-            required
-            [value]="email()"
-            (input)="setEmail($event)"
-            [readOnly]="codeSent()"
-            [disabled]="accountBusy() || importing() || exporting()"
-          />
-          @if (codeSent()) {
-            <label for="account-code">Sign-in code (if included)</label>
-            <input
-              id="account-code"
-              type="text"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              pattern="[0-9]{6,8}"
-              minlength="6"
-              maxlength="8"
-              required
-              [value]="code()"
-              (input)="setCode($event)"
-              [disabled]="accountBusy()"
-            />
-          }
-          <div class="account-actions">
+        @if (deviceRecipes()) {
+          <div class="device-cookbook">
+            <h3>Recipes on this device</h3>
+            <p>
+              {{ deviceRecipes() }} recipes in your device cookbook are separate from this account.
+              Copy them to save them across devices. Your device copy will stay intact.
+            </p>
             <button
-              class="primary"
-              type="submit"
-              [disabled]="accountBusy() || importing() || exporting()"
+              type="button"
+              (click)="copyDeviceRecipes()"
+              [disabled]="accountBusy() || cloud.syncing() || importing() || exporting()"
             >
-              {{ accountBusy() ? 'Please wait…' : codeSent() ? 'Sign in' : 'Send sign-in email' }}
+              Copy to my account
             </button>
-            @if (codeSent()) {
-              <button
-                type="button"
-                (click)="codeSent.set(false); code.set('')"
-                [disabled]="accountBusy()"
-              >
-                Use another email
-              </button>
-            }
           </div>
-        </form>
+        }
+      } @else {
+        <app-account-access [blocked]="importing() || exporting()" />
       }
     } @else {
       <p>Cloud sync is not set up yet. Your recipes are saved on this device.</p>
@@ -137,7 +116,7 @@
     <button
       type="button"
       class="primary"
-      [disabled]="exporting() || importing()"
+      [disabled]="exporting() || importing() || accountBusy()"
       (click)="exportBackup()"
     >
       {{ exporting() ? 'Exporting...' : 'Download backup' }}
@@ -159,7 +138,7 @@
       type="file"
       accept=".json,application/json"
       (change)="onFileSelected($event)"
-      [disabled]="importing() || exporting()"
+      [disabled]="importing() || exporting() || accountBusy()"
       hidden
     />
 
@@ -167,7 +146,7 @@
     <button
       type="button"
       class="secondary"
-      [disabled]="importing() || exporting()"
+      [disabled]="importing() || exporting() || accountBusy()"
       (click)="backupFile.click()"
     >
       {{ importing() ? 'Importing...' : 'Choose backup file' }}

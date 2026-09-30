@@ -46,9 +46,19 @@ export class App {
       this.drafts.clear();
       this.confirmation.answer(true);
       this.feedback.dismiss();
-      void this.router.navigate(['/']).finally(() => {
+      // Keep account feedback visible; other views must leave the previous cookbook.
+      const target = this.router.url.split(/[?#]/)[0] === '/settings' ? '/settings' : '/';
+      void this.router.navigate([target]).finally(() => {
         if (version === next) this.accountChanging.set(false);
       });
+    });
+    effect(() => {
+      if (
+        this.cloud.auth.passwordRecovery() ||
+        this.cloud.auth.callbackError() ||
+        this.cloud.auth.callbackNotice()
+      )
+        void this.router.navigate(['/settings']);
     });
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (!(event instanceof NavigationEnd)) return;

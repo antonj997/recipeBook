@@ -1,26 +1,55 @@
 # Recipebook
 
-A personal Angular recipe collection. Recipes, photos and collections are stored locally in Dexie (IndexedDB). No account or remote database is used.
+A personal recipe app for collecting recipes and cooking from them on your phone or computer. Built with Angular, Dexie and Supabase.
 
-## Run locally
+[Open Recipebook](https://antonj997.github.io/recipeBook/)
 
-Use Node.js 24 and install dependencies with `npm install`, then run `npm run dev`. This starts Angular and the Node recipe importer. If Windows reports a certificate error during link import, run the importer with `node --use-system-ca server/index.mjs` and Angular with `npm start -- --proxy-config src/proxy.conf.json`.
+## Features
 
-Link imports are reviewed before saving. Drafts remain in the current browser tab until approved or discarded. Uploaded and downloaded photos are compressed for offline storage. Cookbook backup import/export is available in Settings.
+- Create recipes, import supported recipe links, and review imports before saving.
+- Organize recipes into collections, search your cookbook, and browse recipe cards.
+- Group ingredients and instructions, adjust servings, and check off cooking steps.
+- Store photos, cooking time and available nutrition information.
+- Sign in with email and password for a private cookbook across devices.
+- Use saved recipes offline and install the app as a PWA.
+- Export and restore cookbook backups, including photos.
 
-## Build and publish
+## Getting started
 
-Run `npm run build` for the normal production build. Run `npm run build -- --configuration production,pages --base-href /recipeBook/` for GitHub Pages. The Pages build uses hash routing so opening or refreshing recipe links works without server rewrites.
+Use Node.js 24 or newer and npm.
 
-The `Publish Recipebook` workflow builds and deploys `main` to GitHub Pages. Set the repository's Pages source to GitHub Actions. Only compiled browser assets are published.
+```sh
+npm ci
+npm run dev
+```
 
-GitHub Pages is static hosting: link import requires the local Node server and is unavailable on the published site. Manual recipe creation and cookbook import work there. Dexie data belongs to its browser and origin: to move local recipes to the published app, export a cookbook locally and import it on the published site. Keep backups before clearing browser data.
+The development command starts Angular and the local recipe importer. To run only Angular, use `npm start`. The local address is printed when the server starts.
+
+For cloud accounts and hosted link import, provide `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` as environment variables. See [.env.example](.env.example) and [backend setup](SUPABASE.md). Without cloud configuration, the app stores recipes in the browser and link import uses the local server.
+
+## Accounts and storage
+
+Each signed-in account has its own cloud cookbook and offline cache. Recipes created while signed out belong to the device cookbook. **Settings → Copy to my account** copies those recipes after signing in without deleting the original copy.
+
+Passwords require at least eight characters, without character-composition rules. Email confirmation and password recovery use Supabase. Its default email sender only supports project team addresses and has a low sending limit; configure custom SMTP before offering accounts to friends outside the project team.
+
+Signing out attempts to synchronize first and keeps queued changes on the device. Browser storage can be cleared by the browser or device owner, so keep exported backups. Offline copies are not encrypted; use a trusted browser profile. See [security and privacy](SECURITY.md) for storage limitations.
+
+## Build and deployment
+
+```sh
+npm run build
+npm run build -- --configuration production,pages --base-href /recipeBook/
+```
+
+The `Publish Recipebook` GitHub Actions workflow deploys `main` to GitHub Pages. Configure Pages to use GitHub Actions and set the two Supabase repository variables described in [SUPABASE.md](SUPABASE.md). Pages serves the frontend; Supabase handles authentication, cloud storage and hosted imports. The Pages build uses hash routing.
 
 ## Project structure
 
-- `src/app/features`: recipe list, saved/unsaved recipe view, editor, importer and settings.
-- `src/app/shared/components`: icons, food drawings, carousel and confirmation dialog.
-- `src/app/core`: Dexie database, recipe metadata, photos, draft and feedback services.
-- `server`: local link extraction and normalization; never a database.
+- `src/app/features`: recipe browsing, cooking view, editor, importer and settings.
+- `src/app/shared`: reusable controls, illustrations and animations.
+- `src/app/core`: storage, account synchronization, photos and recipe models.
+- `server`: local recipe importer.
+- `supabase`: database migrations, Auth configuration and hosted importer.
 
-`DESIGN.md` documents the visual style and `IMPORTING.md` documents import behavior. Local tool configuration, credentials, logs and generated previews are ignored by Git.
+[DESIGN.md](DESIGN.md) describes the visual language. [IMPORTING.md](IMPORTING.md) explains supported import data. Credentials, generated builds, local configuration and review artifacts are excluded from Git.
