@@ -131,6 +131,11 @@
       class="carousel-progress"
       role="group"
       [attr.aria-label]="title() + ' carousel position'"
+      (pointerdown)="startScrub($event)"
+      (pointermove)="moveScrub($event)"
+      (pointerup)="finishScrub($event)"
+      (pointercancel)="finishScrub($event)"
+      (lostpointercapture)="finishScrub($event)"
     >
       @for (stop of stops(); track stop.recipeIndex; let i = $index) {
         <button
@@ -140,7 +145,8 @@
           [attr.aria-controls]="railId()"
           [attr.aria-current]="currentStop() === i ? 'true' : null"
           [style.--dot-strength]="dotStrength(i)"
-          (click)="scrollToCard(stop.recipeIndex)"
+          [attr.data-stop]="i"
+          (click)="onProgressClick($event, stop.recipeIndex)"
         >
           <span aria-hidden="true"></span>
         </button>

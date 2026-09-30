@@ -77,6 +77,9 @@
 .recipe-rail::-webkit-scrollbar {
   display: none;
 }
+.recipe-rail.is-scrubbing {
+  scroll-snap-type: none;
+}
 .recipe-rail:focus-visible {
   outline-offset: 0;
 }
@@ -225,6 +228,14 @@
   margin: -12px auto 8px;
   overflow-x: auto;
   scrollbar-width: none;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  contain: layout style;
+}
+.carousel-progress.is-scrubbing {
+  cursor: grabbing;
 }
 .carousel-progress::-webkit-scrollbar {
   display: none;
@@ -240,7 +251,8 @@
   border: 0;
   background: transparent;
   border-radius: 6px;
-  transition: width 220ms var(--ease-out);
+  // Width follows the carousel's continuous scroll position without retargeted transitions.
+  transition: none;
 }
 .progress-dot span {
   width: calc(6px + 20px * var(--dot-strength, 0));
@@ -248,9 +260,7 @@
   border-radius: 999px;
   background: var(--color-ink);
   opacity: calc(0.55 + 0.45 * var(--dot-strength, 0));
-  transition:
-    width 180ms var(--ease-out),
-    opacity 180ms ease-out;
+  transition: none;
 }
 .progress-dot:focus-visible span {
   width: 26px;
@@ -260,11 +270,11 @@
   width: 44px;
 }
 @media (hover: hover) {
-  .progress-dot:hover {
+  .carousel-progress:not(.is-scrubbing) .progress-dot:hover {
     background: transparent;
     width: 44px;
   }
-  .progress-dot:hover span {
+  .carousel-progress:not(.is-scrubbing) .progress-dot:hover span {
     width: 26px;
     opacity: 1;
   }

@@ -22,7 +22,11 @@ import { FoodPlaceholderComponent, foodPlaceholderBackground } from './food-plac
   imports: [RouterLink, FoodPlaceholderComponent, IconComponent, CardTiltDirective],
   templateUrl: './recipe-rail.html',
   styleUrl: './recipe-rail.scss',
-  host: { '(window:resize)': 'onResize()' },
+  host: {
+    '(window:resize)': 'onResize()',
+    '(window:blur)': 'finishScrub()',
+    '(window:pointerup)': 'finishScrub($event)',
+  },
 })
 export class RecipeRailComponent implements OnDestroy {
   formatTime = formatRecipeTime;
@@ -51,6 +55,18 @@ export class RecipeRailComponent implements OnDestroy {
   private frame = 0;
   private targetIndex: number | null = null;
   private settleTimer?: ReturnType<typeof setTimeout>;
+  private cardPositions: number[] = [];
+  private needsMeasurement = true;
+  private suppressClickUntil = 0;
+  private scrub?: {
+    pointerId: number;
+    controls: HTMLDivElement;
+    startX: number;
+    startY: number;
+    startProgress: number;
+    pixelsPerStop: number;
+    moved: boolean;
+  };
 
   dotStrength(index: number): number {
     return Math.max(0, 1 - Math.abs(this.progress() - index));
@@ -59,6 +75,10 @@ export class RecipeRailComponent implements OnDestroy {
   constructor() {
     afterNextRender(() => this.updateArrowState());
     effect(() => {
+      this.finishScrub(undefined, false);
+      this.needsMeasurement = true;
+      this.cardPositions = [];
+      this.restoreSnap();
       if (!this.recipes().length) {
         this.canScrollPrevious.set(false);
         this.canScrollNext.set(false);
@@ -79,15 +99,20 @@ export class RecipeRailComponent implements OnDestroy {
     });
   }
   private positions(): number[] {
+    if (!this.needsMeasurement) return this.cardPositions;
     const rail = this.rail()?.nativeElement;
     if (!rail) return [];
     const mobile = window.matchMedia('(max-width: 600px)').matches;
     const padding = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
     const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
-    return Array.from(rail.querySelectorAll<HTMLElement>('.recipe-card')).map((card) => {
-      const align = mobile ? (rail.clientWidth - card.offsetWidth) / 2 : padding;
-      return Math.max(0, Math.min(max, card.offsetLeft - align));
-    });
+    this.cardPositions = Array.from(rail.querySelectorAll<HTMLElement>('.recipe-card')).map(
+      (card) => {
+        const align = mobile ? (rail.clientWidth - card.offsetWidth) / 2 : padding;
+        return Math.max(0, Math.min(max, card.offsetLeft - align));
+      },
+    );
+    this.needsMeasurement = false;
+    return this.cardPositions;
   }
   updateArrowState(): void {
     const rail = this.rail()?.nativeElement;
@@ -123,17 +148,12 @@ export class RecipeRailComponent implements OnDestroy {
         break;
       }
     }
-    const previousStop = this.currentStop();
     this.progress.set(progress);
-    // Keep the active dot visible for larger collections without scrolling the page.
-    if (previousStop !== this.currentStop()) {
-      const controls = this.progressControls()?.nativeElement;
-      const dot = controls?.children[this.currentStop()] as HTMLElement | undefined;
-      if (controls && dot)
-        controls.scrollTo({
-          left: dot.offsetLeft - controls.clientWidth / 2 + dot.offsetWidth / 2,
-          behavior: 'instant',
-        });
+    // Follow fractional progress continuously, rather than jumping the strip at each dot.
+    const controls = this.progressControls()?.nativeElement;
+    if (controls && controls.scrollWidth > controls.clientWidth) {
+      const last = Math.max(1, stops.length - 1);
+      controls.scrollLeft = (progress / last) * (controls.scrollWidth - controls.clientWidth);
     }
     let nearest = 0;
     positions.forEach((p, i) => {
@@ -143,8 +163,9 @@ export class RecipeRailComponent implements OnDestroy {
     this.activeIndex.set(nearest);
   }
   queueUpdate(): void {
-    cancelAnimationFrame(this.frame);
+    if (this.frame) return;
     this.frame = requestAnimationFrame(() => {
+      this.frame = 0;
       const rail = this.rail()?.nativeElement;
       const now = performance.now();
       if (rail && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -159,18 +180,105 @@ export class RecipeRailComponent implements OnDestroy {
   onScroll(): void {
     this.queueUpdate();
     clearTimeout(this.settleTimer);
+    if (this.scrub?.moved) return;
     this.settleTimer = setTimeout(() => {
       this.targetIndex = null;
       this.swipeTilt.set(0);
       this.updateArrowState();
+      this.restoreSnap();
     }, 180);
   }
   onResize(): void {
+    this.finishScrub(undefined, false);
+    this.restoreSnap();
+    this.needsMeasurement = true;
     this.targetIndex = null;
     this.queueUpdate();
   }
   interruptScroll(): void {
+    this.restoreSnap();
     this.targetIndex = null;
+  }
+  private restoreSnap(): void {
+    this.rail()?.nativeElement.classList.remove('is-scrubbing');
+  }
+  startScrub(event: PointerEvent): void {
+    if (!event.isPrimary || event.button !== 0 || this.stops().length < 2 || this.scrub) return;
+    const controls = event.currentTarget as HTMLDivElement;
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.progress-dot');
+    // Freeze gesture geometry: expanding dots and strip scrolling must not move its target.
+    this.scrub = {
+      pointerId: event.pointerId,
+      controls,
+      startX: event.clientX,
+      startY: event.clientY,
+      startProgress: button ? Number(button.dataset['stop']) : this.progress(),
+      pixelsPerStop: Math.max(
+        1,
+        Math.min(24, (controls.clientWidth - 44) / (this.stops().length - 1)),
+      ),
+      moved: false,
+    };
+  }
+  moveScrub(event: PointerEvent): void {
+    const scrub = this.scrub;
+    if (!scrub || scrub.pointerId !== event.pointerId) return;
+    const dx = event.clientX - scrub.startX;
+    const dy = event.clientY - scrub.startY;
+    if (!scrub.moved) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 6) return;
+      // Vertical movement still scrolls the page; only horizontal movement scrubs cards.
+      if (Math.abs(dy) > Math.abs(dx)) {
+        this.finishScrub(undefined, false);
+        return;
+      }
+      scrub.moved = true;
+      scrub.controls.setPointerCapture(event.pointerId);
+      scrub.controls.classList.add('is-scrubbing');
+      this.rail()?.nativeElement.classList.add('is-scrubbing');
+      this.targetIndex = null;
+      clearTimeout(this.settleTimer);
+    }
+    event.preventDefault();
+    const stops = this.stops();
+    const progress = Math.max(
+      0,
+      Math.min(stops.length - 1, scrub.startProgress + dx / scrub.pixelsPerStop),
+    );
+    const lower = Math.floor(progress);
+    const upper = Math.min(stops.length - 1, lower + 1);
+    const left = stops[lower].left + (stops[upper].left - stops[lower].left) * (progress - lower);
+    this.rail()?.nativeElement.scrollTo({ left, behavior: 'instant' });
+    this.queueUpdate();
+  }
+  finishScrub(event?: PointerEvent, snap = true): void {
+    const scrub = this.scrub;
+    if (!scrub || (event && event.pointerId !== scrub.pointerId)) return;
+    this.scrub = undefined;
+    if (scrub.controls.hasPointerCapture(scrub.pointerId))
+      scrub.controls.releasePointerCapture(scrub.pointerId);
+    scrub.controls.classList.remove('is-scrubbing');
+    const rail = this.rail()?.nativeElement;
+    if (scrub.moved) {
+      this.suppressClickUntil = performance.now() + 400;
+      // Read the last scroll position before restoring native snapping.
+      if (snap) this.updateArrowState();
+      const stop = snap ? this.stops()[this.currentStop()] : undefined;
+      if (stop) {
+        // Keep snapping disabled during the short settling scroll, avoiding a release jump.
+        this.scrollToCard(stop.recipeIndex);
+        this.onScroll();
+      } else {
+        rail?.classList.remove('is-scrubbing');
+      }
+    } else {
+      rail?.classList.remove('is-scrubbing');
+    }
+  }
+  onProgressClick(event: MouseEvent, recipeIndex: number): void {
+    // Releasing a drag can synthesize a click; keyboard activation must always work.
+    if (event.detail > 0 && performance.now() < this.suppressClickUntil) return;
+    this.scrollToCard(recipeIndex);
   }
   scrollByCard(direction: -1 | 1): void {
     const rail = this.rail()?.nativeElement;
@@ -207,6 +315,7 @@ export class RecipeRailComponent implements OnDestroy {
     }
   }
   ngOnDestroy(): void {
+    this.finishScrub(undefined, false);
     cancelAnimationFrame(this.frame);
     clearTimeout(this.settleTimer);
   }
