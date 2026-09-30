@@ -59,7 +59,14 @@ export class RecipeRailComponent implements OnDestroy {
   constructor() {
     afterNextRender(() => this.updateArrowState());
     effect(() => {
-      this.recipes();
+      if (!this.recipes().length) {
+        this.canScrollPrevious.set(false);
+        this.canScrollNext.set(false);
+        this.activeIndex.set(0);
+        this.progress.set(0);
+        this.swipeTilt.set(0);
+        return;
+      }
       // A search changes the list. Start at its first result and refresh controls.
       const rail = this.rail()?.nativeElement;
       if (rail) {

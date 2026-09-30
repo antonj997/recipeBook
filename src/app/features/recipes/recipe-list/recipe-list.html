@@ -57,27 +57,36 @@
         <a class="button" routerLink="/settings" fragment="import-cookbook">Import cookbook</a>
       </div>
     </div>
-  } @else if (filteredRecipes().length === 0) {
-    <div class="empty-state">
-      <app-food-doodle />
-      <h2>No matching recipes</h2>
-      <button type="button" (click)="query.set('')">Clear search</button>
-    </div>
   } @else {
     <app-recipe-rail
-      [title]="query().trim() ? 'Search results' : 'All recipes'"
+      [title]="categoryTitle()"
       railId="all-recipes-rail"
       [recipes]="filteredRecipes()"
-    />
-  }
-  @if (!loading() && !error() && !query().trim()) {
-    @for (collection of collectionRails(); track collection.id) {
-      <app-recipe-rail
-        [title]="collection.name"
-        [railId]="'collection-' + collection.id"
-        [recipes]="collection.recipes"
-      />
-    }
+    >
+      <div rail-heading class="category-picker">
+        <h2 id="all-recipes-rail-heading">{{ categoryTitle() }}</h2>
+        <app-icon name="chevron" />
+        <select
+          aria-label="Recipe category"
+          [value]="selectedCollectionId()"
+          (change)="onCategoryChange($event)"
+        >
+          <option value="">All recipes</option>
+          @for (collection of collections(); track collection.id) {
+            <option [value]="collection.id">{{ collection.name }}</option>
+          }
+        </select>
+      </div>
+      <div rail-empty class="empty-state">
+        <app-food-doodle />
+        <h3>{{ query().trim() ? 'No matching recipes' : 'No recipes in this category' }}</h3>
+        @if (query().trim()) {
+          <button type="button" (click)="query.set('')">Clear search</button>
+        } @else {
+          <button type="button" (click)="selectedCollectionId.set('')">Show all recipes</button>
+        }
+      </div>
+    </app-recipe-rail>
   }
   <span class="sr-only" role="status">{{
     !loading() && query().trim()

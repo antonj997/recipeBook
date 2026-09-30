@@ -33,20 +33,21 @@ export class RecipeListComponent {
   recipes = signal<Recipe[]>([]);
   query = signal('');
   collections = signal<RecipeCollection[]>([]);
-  collectionRails = computed(() =>
-    this.collections()
-      .map((collection) => ({
-        ...collection,
-        recipes: this.filteredRecipes().filter((recipe) =>
-          recipe.collectionIds?.includes(collection.id),
-        ),
-      }))
-      .filter((collection) => collection.recipes.length),
+  selectedCollectionId = signal('');
+  categoryTitle = computed(
+    () =>
+      this.collections().find((collection) => collection.id === this.selectedCollectionId())
+        ?.name ?? 'All recipes',
   );
+  onCategoryChange(event: Event): void {
+    this.selectedCollectionId.set((event.target as HTMLSelectElement).value);
+  }
   // Filter the loaded recipes; the database and stored objects stay unchanged.
   filteredRecipes = computed(() => {
     const words = this.query().trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+    const collectionId = this.selectedCollectionId();
     return this.recipes().filter((recipe) => {
+      if (collectionId && !recipe.collectionIds?.includes(collectionId)) return false;
       const text = [
         recipe.title,
         ...(recipe.ingredients ?? []),
@@ -74,6 +75,7 @@ export class RecipeListComponent {
         this.recipes.set([]);
         this.collections.set([]);
         this.query.set('');
+        this.selectedCollectionId.set('');
         this.loading.set(true);
       }
       this.recipeService.revision();
@@ -93,6 +95,8 @@ export class RecipeListComponent {
       if (version !== this.loadVersion || accountVersion !== this.recipeService.accountVersion())
         return;
       this.collections.set(collections);
+      if (!collections.some((collection) => collection.id === this.selectedCollectionId()))
+        this.selectedCollectionId.set('');
 
       this.recipes.set(result);
     } catch (error) {

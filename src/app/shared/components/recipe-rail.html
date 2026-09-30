@@ -1,6 +1,8 @@
 <section class="collection-section" [attr.aria-labelledby]="railId() + '-heading'">
   <div class="collection-heading">
-    <h2 [id]="railId() + '-heading'">{{ title() }}</h2>
+    <ng-content select="[rail-heading]">
+      <h2 [id]="railId() + '-heading'">{{ title() }}</h2>
+    </ng-content>
     <div class="collection-heading__actions">
       <span class="recipe-count"
         >{{ recipes().length }} {{ recipes().length === 1 ? 'recipe' : 'recipes' }}</span
@@ -29,96 +31,100 @@
       </div>
     </div>
   </div>
-  <div
-    class="rail-window"
-    [class.has-previous]="canScrollPrevious()"
-    [class.has-next]="canScrollNext()"
-  >
-    <svg class="filter-defs" aria-hidden="true">
-      <defs>
-        <filter
-          [id]="filterId()"
-          x="-20%"
-          y="-20%"
-          width="140%"
-          height="140%"
-          color-interpolation-filters="sRGB"
-        >
-          <feTurbulence
-            type="fractalNoise"
-            baseFrequency="0.012 0.06"
-            numOctaves="1"
-            seed="7"
-            result="ripple"
-          />
-          <feDisplacementMap
-            in="SourceGraphic"
-            in2="ripple"
-            scale="12"
-            xChannelSelector="R"
-            yChannelSelector="G"
-          />
-          <feGaussianBlur stdDeviation="0.65" />
-        </filter>
-      </defs>
-    </svg>
+  @if (recipes().length === 0) {
+    <ng-content select="[rail-empty]"><p>No recipes found.</p></ng-content>
+  } @else {
     <div
-      #recipeRail
-      [id]="railId()"
-      class="recipe-rail"
-      [style.--swipe-tilt]="swipeTilt() + 'deg'"
-      role="region"
-      [attr.aria-label]="title() + ', horizontal scrolling'"
-      tabindex="0"
-      (scroll)="onScroll()"
-      (pointerdown)="interruptScroll()"
-      (wheel)="interruptScroll()"
-      (keydown)="onKeydown($event)"
+      class="rail-window"
+      [class.has-previous]="canScrollPrevious()"
+      [class.has-next]="canScrollNext()"
     >
-      @for (recipe of recipes(); track recipe.id; let i = $index) {
-        <a
-          class="recipe-card"
-          appCardTilt
-          [routerLink]="['/recipes', recipe.id]"
-          [style.--card-color]="
-            recipe.imageDataUrl
-              ? 'var(--color-' + cardColors[i % cardColors.length] + ')'
-              : placeholderBackground(recipe.id)
-          "
-        >
-          <div class="recipe-card__media">
-            @if (recipe.imageDataUrl) {
-              <img
-                class="recipe-image"
-                [src]="recipe.imageDataUrl"
-                alt=""
-                loading="lazy"
-                decoding="async"
-              />
-            } @else {
-              <app-food-placeholder [seed]="recipe.id" />
-            }
-          </div>
-          <div class="recipe-card__content">
-            <h3>{{ recipe.title }}</h3>
-            @if (recipe.totalTime != null) {
-              <p><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</p>
-            }
-          </div>
-        </a>
-      }
+      <svg class="filter-defs" aria-hidden="true">
+        <defs>
+          <filter
+            [id]="filterId()"
+            x="-20%"
+            y="-20%"
+            width="140%"
+            height="140%"
+            color-interpolation-filters="sRGB"
+          >
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.012 0.06"
+              numOctaves="1"
+              seed="7"
+              result="ripple"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="ripple"
+              scale="12"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+            <feGaussianBlur stdDeviation="0.65" />
+          </filter>
+        </defs>
+      </svg>
+      <div
+        #recipeRail
+        [id]="railId()"
+        class="recipe-rail"
+        [style.--swipe-tilt]="swipeTilt() + 'deg'"
+        role="region"
+        [attr.aria-label]="title() + ', horizontal scrolling'"
+        tabindex="0"
+        (scroll)="onScroll()"
+        (pointerdown)="interruptScroll()"
+        (wheel)="interruptScroll()"
+        (keydown)="onKeydown($event)"
+      >
+        @for (recipe of recipes(); track recipe.id; let i = $index) {
+          <a
+            class="recipe-card"
+            appCardTilt
+            [routerLink]="['/recipes', recipe.id]"
+            [style.--card-color]="
+              recipe.imageDataUrl
+                ? 'var(--color-' + cardColors[i % cardColors.length] + ')'
+                : placeholderBackground(recipe.id)
+            "
+          >
+            <div class="recipe-card__media">
+              @if (recipe.imageDataUrl) {
+                <img
+                  class="recipe-image"
+                  [src]="recipe.imageDataUrl"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+              } @else {
+                <app-food-placeholder [seed]="recipe.id" />
+              }
+            </div>
+            <div class="recipe-card__content">
+              <h3>{{ recipe.title }}</h3>
+              @if (recipe.totalTime != null) {
+                <p><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</p>
+              }
+            </div>
+          </a>
+        }
+      </div>
+      <div
+        class="edge-glass edge-glass--start"
+        aria-hidden="true"
+        [style.backdrop-filter]="'url(#' + filterId() + ') blur(2px)'"
+      ></div>
+      <div
+        class="edge-glass edge-glass--end"
+        aria-hidden="true"
+        [style.backdrop-filter]="'url(#' + filterId() + ') blur(2px)'"
+      ></div>
     </div>
-    <div
-      class="edge-glass edge-glass--start"
-      aria-hidden="true"
-      [style.backdrop-filter]="'url(#' + filterId() + ') blur(2px)'"
-    ></div>
-    <div
-      class="edge-glass edge-glass--end"
-      aria-hidden="true"
-      [style.backdrop-filter]="'url(#' + filterId() + ') blur(2px)'"
-    ></div>
-  </div>
+  }
   @if (stops().length > 1) {
     <div
       #progressControls
