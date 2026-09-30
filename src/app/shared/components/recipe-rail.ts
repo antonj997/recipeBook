@@ -61,6 +61,7 @@ export class RecipeRailComponent implements OnDestroy {
   private scrub?: {
     pointerId: number;
     controls: HTMLDivElement;
+    captureTarget: HTMLElement;
     startX: number;
     startY: number;
     startProgress: number;
@@ -210,6 +211,7 @@ export class RecipeRailComponent implements OnDestroy {
     this.scrub = {
       pointerId: event.pointerId,
       controls,
+      captureTarget: button ?? controls,
       startX: event.clientX,
       startY: event.clientY,
       startProgress: button ? Number(button.dataset['stop']) : this.progress(),
@@ -219,6 +221,9 @@ export class RecipeRailComponent implements OnDestroy {
       ),
       moved: false,
     };
+    // Capture from the press, so fast drags can leave the strip. Keep capture on
+    // the starting button to preserve taps and avoid a touch capture handoff mid-drag.
+    this.scrub.captureTarget.setPointerCapture(event.pointerId);
   }
   moveScrub(event: PointerEvent): void {
     const scrub = this.scrub;
@@ -233,7 +238,6 @@ export class RecipeRailComponent implements OnDestroy {
         return;
       }
       scrub.moved = true;
-      scrub.controls.setPointerCapture(event.pointerId);
       scrub.controls.classList.add('is-scrubbing');
       this.rail()?.nativeElement.classList.add('is-scrubbing');
       this.targetIndex = null;
@@ -251,12 +255,16 @@ export class RecipeRailComponent implements OnDestroy {
     this.rail()?.nativeElement.scrollTo({ left, behavior: 'instant' });
     this.queueUpdate();
   }
+  onLostScrubCapture(event: PointerEvent): void {
+    // Capture events bubble: losing a child's implicit capture must not end our drag.
+    if (event.target === this.scrub?.captureTarget) this.finishScrub(event);
+  }
   finishScrub(event?: PointerEvent, snap = true): void {
     const scrub = this.scrub;
     if (!scrub || (event && event.pointerId !== scrub.pointerId)) return;
     this.scrub = undefined;
-    if (scrub.controls.hasPointerCapture(scrub.pointerId))
-      scrub.controls.releasePointerCapture(scrub.pointerId);
+    if (scrub.captureTarget.hasPointerCapture(scrub.pointerId))
+      scrub.captureTarget.releasePointerCapture(scrub.pointerId);
     scrub.controls.classList.remove('is-scrubbing');
     const rail = this.rail()?.nativeElement;
     if (scrub.moved) {

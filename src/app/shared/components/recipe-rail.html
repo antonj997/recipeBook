@@ -135,7 +135,7 @@
       (pointermove)="moveScrub($event)"
       (pointerup)="finishScrub($event)"
       (pointercancel)="finishScrub($event)"
-      (lostpointercapture)="finishScrub($event)"
+      (lostpointercapture)="onLostScrubCapture($event)"
     >
       @for (stop of stops(); track stop.recipeIndex; let i = $index) {
         <button
