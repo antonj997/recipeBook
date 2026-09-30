@@ -6,13 +6,8 @@
     <p role="alert">{{ error() }}</p>
   } @else {
     @if (recipe(); as selectedRecipe) {
-      <div
-        class="recipe-overview"
-        [class.has-photo]="
-          !!(selectedRecipe.imageDataUrl || (isDraft && drafts.recipe()?.imageUrl))
-        "
-      >
-        @if (selectedRecipe.imageDataUrl || (isDraft && drafts.recipe()?.imageUrl); as photo) {
+      <div class="recipe-overview" [class.has-photo]="!!selectedRecipe.imageDataUrl">
+        @if (selectedRecipe.imageDataUrl; as photo) {
           <img
             class="recipe-hero"
             [src]="photo"
@@ -28,6 +23,7 @@
           }
         </header>
       </div>
+      <app-screen-awake />
       <div class="section-switch" role="group" aria-label="Recipe section">
         <button
           type="button"
@@ -104,7 +100,7 @@
                 @if (!completedSteps().has($index) && !failedStepPhotos().has($index)) {
                   @if (
                     selectedRecipe.stepDetails?.[$index]?.imageDataUrl ||
-                      selectedRecipe.stepDetails?.[$index]?.imageUrl;
+                      loadedStepPhotos()[$index];
                     as photo
                   ) {
                     <img
@@ -120,6 +116,15 @@
                       referrerpolicy="no-referrer"
                       (error)="hideStepPhoto($index)"
                     />
+                  } @else if (canLoadStepPhoto($index)) {
+                    <button
+                      type="button"
+                      class="step-photo-load"
+                      [disabled]="loadingStepPhotos().has($index)"
+                      (click)="loadStepPhoto($index)"
+                    >
+                      {{ loadingStepPhotos().has($index) ? 'Loading photo…' : 'Load photo' }}
+                    </button>
                   }
                 }
               </li>
@@ -127,6 +132,9 @@
           </ol>
         </section>
       </div>
+      @if (stepPhotoNotice()) {
+        <p role="status">{{ stepPhotoNotice() }}</p>
+      }
       <app-recipe-extra-details [recipe]="selectedRecipe" />
       @if (!isDraft) {
         <div class="recipe-actions">
@@ -173,7 +181,7 @@
     <app-food-doodle kind="discard" />
   }
   <h2 id="delete-heading">Delete recipe?</h2>
-  <p id="delete-description">“{{ recipe()?.title }}” will be permanently deleted.</p>
+  <p id="delete-description">“{{ recipe()?.title }}” will be removed from your cookbook.</p>
   @if (deleteError()) {
     <p role="alert">{{ deleteError() }}</p>
   }

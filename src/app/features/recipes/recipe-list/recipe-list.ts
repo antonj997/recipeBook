@@ -66,7 +66,16 @@ export class RecipeListComponent {
 
   private loadVersion = 0;
   constructor() {
+    let accountVersion = this.recipeService.accountVersion();
     effect(() => {
+      const current = this.recipeService.accountVersion();
+      if (current !== accountVersion) {
+        accountVersion = current;
+        this.recipes.set([]);
+        this.collections.set([]);
+        this.query.set('');
+        this.loading.set(true);
+      }
       this.recipeService.revision();
       void this.loadRecipes();
     });
@@ -74,13 +83,15 @@ export class RecipeListComponent {
 
   private async loadRecipes(): Promise<void> {
     const version = ++this.loadVersion;
+    const accountVersion = this.recipeService.accountVersion();
     this.error.set('');
     try {
       const [result, collections] = await Promise.all([
         this.recipeService.getRecipes(),
         this.recipeService.getCollections(),
       ]);
-      if (version !== this.loadVersion) return;
+      if (version !== this.loadVersion || accountVersion !== this.recipeService.accountVersion())
+        return;
       this.collections.set(collections);
 
       this.recipes.set(result);

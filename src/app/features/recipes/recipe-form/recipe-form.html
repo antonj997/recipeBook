@@ -20,12 +20,9 @@
       <!-- Photo controls use the existing image processing and removal handlers. -->
       <div class="image-field">
         <span id="photo-label">Recipe photo</span>
-        <div
-          class="image-preview"
-          [class.image-preview--empty]="!imageDataUrl() && !importImageUrl"
-        >
-          @if (imageDataUrl() || importImageUrl) {
-            <img [src]="imageDataUrl() || importImageUrl" alt="Recipe photo preview" />
+        <div class="image-preview" [class.image-preview--empty]="!imageDataUrl()">
+          @if (imageDataUrl()) {
+            <img [src]="imageDataUrl()" alt="Recipe photo preview" referrerpolicy="no-referrer" />
             <button
               type="button"
               class="photo-action remove-image"

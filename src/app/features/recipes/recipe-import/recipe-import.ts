@@ -58,6 +58,8 @@ export class RecipeImportComponent {
     this.ready.set(false);
     this.controller = new AbortController();
     const started = performance.now();
+    const accountVersion = this.auth.accountVersion();
+    const current = () => this.active && this.auth.accountVersion() === accountVersion;
 
     try {
       let draft: unknown;
@@ -79,21 +81,21 @@ export class RecipeImportComponent {
         draft = data as RecipeImportDraft;
       }
       const prepared = await this.drafts.fromImport(draft, this.recipes);
-      if (!this.active) return;
+      if (!current()) return;
 
       // Let one full cooking sequence play; slow imports keep cooking until extraction finishes.
       await new Promise<void>((resolve) =>
         setTimeout(resolve, Math.max(0, 3000 - (performance.now() - started))),
       );
-      if (!this.active) return;
+      if (!current()) return;
       this.ready.set(true);
       await new Promise<void>((resolve) => setTimeout(resolve, 450));
-      if (!this.active) return;
+      if (!current()) return;
 
       this.drafts.set(prepared);
       await this.router.navigate(['/recipes/new']);
     } catch (error) {
-      if (!this.active) return;
+      if (!current()) return;
       console.error('Import failed:', error);
 
       this.error.set(error instanceof Error ? error.message : 'Could not import the recipe.');

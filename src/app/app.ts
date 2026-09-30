@@ -1,3 +1,8 @@
+import { effect } from '@angular/core';
+import { CloudCookbookService } from './core/services/cloud-cookbook.service';
+import { RecipeDraftService } from './core/services/recipe-draft.service';
+import { LeaveConfirmationService } from './core/services/leave-confirmation.service';
+import { AppUpdateService } from './core/services/app-update.service';
 import { LeaveConfirmationComponent } from './shared/components/leave-confirmation';
 import { Component, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
@@ -25,7 +30,26 @@ export class App {
   private lastPage = '/';
   private settingsReturn = '/';
 
+  readonly updates = inject(AppUpdateService);
+  private cloud = inject(CloudCookbookService);
+  private drafts = inject(RecipeDraftService);
+  private confirmation = inject(LeaveConfirmationService);
+  readonly accountChanging = signal(false);
+
   constructor() {
+    let version = this.cloud.auth.accountVersion();
+    effect(() => {
+      const next = this.cloud.auth.accountVersion();
+      if (next === version) return;
+      version = next;
+      this.accountChanging.set(true);
+      this.drafts.clear();
+      this.confirmation.answer(true);
+      this.feedback.dismiss();
+      void this.router.navigate(['/']).finally(() => {
+        if (version === next) this.accountChanging.set(false);
+      });
+    });
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (!(event instanceof NavigationEnd)) return;
       let route = this.router.routerState.snapshot.root;

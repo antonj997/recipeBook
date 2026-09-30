@@ -1,3 +1,9 @@
+import { SupabaseService } from '../../../core/services/supabase.service';
+import {
+  downloadRecipePhoto,
+  isSupportedRecipePhotoUrl,
+} from '../../../core/services/recipe-photo';
+import { ScreenAwakeComponent } from '../../../shared/components/screen-awake';
 import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
 import { LeaveConfirmationService } from '../../../core/services/leave-confirmation.service';
 import { instructionText } from '../../../core/models/recipe-metadata';
@@ -17,6 +23,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
   selector: 'app-recipe-detail',
   host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
   imports: [
+    ScreenAwakeComponent,
     CheckboxMarkComponent,
     RecipeSummaryDetailsComponent,
     RecipeExtraDetailsComponent,
@@ -38,6 +45,7 @@ export class RecipeDetailComponent implements OnInit {
   private leaving = false;
 
   async canLeave(): Promise<boolean> {
+    if (this.accountChanged()) return true;
     if (!this.isDraft || this.leaving) return true;
     if (this.savingDraft()) return false;
     const leave = await this.confirmation.confirm('This recipe has not been saved. Discard it?');
@@ -56,12 +64,13 @@ export class RecipeDetailComponent implements OnInit {
   }
   async saveDraft(): Promise<void> {
     const draft = this.recipe();
-    if (!draft?.title.trim() || this.savingDraft()) return;
+    if (this.accountChanged() || !draft?.title.trim() || this.savingDraft()) return;
     this.savingDraft.set(true);
     this.saveDraftError.set('');
     try {
       const { id, imageUrl, ...data } = this.drafts.getOrCreate();
       const saved = await this.recipeService.addRecipe(data);
+      if (this.accountChanged()) return;
       this.leaving = true;
       this.drafts.clear();
       this.feedback.show('Recipe saved');
@@ -73,6 +82,10 @@ export class RecipeDetailComponent implements OnInit {
     }
   }
   private recipeService = inject(RecipeService);
+  private readonly accountVersion = this.recipeService.accountVersion();
+  private accountChanged(): boolean {
+    return this.accountVersion !== this.recipeService.accountVersion();
+  }
   private router = inject(Router);
   private feedback = inject(FeedbackService);
   deleteDialog = viewChild<ElementRef<HTMLDialogElement>>('deleteDialog');
@@ -99,6 +112,45 @@ export class RecipeDetailComponent implements OnInit {
       next.has(index) ? next.delete(index) : next.add(index);
       return next;
     });
+  }
+
+  private auth = inject(SupabaseService);
+  loadedStepPhotos = signal<Record<number, string>>({});
+  loadingStepPhotos = signal<Set<number>>(new Set());
+  stepPhotoNotice = signal('');
+  canLoadStepPhoto(index: number): boolean {
+    return isSupportedRecipePhotoUrl(this.recipe()?.stepDetails?.[index]?.imageUrl);
+  }
+  async loadStepPhoto(index: number): Promise<void> {
+    const url = this.recipe()?.stepDetails?.[index]?.imageUrl;
+    if (
+      this.accountChanged() ||
+      !isSupportedRecipePhotoUrl(url) ||
+      this.loadingStepPhotos().has(index)
+    )
+      return;
+    this.loadingStepPhotos.update((items) => new Set([...items, index]));
+    this.stepPhotoNotice.set('');
+    try {
+      const photo = await downloadRecipePhoto(
+        url,
+        800,
+        this.auth.configured()
+          ? (url) => this.auth.invokeImporter({ url, action: 'photo' })
+          : undefined,
+      );
+      if (!this.accountChanged())
+        this.loadedStepPhotos.update((items) => ({ ...items, [index]: photo }));
+    } catch {
+      if (!this.accountChanged())
+        this.stepPhotoNotice.set('Could not load the photo. Sign in to load imported photos.');
+    } finally {
+      this.loadingStepPhotos.update((items) => {
+        const next = new Set(items);
+        next.delete(index);
+        return next;
+      });
+    }
   }
 
   failedStepPhotos = signal<Set<number>>(new Set());
@@ -155,6 +207,7 @@ export class RecipeDetailComponent implements OnInit {
           instructionText(step, result.stepDetails?.[index]),
         );
       }
+      if (this.accountChanged()) return;
       this.recipe.set(result);
       const collections = await this.recipeService.getCollections();
       this.collectionNames.set(
@@ -170,7 +223,7 @@ export class RecipeDetailComponent implements OnInit {
 
   async deleteRecipe(): Promise<void> {
     const currentRecipe = this.recipe();
-    if (!currentRecipe || this.deleting()) {
+    if (this.accountChanged() || !currentRecipe || this.deleting()) {
       return;
     }
 
@@ -181,6 +234,7 @@ export class RecipeDetailComponent implements OnInit {
 
     try {
       await this.recipeService.deleteRecipe(currentRecipe.id);
+      if (this.accountChanged()) return;
       // Return to the recipe list.
       this.deleteDialog()?.nativeElement.close();
       this.feedback.show('Recipe deleted');

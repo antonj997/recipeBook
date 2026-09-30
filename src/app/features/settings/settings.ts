@@ -1,5 +1,6 @@
+import { AppUpdateService } from '../../core/services/app-update.service';
 import { IconComponent } from '../../shared/components/icon';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -16,6 +17,17 @@ export class SettingsComponent {
   private recipeService = inject(RecipeService);
   readonly cloud = inject(CloudCookbookService);
   readonly auth = this.cloud.auth;
+  readonly app = inject(AppUpdateService);
+  private readonly accountVersion = this.auth.accountVersion();
+  private active = true;
+  private current(): boolean {
+    return this.active && this.accountVersion === this.auth.accountVersion();
+  }
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      this.active = false;
+    });
+  }
   accountBusy = signal(false);
   email = signal('');
   code = signal('');
@@ -57,7 +69,7 @@ export class SettingsComponent {
     this.error.set('');
     try {
       await this.auth.signOut();
-      this.message.set('Signed out. Your device cookbook is available.');
+      this.message.set('Signed out. Your account’s offline copy stays on this device.');
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Could not sign out.');
     } finally {
@@ -65,6 +77,7 @@ export class SettingsComponent {
     }
   }
   async copyDeviceRecipes(): Promise<void> {
+    if (!this.current()) return;
     if (
       !window.confirm(
         'Copy recipes from this device into your private cookbook? Existing recipes will be skipped. Your device copy will stay intact.',
@@ -75,6 +88,7 @@ export class SettingsComponent {
     this.error.set('');
     try {
       const result = await this.cloud.copyDeviceCookbook();
+      if (!this.current()) return;
       this.message.set(
         `Copied ${result.added} recipes. Skipped ${result.skipped} existing recipes.`,
       );
@@ -93,7 +107,7 @@ export class SettingsComponent {
 
   // Download the cookbook as JSON.
   async exportBackup(): Promise<void> {
-    if (this.exporting()) {
+    if (!this.current() || this.exporting()) {
       return;
     }
 
@@ -103,6 +117,7 @@ export class SettingsComponent {
 
     try {
       const backup = await this.recipeService.exportBackup();
+      if (!this.current()) return;
 
       // Convert the backup into JSON.
       const json = JSON.stringify(backup, null, 2);
@@ -149,7 +164,7 @@ export class SettingsComponent {
 
     const file = input.files?.[0];
 
-    if (!file || this.importing()) {
+    if (!this.current() || !file || this.importing()) {
       return;
     }
 
@@ -165,6 +180,7 @@ export class SettingsComponent {
 
       // Read the selected JSON file.
       const text = await file.text();
+      if (!this.current()) return;
 
       const data: unknown = JSON.parse(text);
 
@@ -176,12 +192,13 @@ export class SettingsComponent {
           'Recipes already in your cookbook will be skipped.',
       );
 
-      if (!confirmed) {
+      if (!confirmed || !this.current()) {
         return;
       }
 
       // Import the validated backup.
       const result = await this.recipeService.importBackup(backup);
+      if (!this.current()) return;
 
       this.message.set(
         `Imported ${result.added} recipes. ` + `Skipped ${result.skipped} existing recipes.`,

@@ -1,0 +1,22 @@
+{
+  "id": "./",
+  "name": "Recipebook",
+  "short_name": "Recipebook",
+  "description": "Your personal cookbook.",
+  "lang": "en",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f0eee6",
+  "theme_color": "#f0eee6",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

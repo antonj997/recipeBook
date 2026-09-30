@@ -3,7 +3,10 @@ import type { SupabaseClient, User } from '@supabase/supabase-js';
 
 @Service()
 export class SupabaseService {
-  readonly user = signal<Pick<User, 'id' | 'email'> | null>(null);
+  private readonly currentUser = signal<Pick<User, 'id' | 'email'> | null>(null);
+  readonly user = this.currentUser.asReadonly();
+  readonly accountVersion = signal(0);
+  readonly cacheScope = new URL('.', document.baseURI).href;
   readonly configured = signal(false);
   client: SupabaseClient | null = null;
   private initialization?: Promise<void>;
@@ -24,8 +27,8 @@ export class SupabaseService {
       signal: AbortSignal.timeout(8000),
     }).catch(() => null);
     let config: unknown = response?.ok ? await response.json().catch(() => null) : null;
-    const configKey = 'recipebook:backend-config';
-    if (!response) {
+    const configKey = 'recipebook:backend-config:' + this.cacheScope;
+    if (!response || [502, 503, 504].includes(response.status)) {
       try {
         config = JSON.parse(localStorage.getItem(configKey) ?? 'null');
       } catch {
@@ -59,7 +62,7 @@ export class SupabaseService {
     }
     const sdk = await import('@supabase/supabase-js').catch(() => null);
     if (!sdk) {
-      this.user.set(offlineUser);
+      this.setUser(offlineUser);
       return;
     }
     const { createClient } = sdk;
@@ -76,7 +79,7 @@ export class SupabaseService {
       },
     });
     this.client.auth.onAuthStateChange((event, session) => {
-      this.user.set(session?.user ?? null);
+      this.setUser(session?.user ?? null);
       try {
         if (session)
           localStorage.setItem(
@@ -90,12 +93,17 @@ export class SupabaseService {
     });
     const { data, error } = await this.client.auth.getSession();
     // This identity only selects a device cache. Every server call still requires a verified JWT.
-    this.user.set(
+    this.setUser(
       data.session?.user ??
         (error && (!navigator.onLine || error.name === 'AuthRetryableFetchError')
           ? offlineUser
           : null),
     );
+  }
+
+  private setUser(user: Pick<User, 'id' | 'email'> | null): void {
+    if (this.currentUser()?.id !== user?.id) this.accountVersion.update((value) => value + 1);
+    this.currentUser.set(user ? { id: user.id, email: user.email } : null);
   }
 
   async sendCode(email: string): Promise<void> {
@@ -116,9 +124,9 @@ export class SupabaseService {
   async signOut(): Promise<void> {
     if (this.client) {
       const { error } = await this.client.auth.signOut({ scope: 'local' });
-      if (error) throw new Error(error.message);
+      if (error && this.user()) throw new Error(error.message);
     }
-    this.user.set(null);
+    this.setUser(null);
     try {
       localStorage.removeItem(this.identityKey);
     } catch {
@@ -130,7 +138,10 @@ export class SupabaseService {
     body: { url: string; action?: 'photo' },
     signal?: AbortSignal,
   ): Promise<Response> {
+    const version = this.accountVersion();
     const session = await this.client?.auth.getSession();
+    if (version !== this.accountVersion())
+      throw new Error('Account changed. Import the recipe again.');
     const token = session?.data.session?.access_token;
     if (!token) throw new Error('Sign in to import recipe links.');
     const response = await fetch(this.endpoint, {

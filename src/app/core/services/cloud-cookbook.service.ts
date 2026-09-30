@@ -27,6 +27,7 @@ export class CloudCookbookService {
   private accountId: string | null = null;
   private cache: AccountDatabase | null = null;
   private running = new Set<AccountDatabase>();
+  private caches = new Map<string, AccountDatabase>();
 
   constructor() {
     effect(() => this.selectAccount(this.auth.user()?.id ?? null));
@@ -43,13 +44,16 @@ export class CloudCookbookService {
   }
 
   get database(): CookbookDatabase {
+    // Auth callbacks can run before Angular effects; never return the previous owner’s cache.
+    this.selectAccount(this.auth.user()?.id ?? null);
     return this.cache ?? db;
   }
 
   private selectAccount(userId: string | null): void {
     if (this.accountId === userId) return;
     this.accountId = userId;
-    this.cache = userId ? new AccountDatabase(userId) : null;
+    if (userId && !this.caches.has(userId)) this.caches.set(userId, new AccountDatabase(userId));
+    this.cache = userId ? this.caches.get(userId)! : null;
     this.pending.set(0);
     this.syncing.set(false);
     this.error.set('');
@@ -131,19 +135,24 @@ export class CloudCookbookService {
   }
 
   async sync(): Promise<void> {
+    this.selectAccount(this.auth.user()?.id ?? null);
     const cache = this.cache;
     const userId = this.accountId;
     const client = this.auth.client;
+    const version = this.auth.accountVersion();
+    const current = () => this.cache === cache && this.auth.accountVersion() === version;
     if (!cache || !userId || !client || this.running.has(cache)) return;
     this.running.add(cache);
     this.syncing.set(true);
     this.error.set('');
     let completed = false;
     try {
-      this.pending.set(await cache.outbox.count());
+      const pending = await cache.outbox.count();
+      if (!current()) return;
+      this.pending.set(pending);
       if (!navigator.onLine) return;
       for (const change of await cache.outbox.toArray()) {
-        if (this.cache !== cache) return;
+        if (!current()) return;
         let payload: Recipe | RecipeCollection | null = change.value;
         let photos: RecipePhotos = {};
         if (change.table === 'recipes' && payload) {
@@ -151,7 +160,7 @@ export class CloudCookbookService {
           payload = uploaded.payload;
           photos = uploaded.photos;
         }
-        if (this.cache !== cache) return;
+        if (!current()) return;
         const { error } = await client.from(change.table).upsert(
           {
             user_id: userId,
@@ -173,7 +182,7 @@ export class CloudCookbookService {
       for (const tableName of ['collections', 'recipes'] as const) {
         const rows: CloudRow[] = [];
         for (let offset = 0; ; offset += 500) {
-          if (this.cache !== cache) return;
+          if (!current()) return;
           const { data, error } = await client
             .from(tableName)
             .select('id,payload,photos,deleted')
@@ -186,7 +195,7 @@ export class CloudCookbookService {
           if (page.length < 500) break;
         }
         for (const row of rows) {
-          if (this.cache !== cache) return;
+          if (!current()) return;
           const key = `${tableName}:${row.id}`;
           if (await cache.outbox.get(key)) continue;
           let value: Recipe | RecipeCollection | null = null;
@@ -202,6 +211,7 @@ export class CloudCookbookService {
               );
             } else value = readCloudCollection(row.payload);
           }
+          if (!current()) return;
           await cache.transaction(
             'rw',
             cache.table(tableName),
@@ -217,20 +227,26 @@ export class CloudCookbookService {
           );
         }
       }
-      if (this.cache === cache) this.revision.update((value) => value + 1);
+      if (current()) this.revision.update((value) => value + 1);
       completed = true;
     } catch (error) {
       console.error('Cloud sync failed:', error instanceof Error ? error.message : 'Unknown error');
-      if (this.cache === cache)
+      if (current())
         this.error.set(
           'Could not sync. Your changes are saved on this device. Try again when online.',
         );
     } finally {
       this.running.delete(cache);
       if (this.cache === cache) {
-        this.pending.set(await cache.outbox.count());
+        const pending = await cache.outbox.count();
+        if (this.cache !== cache) return;
+        if (!current()) {
+          queueMicrotask(() => void this.sync());
+          return;
+        }
+        this.pending.set(pending);
         this.syncing.set(false);
-        if (completed && this.pending() > 0) queueMicrotask(() => void this.sync());
+        if (completed && pending > 0) queueMicrotask(() => void this.sync());
       }
     }
   }

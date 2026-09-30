@@ -25,6 +25,10 @@
         @if (cloud.error()) {
           <p class="error" role="alert">{{ cloud.error() }}</p>
         }
+        <p class="privacy-note">
+          Signing out keeps this account’s offline copy and unsynced changes on this device. On a
+          shared device, clear Recipebook’s site data after syncing or exporting a backup.
+        </p>
         <div class="account-actions">
           <button
             type="button"
@@ -100,6 +104,24 @@
       }
     } @else {
       <p>Cloud sync is not set up yet. Your recipes are saved on this device.</p>
+    }
+  </div>
+
+  <div class="settings-card">
+    <h2>App</h2>
+    @if (app.installed()) {
+      <p>Recipebook is installed.</p>
+    } @else {
+      <p>Use your browser’s Install app or Add to Home Screen option.</p>
+      @if (app.installable()) {
+        <button type="button" (click)="app.install()">Install Recipebook</button>
+      }
+    }
+    @if (app.offlineReady()) {
+      <p role="status">Offline app ready. Your saved cookbook is available without a connection.</p>
+    }
+    @if (app.available()) {
+      <button type="button" (click)="app.reload()">Reload to update</button>
     }
   </div>
 

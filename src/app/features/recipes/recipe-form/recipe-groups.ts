@@ -181,7 +181,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
   }
   photo(control: FormControl<string>) {
     const detail = this.details.get(control)?.getRawValue();
-    return detail?.imageDataUrl || detail?.imageUrl || '';
+    return detail?.imageDataUrl || ''; // Remote previews require an explicit load in the recipe view.
   }
   removePhoto(control: FormControl<string>) {
     this.details.get(control)?.patchValue({ imageDataUrl: '', imageUrl: '' });

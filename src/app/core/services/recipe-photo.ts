@@ -30,16 +30,65 @@ export async function downloadRecipePhoto(
   maxSize = 1200,
   proxy?: (url: string) => Promise<Response>,
 ): Promise<string> {
-  const response = await fetch(url, {
-    mode: 'cors',
-    credentials: 'omit',
-    signal: AbortSignal.timeout(10_000),
-  }).catch(async (error) => {
-    if (proxy) return proxy(url);
-    throw error;
-  });
+  if (!isSupportedRecipePhotoUrl(url)) throw new Error('This photo host is not supported.');
+  const response = proxy
+    ? await proxy(url)
+    : await fetch(url, {
+        mode: 'cors',
+        credentials: 'omit',
+        cache: 'no-store',
+        referrerPolicy: 'no-referrer',
+        redirect: 'error',
+        signal: AbortSignal.timeout(10_000),
+      });
   if (!response.ok) throw new Error('Photo unavailable.');
   if (Number(response.headers.get('content-length')) > maxBytes)
     throw new Error('The image is too large.');
-  return prepareRecipePhoto(await response.blob(), maxSize);
+  if (!response.body) throw new Error('Photo unavailable.');
+  const reader = response.body.getReader();
+  const chunks: Uint8Array<ArrayBuffer>[] = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel();
+      throw new Error('The image is too large.');
+    }
+    chunks.push(new Uint8Array(value));
+  }
+  return prepareRecipePhoto(
+    new Blob(chunks, { type: response.headers.get('content-type')?.split(';')[0] }),
+    maxSize,
+  );
+}
+
+const photoHosts = [
+  'ica.se',
+  'icanet.se',
+  'koket.se',
+  'arla.se',
+  'arla.com',
+  'cookwell.com',
+  'elinaomickesmat.se',
+  'recept.se',
+  'kokaihop.se',
+  'sanity.io',
+  'ctfassets.net',
+];
+export function isSupportedRecipePhotoUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === 'https:' &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      photoHosts.some((host) => url.hostname === host || url.hostname.endsWith('.' + host))
+    );
+  } catch {
+    return false;
+  }
 }

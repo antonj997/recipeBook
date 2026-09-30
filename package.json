@@ -21,6 +21,7 @@
     "@angular/forms": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
+    "@angular/service-worker": "22.1.7",
     "@supabase/supabase-js": "2.117.2",
     "cheerio": "^1.2.0",
     "dexie": "^4.4.6",

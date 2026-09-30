@@ -55,6 +55,7 @@ export class RecipeFormComponent implements OnInit {
   private leaving = false;
 
   async canLeave(): Promise<boolean> {
+    if (this.accountChanged()) return true;
     if (this.leaving || this.loadError()) return true;
     if (this.saving() || this.processingImage()) return false;
     const leave = await this.confirmation.confirm(
@@ -76,6 +77,10 @@ export class RecipeFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private feedback = inject(FeedbackService);
   private recipeService = inject(RecipeService);
+  private readonly accountVersion = this.recipeService.accountVersion();
+  private accountChanged(): boolean {
+    return this.accountVersion !== this.recipeService.accountVersion();
+  }
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
@@ -204,6 +209,7 @@ export class RecipeFormComponent implements OnInit {
   private async loadRecipe(id: string): Promise<void> {
     try {
       const recipe = await this.recipeService.getRecipe(id);
+      if (this.accountChanged()) return;
 
       if (!recipe) {
         this.loadError.set('Recipe not found.');
@@ -261,7 +267,13 @@ export class RecipeFormComponent implements OnInit {
 
   // Create or update a recipe.
   async onSubmit(): Promise<void> {
-    if (this.saving() || this.loading() || this.processingImage() || this.loadError()) {
+    if (
+      this.accountChanged() ||
+      this.saving() ||
+      this.loading() ||
+      this.processingImage() ||
+      this.loadError()
+    ) {
       return;
     }
 
@@ -303,9 +315,11 @@ export class RecipeFormComponent implements OnInit {
     this.saveError.set('');
 
     try {
+      if (this.accountChanged()) return;
       if (this.editingId) {
         // EDIT MODE: Update the existing recipe.
         await this.recipeService.updateRecipe(this.editingId, recipeData);
+        if (this.accountChanged()) return;
 
         this.leaving = true;
         this.feedback.show('Recipe updated');

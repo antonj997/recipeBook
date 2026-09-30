@@ -33,6 +33,7 @@ function isNonEmptyString(value: unknown): value is string {
 export class RecipeService {
   private cloud = inject(CloudCookbookService);
   readonly revision = this.cloud.revision;
+  readonly accountVersion = this.cloud.auth.accountVersion;
 
   getCollections(): Promise<RecipeCollection[]> {
     return this.cloud.database.collections.orderBy('sortOrder').toArray();
