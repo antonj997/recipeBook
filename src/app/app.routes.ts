@@ -53,11 +53,5 @@ export const routes: Routes = [
     loadComponent: () => import('./features/settings/settings').then((m) => m.SettingsComponent),
     title: 'Settings',
   },
-  {
-    path: 'card-demo',
-    loadComponent: () =>
-      import('./features/recipes/card-demo/card-demo').then((m) => m.CardDemoComponent),
-    title: 'Recipe card demo',
-  },
   { path: '**', redirectTo: '' },
 ];

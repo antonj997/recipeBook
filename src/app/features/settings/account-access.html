@@ -1,0 +1,103 @@
+@if (auth.passwordRecovery()) {
+  <h3>Choose a new password</h3>
+  <p>For {{ auth.user()?.email }}.</p>
+} @else if (mode() === 'signup') {
+  <h3>Create an account</h3>
+  <p>Your recipes and photos belong to your private cookbook.</p>
+} @else if (mode() === 'forgot') {
+  <h3>Reset your password</h3>
+  <p>We’ll email you a link to choose a new password.</p>
+} @else {
+  <p>Sign in to save your cookbook across devices and import recipe links.</p>
+}
+
+<form class="account-form" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="busy()">
+  <fieldset [disabled]="busy() || blocked()">
+    @if (!auth.passwordRecovery()) {
+      <label for="account-email">Email</label>
+      <input
+        id="account-email"
+        type="email"
+        autocomplete="username"
+        formControlName="email"
+        required
+        [attr.aria-invalid]="
+          form.controls.email.touched && form.controls.email.invalid ? 'true' : null
+        "
+      />
+    }
+    @if (auth.passwordRecovery() || mode() !== 'forgot') {
+      <div class="password-label">
+        <label for="account-password">{{ newPassword() ? 'New password' : 'Password' }}</label>
+        <button
+          class="text-action"
+          type="button"
+          (click)="showPassword.set(!showPassword())"
+          [attr.aria-pressed]="showPassword()"
+          [attr.aria-controls]="
+            newPassword() ? 'account-password account-confirm' : 'account-password'
+          "
+        >
+          {{ showPassword() ? 'Hide password' : 'Show password' }}
+        </button>
+      </div>
+      <input
+        id="account-password"
+        [type]="showPassword() ? 'text' : 'password'"
+        [attr.autocomplete]="newPassword() ? 'new-password' : 'current-password'"
+        formControlName="password"
+        required
+        [minlength]="newPassword() ? 8 : null"
+        [attr.aria-describedby]="newPassword() ? 'password-hint' : null"
+      />
+      @if (newPassword()) {
+        <p class="hint" id="password-hint">At least 8 characters.</p>
+        <label for="account-confirm">Confirm password</label>
+        <input
+          id="account-confirm"
+          [type]="showPassword() ? 'text' : 'password'"
+          autocomplete="new-password"
+          formControlName="confirm"
+          required
+        />
+      }
+    }
+    @if (error() || auth.callbackError()) {
+      <p class="account-error" role="alert">{{ error() || auth.callbackError() }}</p>
+    }
+    @if (message()) {
+      <p class="account-message" role="status">{{ message() }}</p>
+    }
+    <button class="primary" type="submit">
+      {{
+        busy()
+          ? 'Please wait…'
+          : auth.passwordRecovery()
+            ? 'Save password'
+            : mode() === 'signup'
+              ? 'Create account'
+              : mode() === 'forgot'
+                ? 'Send reset email'
+                : 'Sign in'
+      }}
+    </button>
+    @if (auth.passwordRecovery()) {
+      <button class="text-action" type="button" (click)="auth.cancelPasswordReset()">Cancel</button>
+    } @else {
+      <div class="account-links">
+        @if (mode() === 'signin') {
+          <button class="text-action" type="button" (click)="changeMode('signup')">
+            Create account
+          </button>
+          <button class="text-action" type="button" (click)="changeMode('forgot')">
+            Forgot password?
+          </button>
+        } @else {
+          <button class="text-action" type="button" (click)="changeMode('signin')">
+            Back to sign in
+          </button>
+        }
+      </div>
+    }
+  </fieldset>
+</form>

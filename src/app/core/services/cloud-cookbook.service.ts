@@ -23,10 +23,11 @@ export class CloudCookbookService {
   readonly pending = signal(0);
   readonly online = signal(navigator.onLine);
   readonly error = signal('');
+  readonly lastSynced = signal<string | null>(null);
   readonly revision = signal(0);
   private accountId: string | null = null;
   private cache: AccountDatabase | null = null;
-  private running = new Set<AccountDatabase>();
+  private running = new Map<AccountDatabase, Promise<void>>();
   private caches = new Map<string, AccountDatabase>();
 
   constructor() {
@@ -57,6 +58,7 @@ export class CloudCookbookService {
     this.pending.set(0);
     this.syncing.set(false);
     this.error.set('');
+    this.lastSynced.set(null);
     this.revision.update((value) => value + 1);
     const cache = this.cache;
     if (cache) {
@@ -134,15 +136,39 @@ export class CloudCookbookService {
     return this.importRecords(await db.recipes.toArray(), await db.collections.toArray(), database);
   }
 
-  async sync(): Promise<void> {
+  deviceRecipeCount(): Promise<number> {
+    return db.recipes.count();
+  }
+
+  async prepareSignOut(): Promise<number> {
+    const cache = this.database;
+    const version = this.auth.accountVersion();
+    await this.sync();
+    if (version !== this.auth.accountVersion()) throw new Error('Account changed. Try again.');
+    return cache instanceof AccountDatabase ? cache.outbox.count() : 0;
+  }
+
+  sync(): Promise<void> {
     this.selectAccount(this.auth.user()?.id ?? null);
     const cache = this.cache;
     const userId = this.accountId;
     const client = this.auth.client;
     const version = this.auth.accountVersion();
+    if (!cache || !userId || !client) return Promise.resolve();
+    const existing = this.running.get(cache);
+    if (existing) return existing;
+    const operation = this.syncAccount(cache, userId, client, version);
+    this.running.set(cache, operation);
+    return operation;
+  }
+
+  private async syncAccount(
+    cache: AccountDatabase,
+    userId: string,
+    client: NonNullable<SupabaseService['client']>,
+    version: number,
+  ): Promise<void> {
     const current = () => this.cache === cache && this.auth.accountVersion() === version;
-    if (!cache || !userId || !client || this.running.has(cache)) return;
-    this.running.add(cache);
     this.syncing.set(true);
     this.error.set('');
     let completed = false;
@@ -227,7 +253,10 @@ export class CloudCookbookService {
           );
         }
       }
-      if (current()) this.revision.update((value) => value + 1);
+      if (current()) {
+        this.revision.update((value) => value + 1);
+        this.lastSynced.set(new Date().toISOString());
+      }
       completed = true;
     } catch (error) {
       console.error('Cloud sync failed:', error instanceof Error ? error.message : 'Unknown error');

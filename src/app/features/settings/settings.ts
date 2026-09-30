@@ -1,6 +1,7 @@
 import { AppUpdateService } from '../../core/services/app-update.service';
 import { IconComponent } from '../../shared/components/icon';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { AccountAccessComponent } from './account-access';
+import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -9,7 +10,7 @@ import { CloudCookbookService } from '../../core/services/cloud-cookbook.service
 
 @Component({
   selector: 'app-settings',
-  imports: [IconComponent, RouterLink],
+  imports: [IconComponent, RouterLink, AccountAccessComponent],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
@@ -18,66 +19,74 @@ export class SettingsComponent {
   readonly cloud = inject(CloudCookbookService);
   readonly auth = this.cloud.auth;
   readonly app = inject(AppUpdateService);
-  private readonly accountVersion = this.auth.accountVersion();
   private active = true;
-  private current(): boolean {
-    return this.active && this.accountVersion === this.auth.accountVersion();
+  private current(version: number): boolean {
+    return this.active && version === this.auth.accountVersion();
   }
+  readonly deviceRecipes = signal(0);
   constructor() {
+    effect(() => {
+      this.cloud.revision();
+      void this.cloud.deviceRecipeCount().then((count) => {
+        if (this.active) this.deviceRecipes.set(count);
+      });
+    });
     inject(DestroyRef).onDestroy(() => {
       this.active = false;
     });
   }
-  accountBusy = signal(false);
-  email = signal('');
-  code = signal('');
-  codeSent = signal(false);
-
-  setEmail(event: Event): void {
-    this.email.set((event.target as HTMLInputElement).value);
-  }
-  setCode(event: Event): void {
-    this.code.set((event.target as HTMLInputElement).value);
-  }
-  async signIn(event: Event): Promise<void> {
-    event.preventDefault();
-    if (this.accountBusy()) return;
+  readonly accountBusy = this.auth.busy;
+  async requestPasswordReset(): Promise<void> {
+    const version = this.auth.accountVersion();
+    const email = this.auth.user()?.email;
+    if (!email || this.accountBusy()) return;
     this.accountBusy.set(true);
     this.error.set('');
     this.message.set('');
     try {
-      if (this.codeSent()) {
-        await this.auth.verifyCode(this.email().trim(), this.code().trim());
-        this.code.set('');
-        this.codeSent.set(false);
-        this.message.set('Signed in.');
-      } else {
-        await this.auth.sendCode(this.email().trim());
-        this.codeSent.set(true);
-        this.message.set(
-          'Open the sign-in link in your email, or enter the code if one is included.',
-        );
-      }
+      await this.auth.sendPasswordReset(email);
+      if (this.current(version))
+        this.message.set('Check your email for a link to reset your password.');
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Could not sign in.');
+      if (this.current(version))
+        this.error.set(error instanceof Error ? error.message : 'Could not send a reset email.');
     } finally {
       this.accountBusy.set(false);
     }
   }
+
   async signOut(): Promise<void> {
+    if (this.accountBusy()) return;
+    const version = this.auth.accountVersion();
     this.accountBusy.set(true);
     this.error.set('');
+    this.message.set('');
     try {
+      const pending = await this.cloud.prepareSignOut();
+      if (!this.current(version)) return;
+      if (
+        pending &&
+        !window.confirm(
+          pending +
+            ' changes are saved only on this device. They will upload when you sign back into this account. Keep this browser’s site data until then, or download a backup before leaving. Sign out anyway?',
+        )
+      )
+        return;
       await this.auth.signOut();
-      this.message.set('Signed out. Your account’s offline copy stays on this device.');
+      if (this.active)
+        this.message.set(
+          'Signed out. Your account’s recipes and pending changes stay on this device. Sign back into the same account to see them.',
+        );
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Could not sign out.');
+      if (this.current(version))
+        this.error.set(error instanceof Error ? error.message : 'Could not sign out.');
     } finally {
       this.accountBusy.set(false);
     }
   }
   async copyDeviceRecipes(): Promise<void> {
-    if (!this.current()) return;
+    const version = this.auth.accountVersion();
+    if (!this.current(version)) return;
     if (
       !window.confirm(
         'Copy recipes from this device into your private cookbook? Existing recipes will be skipped. Your device copy will stay intact.',
@@ -88,12 +97,13 @@ export class SettingsComponent {
     this.error.set('');
     try {
       const result = await this.cloud.copyDeviceCookbook();
-      if (!this.current()) return;
+      if (!this.current(version)) return;
       this.message.set(
         `Copied ${result.added} recipes. Skipped ${result.skipped} existing recipes.`,
       );
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : 'Could not copy recipes.');
+      if (this.current(version))
+        this.error.set(error instanceof Error ? error.message : 'Could not copy recipes.');
     } finally {
       this.accountBusy.set(false);
     }
@@ -107,7 +117,8 @@ export class SettingsComponent {
 
   // Download the cookbook as JSON.
   async exportBackup(): Promise<void> {
-    if (!this.current() || this.exporting()) {
+    const version = this.auth.accountVersion();
+    if (!this.current(version) || this.exporting()) {
       return;
     }
 
@@ -117,7 +128,7 @@ export class SettingsComponent {
 
     try {
       const backup = await this.recipeService.exportBackup();
-      if (!this.current()) return;
+      if (!this.current(version)) return;
 
       // Convert the backup into JSON.
       const json = JSON.stringify(backup, null, 2);
@@ -152,7 +163,7 @@ export class SettingsComponent {
     } catch (error) {
       console.error('Export failed:', error);
 
-      this.error.set('Could not export your cookbook.');
+      if (this.current(version)) this.error.set('Could not export your cookbook.');
     } finally {
       this.exporting.set(false);
     }
@@ -160,11 +171,12 @@ export class SettingsComponent {
 
   // Restore recipes from a selected file.
   async onFileSelected(event: Event): Promise<void> {
+    const version = this.auth.accountVersion();
     const input = event.target as HTMLInputElement;
 
     const file = input.files?.[0];
 
-    if (!this.current() || !file || this.importing()) {
+    if (!this.current(version) || !file || this.importing()) {
       return;
     }
 
@@ -180,7 +192,7 @@ export class SettingsComponent {
 
       // Read the selected JSON file.
       const text = await file.text();
-      if (!this.current()) return;
+      if (!this.current(version)) return;
 
       const data: unknown = JSON.parse(text);
 
@@ -192,13 +204,13 @@ export class SettingsComponent {
           'Recipes already in your cookbook will be skipped.',
       );
 
-      if (!confirmed || !this.current()) {
+      if (!confirmed || !this.current(version)) {
         return;
       }
 
       // Import the validated backup.
       const result = await this.recipeService.importBackup(backup);
-      if (!this.current()) return;
+      if (!this.current(version)) return;
 
       this.message.set(
         `Imported ${result.added} recipes. ` + `Skipped ${result.skipped} existing recipes.`,
@@ -206,7 +218,8 @@ export class SettingsComponent {
     } catch (error) {
       console.error('Import failed:', error);
 
-      this.error.set(error instanceof Error ? error.message : 'Could not import the backup.');
+      if (this.current(version))
+        this.error.set(error instanceof Error ? error.message : 'Could not import the backup.');
     } finally {
       this.importing.set(false);
 
