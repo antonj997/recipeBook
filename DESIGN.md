@@ -104,7 +104,7 @@ Desktop cards are 240–340px wide with 28px gaps. Mobile cards are 78vw with 18
 
 ## Motion
 
-The wordmark is upright medium-weight sans-serif. Hover quickly draws one soft perimeter around the entire word, without entering letter gaps. The settings icon uses the same perimeter effect, with no hover fill. Card surfaces tilt up to a few degrees toward the mouse; scroll velocity adds a small temporary tilt that settles to zero. Arrow hover nudges its chevron, section controls gently change fill, and checkbox/search hover remains slight. Restrict hover effects to devices that support hover.
+The wordmark is upright medium-weight sans-serif and stays still on hover. The settings icon tilts slightly, with no hover fill. Card surfaces tilt smoothly toward the mouse, up to six degrees vertically and eight horizontally; scroll velocity adds a small temporary tilt that settles to zero. Carousel arrows stay still on hover. Section controls gently change fill and checkbox hover remains slight. Search hover fill is desktop-only; mobile retains the green focus underline. Restrict hover effects to devices that support hover, with pointer tilt limited to a fine pointer.
 
 Import feedback shows a stirring pot, independently rising steam and a recipe-sheet check. Successful imports stay visible for at least three seconds, then finish the check before review opens. On mobile the illustration fills the viewport with one randomly chosen muted palette color. No falling ingredients. The existing paper-and-bin delete animation stays intact.
 

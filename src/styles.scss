@@ -483,7 +483,7 @@ app-checkbox-mark {
     color 180ms,
     transform 180ms var(--ease-out);
 }
-@media (hover: hover) {
+@media (min-width: 601px) and (hover: hover) and (pointer: fine) {
   .search-field:hover {
     background: #faf9f570;
     box-shadow: 0 1px 0 var(--color-green);
@@ -491,6 +491,8 @@ app-checkbox-mark {
   .search-field:focus-within {
     box-shadow: 0 2px 0 var(--color-green);
   }
+}
+@media (hover: hover) {
   .check-control:hover app-checkbox-mark {
     color: var(--color-ink);
     transform: scale(1.06);

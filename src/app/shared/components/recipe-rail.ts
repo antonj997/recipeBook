@@ -8,6 +8,7 @@ import {
   effect,
   ElementRef,
   input,
+  linkedSignal,
   OnDestroy,
   signal,
   viewChild,
@@ -35,7 +36,12 @@ export class RecipeRailComponent implements OnDestroy {
   canScrollPrevious = signal(false);
   canScrollNext = signal(false);
   activeIndex = signal(0);
-  stops = signal<{ recipeIndex: number; left: number }[]>([]);
+  // Discard measured positions immediately when search changes the recipe list.
+  // The next frame measures the new cards, without rendering stale dot indexes.
+  stops = linkedSignal<Recipe[], { recipeIndex: number; left: number }[]>({
+    source: this.recipes,
+    computation: () => [],
+  });
   progress = signal(0);
   currentStop = computed(() => Math.round(this.progress()));
   progressControls = viewChild<ElementRef<HTMLDivElement>>('progressControls');
