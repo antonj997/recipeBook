@@ -1,8 +1,9 @@
+import { SupabaseService } from '../../../core/services/supabase.service';
 import { runtimeConfig } from '../../../core/runtime-config';
 import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
 import { RecipeService } from '../../../core/services/recipe.service';
 import { IconComponent } from '../../../shared/components/icon';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 
 import { Router, RouterLink } from '@angular/router';
 
@@ -25,7 +26,9 @@ export class RecipeImportComponent {
   private controller?: AbortController;
   private active = true;
   ready = signal(false);
-  readonly localOnly = runtimeConfig.pages;
+  readonly auth = inject(SupabaseService);
+  readonly localOnly = computed(() => runtimeConfig.pages && !this.auth.configured());
+  readonly needsSignIn = computed(() => this.auth.configured() && !this.auth.user());
 
   constructor() {
     this.destroyRef.onDestroy(() => {
@@ -46,7 +49,7 @@ export class RecipeImportComponent {
   async importRecipe(event: Event): Promise<void> {
     event.preventDefault();
 
-    if (this.localOnly || this.importing() || !this.url.trim()) {
+    if (this.localOnly() || this.needsSignIn() || this.importing() || !this.url.trim()) {
       return;
     }
 
@@ -57,27 +60,24 @@ export class RecipeImportComponent {
     const started = performance.now();
 
     try {
-      // Ask our backend to extract the recipe.
-      const response = await fetch('/api/import', {
-        method: 'POST',
-        signal: this.controller.signal,
-
-        headers: {
-          'Content-Type': 'application/json',
-        },
-
-        body: JSON.stringify({
-          url: this.url.trim(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error ?? 'Could not import recipe.');
+      let draft: unknown;
+      if (this.auth.configured()) {
+        const response = await this.auth.invokeImporter(
+          { url: this.url.trim() },
+          this.controller.signal,
+        );
+        draft = await response.json();
+      } else {
+        const response = await fetch('/api/import', {
+          method: 'POST',
+          signal: this.controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: this.url.trim() }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error ?? 'Could not import recipe.');
+        draft = data as RecipeImportDraft;
       }
-
-      const draft = data as RecipeImportDraft;
       const prepared = await this.drafts.fromImport(draft, this.recipes);
       if (!this.active) return;
 

@@ -25,11 +25,18 @@ export async function prepareRecipePhoto(blob: Blob, maxSize = 1200): Promise<st
   }
 }
 
-export async function downloadRecipePhoto(url: string, maxSize = 1200): Promise<string> {
+export async function downloadRecipePhoto(
+  url: string,
+  maxSize = 1200,
+  proxy?: (url: string) => Promise<Response>,
+): Promise<string> {
   const response = await fetch(url, {
     mode: 'cors',
     credentials: 'omit',
     signal: AbortSignal.timeout(10_000),
+  }).catch(async (error) => {
+    if (proxy) return proxy(url);
+    throw error;
   });
   if (!response.ok) throw new Error('Photo unavailable.');
   if (Number(response.headers.get('content-length')) > maxBytes)

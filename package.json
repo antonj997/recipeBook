@@ -7,7 +7,10 @@
     "dev": "concurrently --kill-others \"node server/index.mjs\" \"ng serve --proxy-config src/proxy.conf.json\"",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "prebuild": "node scripts/configure-supabase.mjs",
+    "prestart": "node scripts/configure-supabase.mjs",
+    "predev": "node scripts/configure-supabase.mjs"
   },
   "private": true,
   "packageManager": "npm@12.0.2",
@@ -18,6 +21,7 @@
     "@angular/forms": "^22.1.0",
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
+    "@supabase/supabase-js": "2.117.2",
     "cheerio": "^1.2.0",
     "dexie": "^4.4.6",
     "express": "^5.2.1",

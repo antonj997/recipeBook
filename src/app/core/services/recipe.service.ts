@@ -1,8 +1,8 @@
 import type { RecipeCollection } from '../models/recipe-collection.model';
 import { readRecipeMetadata, isHttpsUrl } from '../models/recipe-metadata';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import type { Recipe } from '../models/recipe.model';
-import { db } from '../database';
+import { CloudCookbookService } from './cloud-cookbook.service';
 
 export interface RecipeBackup {
   app: 'recipiebook';
@@ -31,24 +31,26 @@ function isNonEmptyString(value: unknown): value is string {
   providedIn: 'root',
 })
 export class RecipeService {
+  private cloud = inject(CloudCookbookService);
+  readonly revision = this.cloud.revision;
+
   getCollections(): Promise<RecipeCollection[]> {
-    return db.collections.orderBy('sortOrder').toArray();
+    return this.cloud.database.collections.orderBy('sortOrder').toArray();
   }
   async createCollection(name: string): Promise<RecipeCollection> {
-    return db.transaction('rw', db.collections, async () => {
-      const collections = await this.getCollections();
-      const existing = collections.find(
-        (c) => c.name.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase(),
-      );
-      if (existing) return existing;
-      const collection = {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        sortOrder: Math.max(-1, ...collections.map((c) => c.sortOrder)) + 1,
-      };
-      await db.collections.add(collection);
-      return collection;
-    });
+    const database = this.cloud.database;
+    const collections = await database.collections.toArray();
+    const existing = collections.find(
+      (c) => c.name.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase(),
+    );
+    if (existing) return existing;
+    const collection = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      sortOrder: Math.max(-1, ...collections.map((c) => c.sortOrder)) + 1,
+    };
+    await this.cloud.put('collections', collection, database);
+    return collection;
   }
   matchCollections(category: string | undefined, collections: RecipeCollection[]): string[] {
     const names = (category ?? '').split(/[,;]/).map((name) => name.trim().toLocaleLowerCase());
@@ -56,59 +58,52 @@ export class RecipeService {
       .filter((c) => names.includes(c.name.trim().toLocaleLowerCase()))
       .map((c) => c.id);
   }
-  // Retrieve all recipes, sorted by title.
   getRecipes(): Promise<Recipe[]> {
-    return db.recipes.orderBy('title').toArray();
+    return this.cloud.database.recipes.orderBy('title').toArray();
   }
-
-  // Retrieve a specific recipe.
   getRecipe(id: string): Promise<Recipe | undefined> {
-    return db.recipes.get(id);
+    return this.cloud.database.recipes.get(id);
   }
-
-  // Add a new recipe.
   async addRecipe(recipeData: Omit<Recipe, 'id'>): Promise<Recipe> {
-    const newRecipe: Recipe = {
-      ...recipeData,
-      id: crypto.randomUUID(),
-    };
-
-    await db.recipes.add(newRecipe);
-
-    return newRecipe;
+    const recipe = { ...recipeData, id: crypto.randomUUID() };
+    await this.cloud.put('recipes', recipe);
+    return recipe;
   }
-
   async updateRecipe(id: string, changes: Partial<Omit<Recipe, 'id'>>): Promise<void> {
-    const updated = await db.recipes.update(id, {
-      ...changes,
-      sourceRating: undefined,
-      difficulty: undefined,
-      prepTime: undefined,
-      cookTime: undefined,
-      tips: undefined,
-      yieldText: undefined,
-      category: undefined,
-      cuisine: undefined,
-      dietaryNotes: undefined,
-    } as Partial<Recipe>);
-
-    if (updated === 0) {
-      throw new Error('Recipe not found');
-    }
+    const database = this.cloud.database;
+    const current = await database.recipes.get(id);
+    if (!current) throw new Error('Recipe not found');
+    const recipe = { ...current, ...changes } as Recipe & Record<string, unknown>;
+    for (const key of [
+      'sourceRating',
+      'difficulty',
+      'prepTime',
+      'cookTime',
+      'tips',
+      'yieldText',
+      'category',
+      'cuisine',
+      'dietaryNotes',
+    ])
+      delete recipe[key];
+    await this.cloud.put('recipes', recipe, database);
   }
-
   async deleteRecipe(id: string): Promise<void> {
-    await db.recipes.delete(id);
+    await this.cloud.remove('recipes', id);
   }
 
   async exportBackup(): Promise<RecipeBackup> {
-    const recipes = await this.getRecipes();
+    const database = this.cloud.database;
+    const [recipes, collections] = await Promise.all([
+      database.recipes.orderBy('title').toArray(),
+      database.collections.orderBy('sortOrder').toArray(),
+    ]);
 
     return {
       app: 'recipiebook',
       version: 1,
       exportedAt: new Date().toISOString(),
-      collections: await this.getCollections(),
+      collections,
       recipes: recipes.map((recipe) => {
         const clean = { ...recipe } as Recipe & Record<string, unknown>;
         for (const key of [
@@ -249,30 +244,6 @@ export class RecipeService {
       return { added: 0, skipped: 0 };
     }
 
-    // Run database operations inside a transaction.
-    return db.transaction('rw', db.recipes, db.collections, async () => {
-      const savedCollections = await this.getCollections();
-      const newCollections = (backup.collections ?? []).filter(
-        (c) => !savedCollections.some((existing) => existing.id === c.id),
-      );
-      if (newCollections.length) await db.collections.bulkAdd(newCollections);
-      const ids = backup.recipes.map((recipe) => recipe.id);
-
-      // Look up existing recipes in one operation.
-      const existing = await db.recipes.bulkGet(ids);
-
-      // Keep only recipes that aren't already stored.
-      const newRecipes = backup.recipes.filter((_, index) => existing[index] === undefined);
-
-      // Insert the new recipes.
-      if (newRecipes.length > 0) {
-        await db.recipes.bulkAdd(newRecipes);
-      }
-
-      return {
-        added: newRecipes.length,
-        skipped: backup.recipes.length - newRecipes.length,
-      };
-    });
+    return this.cloud.importRecords(backup.recipes, backup.collections);
   }
 }

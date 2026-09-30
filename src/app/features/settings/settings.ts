@@ -4,6 +4,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { RecipeService } from '../../core/services/recipe.service';
+import { CloudCookbookService } from '../../core/services/cloud-cookbook.service';
 
 @Component({
   selector: 'app-settings',
@@ -13,6 +14,76 @@ import { RecipeService } from '../../core/services/recipe.service';
 })
 export class SettingsComponent {
   private recipeService = inject(RecipeService);
+  readonly cloud = inject(CloudCookbookService);
+  readonly auth = this.cloud.auth;
+  accountBusy = signal(false);
+  email = signal('');
+  code = signal('');
+  codeSent = signal(false);
+
+  setEmail(event: Event): void {
+    this.email.set((event.target as HTMLInputElement).value);
+  }
+  setCode(event: Event): void {
+    this.code.set((event.target as HTMLInputElement).value);
+  }
+  async signIn(event: Event): Promise<void> {
+    event.preventDefault();
+    if (this.accountBusy()) return;
+    this.accountBusy.set(true);
+    this.error.set('');
+    this.message.set('');
+    try {
+      if (this.codeSent()) {
+        await this.auth.verifyCode(this.email().trim(), this.code().trim());
+        this.code.set('');
+        this.codeSent.set(false);
+        this.message.set('Signed in.');
+      } else {
+        await this.auth.sendCode(this.email().trim());
+        this.codeSent.set(true);
+        this.message.set(
+          'Open the sign-in link in your email, or enter the code if one is included.',
+        );
+      }
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Could not sign in.');
+    } finally {
+      this.accountBusy.set(false);
+    }
+  }
+  async signOut(): Promise<void> {
+    this.accountBusy.set(true);
+    this.error.set('');
+    try {
+      await this.auth.signOut();
+      this.message.set('Signed out. Your device cookbook is available.');
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Could not sign out.');
+    } finally {
+      this.accountBusy.set(false);
+    }
+  }
+  async copyDeviceRecipes(): Promise<void> {
+    if (
+      !window.confirm(
+        'Copy recipes from this device into your private cookbook? Existing recipes will be skipped. Your device copy will stay intact.',
+      )
+    )
+      return;
+    this.accountBusy.set(true);
+    this.error.set('');
+    try {
+      const result = await this.cloud.copyDeviceCookbook();
+      this.message.set(
+        `Copied ${result.added} recipes. Skipped ${result.skipped} existing recipes.`,
+      );
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Could not copy recipes.');
+    } finally {
+      this.accountBusy.set(false);
+    }
+  }
 
   exporting = signal(false);
   importing = signal(false);

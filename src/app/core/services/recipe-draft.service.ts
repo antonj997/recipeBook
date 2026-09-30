@@ -1,4 +1,5 @@
-import { Service, signal } from '@angular/core';
+import { Service, inject, signal } from '@angular/core';
+import { SupabaseService } from './supabase.service';
 import type { Recipe } from '../models/recipe.model';
 import {
   instructionText,
@@ -15,6 +16,7 @@ const storageKey = 'recipebook:review-draft';
 // Drafts live in this tab, never in Dexie, until the user approves the preview.
 @Service()
 export class RecipeDraftService {
+  private auth = inject(SupabaseService);
   readonly recipe = signal<RecipeDraft | undefined>(undefined);
   readonly photoNotice = signal('');
 
@@ -75,7 +77,7 @@ export class RecipeDraftService {
     let failed = 0;
     if (draft.imageUrl && !draft.imageDataUrl) {
       try {
-        draft.imageDataUrl = await downloadRecipePhoto(draft.imageUrl);
+        draft.imageDataUrl = await downloadRecipePhoto(draft.imageUrl, 1200, this.photoProxy());
       } catch {
         failed++;
       }
@@ -86,7 +88,7 @@ export class RecipeDraftService {
         steps.slice(i, i + 2).map(async (step) => {
           if (!step.imageUrl || step.imageDataUrl) return;
           try {
-            step.imageDataUrl = await downloadRecipePhoto(step.imageUrl, 800);
+            step.imageDataUrl = await downloadRecipePhoto(step.imageUrl, 800, this.photoProxy());
           } catch {
             failed++;
           }
@@ -96,6 +98,12 @@ export class RecipeDraftService {
     if (failed)
       this.photoNotice.set('Some photos could not be saved offline. You can add them in Edit.');
     return draft;
+  }
+
+  private photoProxy(): ((url: string) => Promise<Response>) | undefined {
+    return this.auth.configured() && this.auth.user()
+      ? (url) => this.auth.invokeImporter({ url, action: 'photo' })
+      : undefined;
   }
 
   private parse(value: unknown): RecipeDraft {

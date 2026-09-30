@@ -3,10 +3,13 @@
 
   <h1>Import Recipe</h1>
 
-  @if (localOnly) {
+  @if (localOnly()) {
     <p>Link import is available when Recipebook runs locally with its import server.</p>
     <a class="button primary" routerLink="/recipes/new">Create recipe</a>
     <a class="button" routerLink="/settings" fragment="import-cookbook">Import cookbook</a>
+  } @else if (needsSignIn()) {
+    <p>Sign in to import a recipe from a link.</p>
+    <a class="button primary" routerLink="/settings" fragment="account">Sign in</a>
   } @else {
     <p>
       Paste a link to a recipe website. We'll extract the ingredients and instructions so you can

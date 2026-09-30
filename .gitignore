@@ -61,3 +61,8 @@ docs/superpowers/
 
 AI suggestions.md
 src/app/features/recipes/card-demo/README.md
+
+# Generated public backend configuration and local Supabase state
+/public/supabase-config.json
+/supabase/.temp/
+/supabase/.branches/

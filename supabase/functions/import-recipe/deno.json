@@ -1,0 +1,4 @@
+{
+  "imports": { "cheerio": "npm:cheerio@1.2.0" },
+  "compilerOptions": { "checkJs": false }
+}

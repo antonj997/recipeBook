@@ -1,11 +1,12 @@
 import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, effect, signal } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
 import type { Recipe } from '../../../core/models/recipe.model';
 
 import { RecipeService } from '../../../core/services/recipe.service';
+import { CloudCookbookService } from '../../../core/services/cloud-cookbook.service';
 
 import { RecipeRailComponent } from '../../../shared/components/recipe-rail';
 
@@ -25,8 +26,9 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
   templateUrl: './recipe-list.html',
   styleUrl: './recipe-list.scss',
 })
-export class RecipeListComponent implements OnInit {
+export class RecipeListComponent {
   private recipeService = inject(RecipeService);
+  readonly cloud = inject(CloudCookbookService);
 
   recipes = signal<Recipe[]>([]);
   query = signal('');
@@ -62,25 +64,32 @@ export class RecipeListComponent implements OnInit {
   loading = signal(true);
   error = signal('');
 
-  ngOnInit(): void {
-    void this.loadRecipes();
+  private loadVersion = 0;
+  constructor() {
+    effect(() => {
+      this.recipeService.revision();
+      void this.loadRecipes();
+    });
   }
 
   private async loadRecipes(): Promise<void> {
+    const version = ++this.loadVersion;
+    this.error.set('');
     try {
       const [result, collections] = await Promise.all([
         this.recipeService.getRecipes(),
         this.recipeService.getCollections(),
       ]);
+      if (version !== this.loadVersion) return;
       this.collections.set(collections);
 
       this.recipes.set(result);
     } catch (error) {
       console.error('Failed to load recipes:', error);
 
-      this.error.set('Could not load your recipes.');
+      if (version === this.loadVersion) this.error.set('Could not load your recipes.');
     } finally {
-      this.loading.set(false);
+      if (version === this.loadVersion) this.loading.set(false);
     }
   }
 }

@@ -1,6 +1,17 @@
 .description {
   margin-bottom: 36px;
 }
+.account-form {
+  max-width: 420px;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.account-form input {
+  margin-bottom: 18px;
+}
 .settings-card {
   padding: 28px 0;
   border-top: 1px solid var(--color-border);

@@ -6,6 +6,103 @@
 
   <p class="description">Manage your cookbook and keep your recipes safe.</p>
 
+  <div class="settings-card" id="account">
+    <h2>Account</h2>
+    @if (auth.configured()) {
+      @if (auth.user(); as user) {
+        <p>{{ user.email }}</p>
+        <p role="status" aria-live="polite">
+          {{
+            !cloud.online()
+              ? 'Offline · changes stay on this device'
+              : cloud.syncing()
+                ? 'Syncing…'
+                : cloud.pending()
+                  ? cloud.pending() + ' changes waiting to sync'
+                  : 'Your cookbook is synced'
+          }}
+        </p>
+        @if (cloud.error()) {
+          <p class="error" role="alert">{{ cloud.error() }}</p>
+        }
+        <div class="account-actions">
+          <button
+            type="button"
+            (click)="cloud.sync()"
+            [disabled]="cloud.syncing() || accountBusy()"
+          >
+            Sync now
+          </button>
+          <button
+            type="button"
+            (click)="copyDeviceRecipes()"
+            [disabled]="accountBusy() || cloud.syncing() || importing() || exporting()"
+          >
+            Copy device recipes
+          </button>
+          <button
+            type="button"
+            (click)="signOut()"
+            [disabled]="accountBusy() || importing() || exporting()"
+          >
+            Sign out
+          </button>
+        </div>
+      } @else {
+        <p>Sign in to save your cookbook across devices and import recipe links.</p>
+        <form class="account-form" (submit)="signIn($event)">
+          <label for="account-email">Email</label>
+          <input
+            id="account-email"
+            type="email"
+            autocomplete="email"
+            required
+            [value]="email()"
+            (input)="setEmail($event)"
+            [readOnly]="codeSent()"
+            [disabled]="accountBusy() || importing() || exporting()"
+          />
+          @if (codeSent()) {
+            <label for="account-code">Sign-in code (if included)</label>
+            <input
+              id="account-code"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              pattern="[0-9]{6,8}"
+              minlength="6"
+              maxlength="8"
+              required
+              [value]="code()"
+              (input)="setCode($event)"
+              [disabled]="accountBusy()"
+            />
+          }
+          <div class="account-actions">
+            <button
+              class="primary"
+              type="submit"
+              [disabled]="accountBusy() || importing() || exporting()"
+            >
+              {{ accountBusy() ? 'Please wait…' : codeSent() ? 'Sign in' : 'Send sign-in email' }}
+            </button>
+            @if (codeSent()) {
+              <button
+                type="button"
+                (click)="codeSent.set(false); code.set('')"
+                [disabled]="accountBusy()"
+              >
+                Use another email
+              </button>
+            }
+          </div>
+        </form>
+      }
+    } @else {
+      <p>Cloud sync is not set up yet. Your recipes are saved on this device.</p>
+    }
+  </div>
+
   <!-- Export -->
   <div class="settings-card">
     <h2>Export cookbook</h2>

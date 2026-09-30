@@ -1,0 +1,29 @@
+project_id = "recipebook"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[auth]
+enabled = true
+site_url = "https://antonj997.github.io/recipeBook/"
+additional_redirect_urls = ["http://127.0.0.1:4300/", "http://localhost:4300/", "http://localhost:4200/"]
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+otp_length = 6
+
+[functions.import-recipe]
+enabled = true
+verify_jwt = true
+import_map = "./functions/import-recipe/deno.json"
+entrypoint = "./functions/import-recipe/index.ts"

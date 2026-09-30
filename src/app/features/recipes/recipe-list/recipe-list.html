@@ -1,4 +1,9 @@
 <section class="recipe-list page">
+  @if (cloud.error()) {
+    <p role="status">
+      {{ cloud.error() }} <a routerLink="/settings" fragment="account">Sync settings</a>
+    </p>
+  }
   @if (!loading() && !error() && recipes().length > 0) {
     <div class="home-tools">
       <div class="search-field" role="search">
@@ -36,7 +41,7 @@
       </div>
     </div>
   }
-  @if (loading()) {
+  @if (loading() || (cloud.syncing() && recipes().length === 0)) {
     <app-loading-state />
   } @else if (error()) {
     <p role="alert">{{ error() }}</p>
