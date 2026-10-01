@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Recipe } from '../models/recipe.model';
+import { isRecipeImage } from '../models/recipe-metadata';
 
 export interface RecipePhotos {
   cover?: string;
@@ -12,7 +13,11 @@ export async function uploadPhotos(client: SupabaseClient, userId: string, recip
   const photos: RecipePhotos = {};
   const payload = structuredClone(recipe);
   async function upload(data: string): Promise<string> {
-    const blob = await (await fetch(data)).blob();
+    // Data URLs are local bytes, not network requests. Fetching one is blocked by our CSP.
+    if (!isRecipeImage(data)) throw new Error('Invalid recipe photo.');
+    const encoded = data.slice(data.indexOf(',') + 1);
+    const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+    const blob = new Blob([bytes], { type: 'image/jpeg' });
     const hash = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
     const name = Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('');
     const path = `${userId}/${name}.jpg`;

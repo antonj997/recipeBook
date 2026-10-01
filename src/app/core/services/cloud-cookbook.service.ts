@@ -37,6 +37,11 @@ export class CloudCookbookService {
       void this.initialize().then(() => this.sync());
     });
     window.addEventListener('offline', () => this.online.set(false));
+    document.addEventListener('visibilitychange', () => {
+      // Refresh recipes from other devices, and retry queued changes after returning to the app.
+      if (document.visibilityState === 'visible' && navigator.onLine)
+        void this.initialize().then(() => this.sync());
+    });
   }
 
   async initialize(): Promise<void> {
@@ -75,6 +80,12 @@ export class CloudCookbookService {
     database = this.database,
   ): Promise<void> {
     await this.write(database, [{ table, id: value.id, value }]);
+  }
+  async putRecipes(recipes: Recipe[], database = this.database): Promise<void> {
+    await this.write(
+      database,
+      recipes.map((value) => ({ table: 'recipes', id: value.id, value })),
+    );
   }
   async remove(table: CookbookTable, id: string): Promise<void> {
     await this.write(this.database, [{ table, id, value: null }]);

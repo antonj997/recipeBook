@@ -39,6 +39,9 @@ export class RecipeService {
     return this.cloud.database.collections.orderBy('sortOrder').toArray();
   }
   async createCollection(name: string): Promise<RecipeCollection> {
+    name = name.trim();
+    if (!name || name.length > 80)
+      throw new Error('Use a category name between 1 and 80 characters.');
     const database = this.cloud.database;
     const collections = await database.collections.toArray();
     const existing = collections.find(
@@ -52,6 +55,30 @@ export class RecipeService {
     };
     await this.cloud.put('collections', collection, database);
     return collection;
+  }
+  async assignCollection(
+    id: string,
+    selected: ReadonlySet<string>,
+    shown: ReadonlySet<string>,
+  ): Promise<void> {
+    const database = this.cloud.database;
+    const version = this.accountVersion();
+    if (!(await database.collections.get(id))) throw new Error('Category not found.');
+    const recipes = await database.recipes.toArray();
+    if (version !== this.accountVersion()) throw new Error('Account changed. Try again.');
+    const changed = recipes
+      .filter(
+        (recipe) =>
+          shown.has(recipe.id) && !!recipe.collectionIds?.includes(id) !== selected.has(recipe.id),
+      )
+      .map((recipe) => ({
+        ...recipe,
+        collectionIds: selected.has(recipe.id)
+          ? [...(recipe.collectionIds ?? []), id]
+          : (recipe.collectionIds ?? []).filter((categoryId) => categoryId !== id),
+        updatedAt: new Date().toISOString(),
+      }));
+    await this.cloud.putRecipes(changed, database);
   }
   matchCollections(category: string | undefined, collections: RecipeCollection[]): string[] {
     const names = (category ?? '').split(/[,;]/).map((name) => name.trim().toLocaleLowerCase());

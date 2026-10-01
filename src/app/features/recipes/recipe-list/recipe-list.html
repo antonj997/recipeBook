@@ -1,9 +1,4 @@
 <section class="recipe-list page">
-  @if (cloud.error()) {
-    <p role="status">
-      {{ cloud.error() }} <a routerLink="/settings" fragment="account">Sync settings</a>
-    </p>
-  }
   @if (!loading() && !error() && recipes().length > 0) {
     <div class="home-tools">
       <div class="search-field" role="search">
@@ -75,6 +70,7 @@
           @for (collection of collections(); track collection.id) {
             <option [value]="collection.id">{{ collection.name }}</option>
           }
+          <option value="manage-categories">Manage categories…</option>
         </select>
       </div>
       <div rail-empty class="empty-state">

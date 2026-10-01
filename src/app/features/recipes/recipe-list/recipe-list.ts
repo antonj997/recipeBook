@@ -1,7 +1,7 @@
 import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
 import { Component, computed, inject, effect, signal } from '@angular/core';
 
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import type { Recipe } from '../../../core/models/recipe.model';
 
@@ -28,6 +28,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
 })
 export class RecipeListComponent {
   private recipeService = inject(RecipeService);
+  private router = inject(Router);
   readonly cloud = inject(CloudCookbookService);
 
   recipes = signal<Recipe[]>([]);
@@ -40,7 +41,11 @@ export class RecipeListComponent {
         ?.name ?? 'All recipes',
   );
   onCategoryChange(event: Event): void {
-    this.selectedCollectionId.set((event.target as HTMLSelectElement).value);
+    const picker = event.target as HTMLSelectElement;
+    if (picker.value === 'manage-categories') {
+      picker.value = this.selectedCollectionId();
+      void this.router.navigate(['/settings'], { fragment: 'categories' });
+    } else this.selectedCollectionId.set(picker.value);
   }
   // Filter the loaded recipes; the database and stored objects stay unchanged.
   filteredRecipes = computed(() => {

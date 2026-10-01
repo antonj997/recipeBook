@@ -41,25 +41,28 @@
           {{ showPassword() ? 'Hide password' : 'Show password' }}
         </button>
       </div>
-      <input
-        id="account-password"
-        [type]="showPassword() ? 'text' : 'password'"
-        [attr.autocomplete]="newPassword() ? 'new-password' : 'current-password'"
-        formControlName="password"
-        required
-        [minlength]="newPassword() ? 8 : null"
-        [attr.aria-describedby]="newPassword() ? 'password-hint' : null"
-      />
-      @if (newPassword()) {
-        <p class="hint" id="password-hint">At least 8 characters.</p>
-        <label for="account-confirm">Confirm password</label>
+      <!-- Recreate inputs on visibility changes so mobile browsers repaint both values immediately. -->
+      @for (inputType of [showPassword() ? 'text' : 'password']; track inputType) {
         <input
-          id="account-confirm"
-          [type]="showPassword() ? 'text' : 'password'"
-          autocomplete="new-password"
-          formControlName="confirm"
+          id="account-password"
+          [type]="inputType"
+          [attr.autocomplete]="newPassword() ? 'new-password' : 'current-password'"
+          formControlName="password"
           required
+          [minlength]="newPassword() ? 8 : null"
+          [attr.aria-describedby]="newPassword() ? 'password-hint' : null"
         />
+        @if (newPassword()) {
+          <p class="hint" id="password-hint">At least 8 characters.</p>
+          <label for="account-confirm">Confirm password</label>
+          <input
+            id="account-confirm"
+            [type]="inputType"
+            autocomplete="new-password"
+            formControlName="confirm"
+            required
+          />
+        }
       }
     }
     @if (error() || auth.callbackError()) {

@@ -7,7 +7,7 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 ## Features
 
 - Create recipes, import supported recipe links, and review imports before saving.
-- Organize recipes into collections, search your cookbook, and browse recipe cards.
+- Create categories, assign several recipes at once, and filter or search your cookbook.
 - Group ingredients and instructions, adjust servings, and check off cooking steps.
 - Store photos, cooking time and available nutrition information.
 - Sign in with email and password for a private cookbook across devices.

@@ -11,7 +11,7 @@ import { IconComponent } from '../../../shared/components/icon';
   template: `
     <details>
       <summary class="disclosure">
-        Collections
+        Categories
         <span
           >{{ selectedCount() ? selectedCount() + ' selected' : 'None' }}<app-icon name="chevron"
         /></span>
@@ -29,9 +29,9 @@ import { IconComponent } from '../../../shared/components/icon';
       </div>
       <div class="create">
         <label
-          >New collection<input
+          >New category<input
             #name
-            placeholder="Collection name"
+            placeholder="Category name"
             [disabled]="creating()"
             (keydown.enter)="$event.preventDefault(); create(name)" /></label
         ><button type="button" [disabled]="creating()" (click)="create(name)">
@@ -122,7 +122,7 @@ export class RecipeCollectionsComponent {
     if (this.creating()) return;
     const name = input.value.trim();
     if (!name) {
-      this.error.set('Enter a collection name.');
+      this.error.set('Enter a category name.');
       return;
     }
     this.creating.set(true);
@@ -134,7 +134,7 @@ export class RecipeCollectionsComponent {
       if (!this.control().value.includes(collection.id)) this.toggle(collection.id);
       input.value = '';
     } catch {
-      this.error.set('Could not create the collection. Please try again.');
+      this.error.set('Could not create the category. Please try again.');
     } finally {
       this.creating.set(false);
     }

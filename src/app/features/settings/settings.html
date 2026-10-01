@@ -1,73 +1,70 @@
 <section class="settings-page page page--narrow">
-  <!-- Header -->
   <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
-
   <h1>Settings</h1>
+  <p class="description">Your account, categories and cookbook backups.</p>
+  <nav class="settings-nav" aria-label="Settings sections">
+    <a href="#account" (click)="$event.preventDefault(); scrollTo('account')">Account</a>
+    <a href="#categories" (click)="$event.preventDefault(); scrollTo('categories')">Categories</a>
+    <a href="#import-cookbook" (click)="$event.preventDefault(); scrollTo('import-cookbook')"
+      >Backups</a
+    >
+    <a href="#app-settings" (click)="$event.preventDefault(); scrollTo('app-settings')">App</a>
+  </nav>
 
-  <p class="description">Manage your cookbook and keep your recipes safe.</p>
-
-  <div class="settings-card" id="account">
-    <h2>Account</h2>
+  <section class="settings-section" id="account" aria-labelledby="account-heading">
+    <h2 id="account-heading">Account</h2>
     @if (auth.configured()) {
       @if (auth.passwordRecovery()) {
         <app-account-access [blocked]="importing() || exporting()" />
       } @else if (auth.user(); as user) {
-        <p>{{ user.email }}</p>
-        <p role="status" aria-live="polite">
-          {{
-            !cloud.online()
-              ? 'Offline · changes stay on this device'
-              : cloud.syncing()
-                ? 'Syncing…'
-                : cloud.pending()
-                  ? cloud.pending() + ' changes waiting to sync'
-                  : cloud.error()
-                    ? 'Saved on this device · sync needs attention'
-                    : cloud.lastSynced()
-                      ? 'Your cookbook is synced'
-                      : 'Checking your cloud cookbook…'
-          }}
-        </p>
+        <div class="account-summary">
+          <div>
+            <p class="account-email">{{ user.email }}</p>
+            <p class="sync-status" role="status" aria-live="polite">{{ syncStatus() }}</p>
+          </div>
+          <button
+            type="button"
+            (click)="cloud.sync()"
+            [disabled]="cloud.syncing() || accountBusy()"
+          >
+            {{ cloud.syncing() ? 'Syncing…' : 'Sync now' }}
+          </button>
+        </div>
         @if (cloud.error()) {
           <p class="error" role="alert">{{ cloud.error() }}</p>
         }
         @if (auth.callbackNotice()) {
           <p role="status">{{ auth.callbackNotice() }}</p>
         }
-        <p class="privacy-note">
-          Signing out keeps this account’s offline copy and unsynced changes on this device. On a
-          shared device, clear Recipebook’s site data after syncing or exporting a backup.
-        </p>
-        <div class="account-actions">
-          <button
-            type="button"
-            (click)="cloud.sync()"
-            [disabled]="cloud.syncing() || accountBusy()"
-          >
-            Sync now
-          </button>
-
-          <button
-            type="button"
-            (click)="requestPasswordReset()"
-            [disabled]="accountBusy() || importing() || exporting()"
-          >
-            Reset password
-          </button>
-          <button
-            type="button"
-            (click)="signOut()"
-            [disabled]="accountBusy() || importing() || exporting()"
-          >
-            Sign out
-          </button>
-        </div>
+        <details class="account-options">
+          <summary class="disclosure">Account options<app-icon name="chevron" /></summary>
+          <div class="account-actions">
+            <button
+              type="button"
+              (click)="requestPasswordReset()"
+              [disabled]="accountBusy() || importing() || exporting()"
+            >
+              Reset password
+            </button>
+            <button
+              type="button"
+              (click)="signOut()"
+              [disabled]="accountBusy() || importing() || exporting()"
+            >
+              Sign out
+            </button>
+          </div>
+          <p class="privacy-note">
+            Signing out keeps your offline copy on this device. On a shared device, sync or download
+            a backup before clearing Recipebook’s site data.
+          </p>
+        </details>
         @if (deviceRecipes()) {
           <div class="device-cookbook">
-            <h3>Recipes on this device</h3>
+            <h3>Bring your device recipes with you</h3>
             <p>
-              {{ deviceRecipes() }} recipes in your device cookbook are separate from this account.
-              Copy them to save them across devices. Your device copy will stay intact.
+              {{ deviceRecipes() }} recipes were saved without an account. Copy them into your
+              private cookbook to use them across devices.
             </p>
             <button
               type="button"
@@ -76,93 +73,102 @@
             >
               Copy to my account
             </button>
+            <p class="hint">The device copy stays intact. Existing recipes are skipped.</p>
           </div>
         }
       } @else {
         <app-account-access [blocked]="importing() || exporting()" />
       }
     } @else {
-      <p>Cloud sync is not set up yet. Your recipes are saved on this device.</p>
+      <p>Your cookbook is saved on this device. Cloud sign-in is not configured.</p>
     }
-  </div>
+    @if (feedbackSection() === 'account') {
+      @if (message()) {
+        <p class="feedback" role="status">{{ message() }}</p>
+      }
+      @if (error()) {
+        <p class="feedback error" role="alert">{{ error() }}</p>
+      }
+    }
+  </section>
 
-  <div class="settings-card">
-    <h2>App</h2>
+  <section class="settings-section" id="categories" aria-labelledby="categories-heading">
+    <h2 id="categories-heading">Categories</h2>
+    <app-category-manager />
+  </section>
+
+  <section class="settings-section" id="import-cookbook" aria-labelledby="backups-heading">
+    <h2 id="backups-heading">Cookbook backups</h2>
+    <p>
+      {{
+        auth.user()
+          ? 'Back up the recipes and categories in your signed-in account.'
+          : 'Back up the recipes and categories saved on this device.'
+      }}
+      Photos are included.
+    </p>
+    <div class="backup-actions">
+      <div>
+        <h3>Download a copy</h3>
+        <p>Keep a backup somewhere safe.</p>
+        <button
+          type="button"
+          [disabled]="exporting() || importing() || accountBusy()"
+          (click)="exportBackup()"
+        >
+          {{ exporting() ? 'Preparing…' : 'Download backup' }}
+        </button>
+      </div>
+      <div>
+        <h3>Restore a cookbook</h3>
+        <p>Add recipes from a Recipebook backup. Existing recipes stay intact.</p>
+        <input
+          #backupFile
+          type="file"
+          accept=".json,application/json"
+          (change)="onFileSelected($event)"
+          [disabled]="importing() || exporting() || accountBusy()"
+          hidden
+        />
+        <button
+          type="button"
+          [disabled]="importing() || exporting() || accountBusy()"
+          (click)="backupFile.click()"
+        >
+          {{ importing() ? 'Importing…' : 'Choose backup file' }}
+        </button>
+      </div>
+    </div>
+    @if (feedbackSection() === 'backup') {
+      @if (message()) {
+        <p class="feedback" role="status">{{ message() }}</p>
+      }
+      @if (error()) {
+        <p class="feedback error" role="alert">{{ error() }}</p>
+      }
+    }
+  </section>
+
+  <section class="settings-section" id="app-settings" aria-labelledby="app-heading">
+    <h2 id="app-heading">App</h2>
+    @if (app.available()) {
+      <div class="app-update">
+        <p>A new version is ready.</p>
+        <button type="button" (click)="app.reload()">Reload to update</button>
+      </div>
+    }
     @if (app.installed()) {
-      <p>Recipebook is installed.</p>
+      <p>Recipebook is installed on this device.</p>
     } @else {
-      <p>Use your browser’s Install app or Add to Home Screen option.</p>
+      <p>Install Recipebook from your browser, or choose Add to Home Screen.</p>
       @if (app.installable()) {
         <button type="button" (click)="app.install()">Install Recipebook</button>
       }
     }
     @if (app.offlineReady()) {
-      <p role="status">Offline app ready. Your saved cookbook is available without a connection.</p>
+      <p class="hint" role="status">
+        Ready for offline use. Saved recipes are available without a connection.
+      </p>
     }
-    @if (app.available()) {
-      <button type="button" (click)="app.reload()">Reload to update</button>
-    }
-  </div>
-
-  <!-- Export -->
-  <div class="settings-card">
-    <h2>Export cookbook</h2>
-
-    <p>
-      Download a backup containing all your saved recipes. Keep this file somewhere safe so you can
-      restore your cookbook later.
-    </p>
-
-    <button
-      type="button"
-      class="primary"
-      [disabled]="exporting() || importing() || accountBusy()"
-      (click)="exportBackup()"
-    >
-      {{ exporting() ? 'Exporting...' : 'Download backup' }}
-    </button>
-  </div>
-
-  <!-- Import -->
-  <div class="settings-card" id="import-cookbook">
-    <h2>Import cookbook</h2>
-
-    <p>
-      Restore recipes from a previously exported Recipebook backup file. Existing recipes with
-      matching IDs will not be overwritten.
-    </p>
-
-    <!-- Hidden native file input -->
-    <input
-      #backupFile
-      type="file"
-      accept=".json,application/json"
-      (change)="onFileSelected($event)"
-      [disabled]="importing() || exporting() || accountBusy()"
-      hidden
-    />
-
-    <!-- Opens the file picker -->
-    <button
-      type="button"
-      class="secondary"
-      [disabled]="importing() || exporting() || accountBusy()"
-      (click)="backupFile.click()"
-    >
-      {{ importing() ? 'Importing...' : 'Choose backup file' }}
-    </button>
-  </div>
-
-  <!-- Feedback -->
-  @if (message()) {
-    <div class="message success" role="status">
-      {{ message() }}
-    </div>
-  }
-
-  @if (error()) {
-    <div class="message error" role="alert">
-      {{ error() }}
-    </div>
-  }
+  </section>
 </section>

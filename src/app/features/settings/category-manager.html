@@ -1,0 +1,110 @@
+<div class="category-heading">
+  <p>Group recipes your way, then filter them on the home page.</p>
+  <button
+    type="button"
+    (click)="creating.set(!creating())"
+    [disabled]="busy()"
+    [attr.aria-expanded]="creating()"
+    aria-controls="new-category"
+  >
+    <app-icon name="plus" />New category
+  </button>
+</div>
+@if (creating()) {
+  <div class="create-category" id="new-category">
+    <label for="category-name">Category name</label>
+    <div class="create-row">
+      <input
+        #name
+        id="category-name"
+        placeholder="e.g. Weeknight dinners"
+        maxlength="80"
+        [disabled]="busy()"
+        (keydown.enter)="$event.preventDefault(); create(name)"
+      />
+      <button class="primary" type="button" (click)="create(name)" [disabled]="busy()">
+        Create
+      </button>
+    </div>
+  </div>
+}
+@if (loading()) {
+  <p role="status">Loading categories…</p>
+} @else if (!categories().length) {
+  <p class="hint">No categories yet. Recipes can belong to more than one, or none.</p>
+}
+<div class="categories">
+  @for (category of categories(); track category.id) {
+    <button
+      type="button"
+      class="category-row"
+      (click)="open(category.id)"
+      [disabled]="busy()"
+      [attr.aria-expanded]="activeId() === category.id"
+      [attr.aria-controls]="activeId() === category.id ? 'category-recipes' : null"
+    >
+      <span>{{ category.name }}</span
+      ><span class="category-count"
+        >{{ count(category.id) }} {{ count(category.id) === 1 ? 'recipe' : 'recipes' }}</span
+      ><app-icon name="chevron" [class.open]="activeId() === category.id" />
+    </button>
+    @if (activeId() === category.id) {
+      <div class="recipe-selection" id="category-recipes">
+        @if (recipes().length) {
+          <div class="search-field" role="search">
+            <app-icon name="search" /><input
+              type="search"
+              aria-label="Find recipes to categorize"
+              placeholder="Find recipes"
+              [value]="query()"
+              (input)="onSearch($event)"
+            />
+            @if (query()) {
+              <button type="button" aria-label="Clear recipe search" (click)="query.set('')">
+                <app-icon name="close" />
+              </button>
+            }
+          </div>
+          <fieldset [disabled]="busy()">
+            <legend class="sr-only">Recipes in {{ category.name }}</legend>
+            <div class="recipe-choices">
+              @for (recipe of filteredRecipes(); track recipe.id) {
+                <label class="check-control"
+                  ><input
+                    type="checkbox"
+                    [checked]="selected().has(recipe.id)"
+                    (change)="toggle(recipe.id)"
+                  /><app-checkbox-mark /><span>{{ recipe.title }}</span></label
+                >
+              } @empty {
+                <p class="hint">No matching recipes.</p>
+              }
+            </div>
+          </fieldset>
+          <div class="selection-actions">
+            <span role="status">{{ selected().size }} selected</span>
+            <button type="button" (click)="resetSelection()" [disabled]="busy() || !changed()">
+              Reset
+            </button>
+            <button
+              class="primary"
+              type="button"
+              (click)="save()"
+              [disabled]="busy() || !changed()"
+            >
+              {{ busy() ? 'Saving…' : 'Save selection' }}
+            </button>
+          </div>
+        } @else {
+          <p class="hint">Save a recipe first, then add it here.</p>
+        }
+      </div>
+    }
+  }
+</div>
+@if (error()) {
+  <p class="category-error" role="alert">{{ error() }}</p>
+}
+@if (message()) {
+  <p class="category-message" role="status">{{ message() }}</p>
+}

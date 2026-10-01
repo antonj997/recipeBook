@@ -1,0 +1,137 @@
+:host {
+  display: block;
+}
+.category-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.category-heading p {
+  color: var(--color-muted);
+  margin: 0;
+  max-width: 36ch;
+}
+.category-heading button {
+  flex-shrink: 0;
+}
+.create-category {
+  margin-bottom: 24px;
+}
+.create-category label {
+  display: block;
+  margin-bottom: 8px;
+}
+.create-row {
+  display: flex;
+  gap: 12px;
+}
+.create-row input {
+  flex: 1;
+  min-width: 0;
+}
+.category-row {
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--color-border);
+  padding: 14px 0;
+  text-align: left;
+  font-size: 1rem;
+}
+.category-row > span:first-child {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.category-count {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+.category-row app-icon {
+  transform: rotate(-90deg);
+  transition: transform 180ms var(--ease-out);
+}
+.category-row app-icon.open {
+  transform: rotate(90deg);
+}
+.recipe-selection {
+  padding: 16px 0 24px;
+}
+.search-field {
+  margin-bottom: 14px;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.recipe-choices {
+  max-height: 330px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--color-control-border) transparent;
+}
+.recipe-choices label {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 48px;
+  padding: 8px 4px;
+  font-weight: 400;
+}
+.selection-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.selection-actions > span {
+  margin-right: auto;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+.hint {
+  margin: 0;
+}
+.category-error {
+  color: var(--color-danger);
+  margin: 16px 0 0;
+}
+.category-message {
+  margin: 16px 0 0;
+}
+@media (max-width: 600px) {
+  .category-heading {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .selection-actions {
+    gap: 8px;
+  }
+  .selection-actions > span {
+    flex-basis: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .category-row app-icon {
+    transition: none;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

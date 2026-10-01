@@ -82,7 +82,7 @@ export class App {
   }
 
   protected onNavigationKey(event: KeyboardEvent): void {
-    if (event.key === 'Tab' || event.key.startsWith('Arrow')) {
+    if (event.key === 'Tab' || event.key?.startsWith('Arrow')) {
       this.touchInput.set(false);
     }
   }

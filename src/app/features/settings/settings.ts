@@ -1,7 +1,8 @@
 import { AppUpdateService } from '../../core/services/app-update.service';
 import { IconComponent } from '../../shared/components/icon';
+import { CategoryManagerComponent } from './category-manager';
 import { AccountAccessComponent } from './account-access';
-import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 
 import { RouterLink } from '@angular/router';
 
@@ -10,7 +11,7 @@ import { CloudCookbookService } from '../../core/services/cloud-cookbook.service
 
 @Component({
   selector: 'app-settings',
-  imports: [IconComponent, RouterLink, AccountAccessComponent],
+  imports: [IconComponent, RouterLink, AccountAccessComponent, CategoryManagerComponent],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
@@ -22,6 +23,20 @@ export class SettingsComponent {
   private active = true;
   private current(version: number): boolean {
     return this.active && version === this.auth.accountVersion();
+  }
+  readonly feedbackSection = signal<'account' | 'backup'>('account');
+  readonly syncStatus = computed(() => {
+    if (!this.cloud.online()) return 'Offline · changes saved on this device';
+    if (this.cloud.syncing()) return 'Syncing your cookbook…';
+    if (this.cloud.error()) return 'Saved on this device · sync needs attention';
+    if (this.cloud.pending()) return this.cloud.pending() + ' changes waiting to sync';
+    return this.cloud.lastSynced() ? 'Your cookbook is synced' : 'Checking your cloud cookbook…';
+  });
+  scrollTo(id: string): void {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start',
+    });
   }
   readonly deviceRecipes = signal(0);
   constructor() {
@@ -37,6 +52,7 @@ export class SettingsComponent {
   }
   readonly accountBusy = this.auth.busy;
   async requestPasswordReset(): Promise<void> {
+    this.feedbackSection.set('account');
     const version = this.auth.accountVersion();
     const email = this.auth.user()?.email;
     if (!email || this.accountBusy()) return;
@@ -56,6 +72,7 @@ export class SettingsComponent {
   }
 
   async signOut(): Promise<void> {
+    this.feedbackSection.set('account');
     if (this.accountBusy()) return;
     const version = this.auth.accountVersion();
     this.accountBusy.set(true);
@@ -85,6 +102,7 @@ export class SettingsComponent {
     }
   }
   async copyDeviceRecipes(): Promise<void> {
+    this.feedbackSection.set('account');
     const version = this.auth.accountVersion();
     if (!this.current(version)) return;
     if (
@@ -117,6 +135,7 @@ export class SettingsComponent {
 
   // Download the cookbook as JSON.
   async exportBackup(): Promise<void> {
+    this.feedbackSection.set('backup');
     const version = this.auth.accountVersion();
     if (!this.current(version) || this.exporting()) {
       return;
@@ -171,6 +190,7 @@ export class SettingsComponent {
 
   // Restore recipes from a selected file.
   async onFileSelected(event: Event): Promise<void> {
+    this.feedbackSection.set('backup');
     const version = this.auth.accountVersion();
     const input = event.target as HTMLInputElement;
 
