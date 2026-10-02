@@ -142,6 +142,9 @@
     <div
       #progressControls
       class="carousel-progress"
+      [class.is-windowed]="condensed()"
+      [style.width.px]="condensed() ? indicatorCapacity() * 32 : null"
+      [attr.aria-describedby]="condensed() ? railId() + '-progress-help' : null"
       [attr.role]="condensed() ? 'slider' : 'group'"
       [attr.tabindex]="condensed() ? 0 : null"
       [attr.aria-valuemin]="condensed() ? 1 : null"
@@ -163,7 +166,10 @@
           <span
             class="progress-mark"
             aria-hidden="true"
-            [style.--dot-strength]="indicatorStrength(mark)"
+            [style.transform]="'translateX(' + (mark - indicatorOffset()) * 32 + 'px)'"
+            [style.--dot-strength]="dotStrength(mark)"
+            [style.--edge-scale]="indicatorScale(mark)"
+            [attr.data-recipe-index]="mark"
             ><span></span
           ></span>
         }
@@ -184,5 +190,14 @@
         }
       }
     </div>
+    @if (condensed()) {
+      <span class="sr-only" [id]="railId() + '-progress-help'"
+        >Each dot is one recipe. Drag to browse; hold near either end to keep moving. Use arrow
+        keys, Home or End with a keyboard.</span
+      >
+      <p class="carousel-position" aria-hidden="true">
+        {{ currentStop() + 1 }} / {{ recipes().length }}
+      </p>
+    }
   }
 </section>

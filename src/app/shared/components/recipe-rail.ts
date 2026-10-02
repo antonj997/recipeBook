@@ -74,7 +74,24 @@ export class RecipeRailComponent implements OnDestroy {
   progress = signal(0);
   indicatorCapacity = signal(9);
   condensed = computed(() => this.stops().length > this.indicatorCapacity());
-  indicatorMarks = computed(() => Array.from({ length: this.indicatorCapacity() }, (_, i) => i));
+  // Every mark keeps its recipe index. Only the nearby window is rendered.
+  indicatorOffset = computed(() =>
+    Math.max(
+      0,
+      Math.min(
+        this.stops().length - this.indicatorCapacity(),
+        this.progress() - (this.indicatorCapacity() - 1) / 2,
+      ),
+    ),
+  );
+  indicatorMarks = computed(() => {
+    const first = Math.max(0, Math.floor(this.indicatorOffset()) - 1);
+    const end = Math.min(
+      this.stops().length,
+      Math.ceil(this.indicatorOffset()) + this.indicatorCapacity() + 1,
+    );
+    return Array.from({ length: end - first }, (_, i) => first + i);
+  });
   positionLabel = computed(() => {
     const stops = this.stops();
     const index = Math.min(stops.length - 1, this.currentStop());
@@ -87,6 +104,7 @@ export class RecipeRailComponent implements OnDestroy {
   private lastScroll = 0;
   private lastScrollTime = 0;
   private frame = 0;
+  private edgeFrame = 0;
   private targetIndex: number | null = null;
   private settleTimer?: ReturnType<typeof setTimeout>;
   private cardPositions: number[] = [];
@@ -99,7 +117,11 @@ export class RecipeRailComponent implements OnDestroy {
     startX: number;
     startY: number;
     startProgress: number;
-    pixelsPerStop: number;
+    pressedProgress: number;
+    lastX: number;
+    edgeDirection: number;
+    edgeSince: number;
+    edgeTime: number;
     moved: boolean;
     condensed: boolean;
   };
@@ -108,10 +130,14 @@ export class RecipeRailComponent implements OnDestroy {
     return Math.max(0, 1 - Math.abs(this.progress() - index));
   }
 
-  indicatorStrength(index: number): number {
-    const progress =
-      (this.progress() / Math.max(1, this.stops().length - 1)) * (this.indicatorCapacity() - 1);
-    return Math.max(0, 1 - Math.abs(progress - index));
+  indicatorScale(index: number): number {
+    const slot = index - this.indicatorOffset();
+    const last = this.indicatorCapacity() - 1;
+    const distance = Math.min(
+      this.indicatorOffset() > 0 ? slot : 1,
+      this.indicatorOffset() < this.stops().length - this.indicatorCapacity() ? last - slot : 1,
+    );
+    return Math.max(0.4, Math.min(1, 0.4 + distance * 0.6));
   }
 
   constructor() {
@@ -170,40 +196,26 @@ export class RecipeRailComponent implements OnDestroy {
     const available =
       rail.closest<HTMLElement>('.collection-section')?.clientWidth ?? rail.clientWidth;
     this.indicatorCapacity.set(Math.max(2, Math.min(9, Math.floor(available / 32))));
+    const measured = this.needsMeasurement;
     const positions = this.positions();
-    // A desktop rail shows several cards at once; duplicate end positions share one dot.
-    const stops = positions.flatMap((left, recipeIndex) =>
-      recipeIndex === 0 || Math.abs(left - positions[recipeIndex - 1]) > 2
-        ? [{ recipeIndex, left }]
-        : [],
-    );
-    if (
-      stops.length !== this.stops().length ||
-      stops.some(
-        (stop, i) =>
-          stop.recipeIndex !== this.stops()[i].recipeIndex ||
-          Math.abs(stop.left - this.stops()[i].left) > 1,
-      )
-    ) {
-      this.stops.set(stops);
+    if (measured || positions.length !== this.stops().length) {
+      this.stops.set(positions.map((left, recipeIndex) => ({ recipeIndex, left })));
     }
-    let progress = 0;
-    for (let i = 1; i < stops.length; i++) {
-      if (rail.scrollLeft >= stops[i].left) progress = i;
-      else {
-        progress =
-          i -
-          1 +
-          Math.max(0, (rail.scrollLeft - stops[i - 1].left) / (stops[i].left - stops[i - 1].left));
-        break;
-      }
+    // Measured positions are reused during dragging; locate the card in O(log n).
+    let low = 0;
+    let high = Math.max(0, positions.length - 1);
+    while (low < high) {
+      const middle = Math.ceil((low + high) / 2);
+      if (positions[middle] <= rail.scrollLeft) low = middle;
+      else high = middle - 1;
     }
+    const next = Math.min(positions.length - 1, low + 1);
+    const distance = positions[next] - positions[low];
+    const progress =
+      low +
+      (distance > 0 ? Math.max(0, Math.min(1, (rail.scrollLeft - positions[low]) / distance)) : 0);
     this.progress.set(progress);
-    let nearest = 0;
-    positions.forEach((p, i) => {
-      if (Math.abs(p - rail.scrollLeft) < Math.abs(positions[nearest] - rail.scrollLeft))
-        nearest = i;
-    });
+    const nearest = Math.round(progress);
     this.activeIndex.set(nearest);
     const id = this.recipes()[nearest]?.id ?? '';
     if (id && id !== this.currentRecipeId) {
@@ -261,26 +273,29 @@ export class RecipeRailComponent implements OnDestroy {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.progress-dot');
     const condensed = this.condensed();
     const bounds = controls.getBoundingClientRect();
-    const travel = Math.max(1, bounds.width - 32);
     const last = this.stops().length - 1;
-    const pressedProgress = Math.max(
-      0,
-      Math.min(last, ((event.clientX - bounds.left - 16) / travel) * last),
-    );
-    // The condensed track maps its fixed width to the entire carousel. Normal dots
-    // retain their physical 32px spacing. Neither geometry moves during a drag.
+    const pressedProgress = button
+      ? Number(button.dataset['stop'])
+      : Math.max(
+          0,
+          Math.min(
+            last,
+            Math.round(this.indicatorOffset() + (event.clientX - bounds.left - 16) / 32),
+          ),
+        );
+    // Freeze the starting recipe, not a percentage of the whole collection.
     this.scrub = {
       pointerId: event.pointerId,
       controls,
       captureTarget: button ?? controls,
       startX: event.clientX,
       startY: event.clientY,
-      startProgress: condensed
-        ? pressedProgress
-        : button
-          ? Number(button.dataset['stop'])
-          : this.progress(),
-      pixelsPerStop: condensed ? travel / last : 32,
+      startProgress: pressedProgress,
+      pressedProgress,
+      lastX: event.clientX,
+      edgeDirection: 0,
+      edgeSince: 0,
+      edgeTime: 0,
       moved: false,
       condensed,
     };
@@ -307,16 +322,49 @@ export class RecipeRailComponent implements OnDestroy {
       clearTimeout(this.settleTimer);
     }
     event.preventDefault();
+    scrub.lastX = event.clientX;
+    this.scrubTo(scrub.startProgress + dx / 32);
+    const bounds = scrub.controls.getBoundingClientRect();
+    const direction = !scrub.condensed
+      ? 0
+      : event.clientX <= bounds.left + 24
+        ? -1
+        : event.clientX >= bounds.right - 24
+          ? 1
+          : 0;
+    if (direction !== scrub.edgeDirection) {
+      scrub.edgeDirection = direction;
+      scrub.edgeSince = scrub.edgeTime = performance.now();
+      cancelAnimationFrame(this.edgeFrame);
+      this.edgeFrame = 0;
+    }
+    if (direction && !this.edgeFrame)
+      this.edgeFrame = requestAnimationFrame((time) => this.scrubEdge(time));
+  }
+  private scrubTo(value: number): void {
     const stops = this.stops();
-    const progress = Math.max(
-      0,
-      Math.min(stops.length - 1, scrub.startProgress + dx / scrub.pixelsPerStop),
-    );
+    if (!stops.length) return;
+    const progress = Math.max(0, Math.min(stops.length - 1, value));
     const lower = Math.floor(progress);
     const upper = Math.min(stops.length - 1, lower + 1);
     const left = stops[lower].left + (stops[upper].left - stops[lower].left) * (progress - lower);
     this.rail()?.nativeElement.scrollTo({ left, behavior: 'instant' });
-    this.queueUpdate();
+    this.updateArrowState();
+  }
+  private scrubEdge(time: number): void {
+    this.edgeFrame = 0;
+    const scrub = this.scrub;
+    if (!scrub?.moved || !scrub.edgeDirection) return;
+    // A short hold starts slowly, then speeds up for long collections.
+    const speed = 4 + Math.min(26, (time - scrub.edgeSince) / 80);
+    const delta = (scrub.edgeDirection * speed * Math.min(64, time - scrub.edgeTime)) / 1000;
+    scrub.edgeTime = time;
+    const previous = this.progress();
+    this.scrubTo(previous + delta);
+    // Keep the finger-relative drag anchored to the actual clamped position.
+    scrub.startProgress = this.progress() - (scrub.lastX - scrub.startX) / 32;
+    if (this.progress() !== previous)
+      this.edgeFrame = requestAnimationFrame((next) => this.scrubEdge(next));
   }
   onLostScrubCapture(event: PointerEvent): void {
     // Capture events bubble: losing a child's implicit capture must not end our drag.
@@ -326,6 +374,8 @@ export class RecipeRailComponent implements OnDestroy {
     const scrub = this.scrub;
     if (!scrub || (event && event.pointerId !== scrub.pointerId)) return;
     this.scrub = undefined;
+    cancelAnimationFrame(this.edgeFrame);
+    this.edgeFrame = 0;
     if (scrub.captureTarget.hasPointerCapture(scrub.pointerId))
       scrub.captureTarget.releasePointerCapture(scrub.pointerId);
     scrub.controls.classList.remove('is-scrubbing');
@@ -345,7 +395,7 @@ export class RecipeRailComponent implements OnDestroy {
     } else {
       rail?.classList.remove('is-scrubbing');
       if (scrub.condensed && snap && event?.type === 'pointerup') {
-        const stop = this.stops()[Math.round(scrub.startProgress)];
+        const stop = this.stops()[scrub.pressedProgress];
         if (stop) this.scrollToCard(stop.recipeIndex);
       }
     }
