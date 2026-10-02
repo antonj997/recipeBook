@@ -25,3 +25,15 @@ form button {
     width: 100%;
   }
 }
+
+.prerequisite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sign-in {
+  align-self: flex-start;
+}
+form .hint {
+  margin: 0;
+}

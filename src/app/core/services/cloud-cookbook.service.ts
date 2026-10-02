@@ -91,6 +91,60 @@ export class CloudCookbookService {
     await this.write(this.database, [{ table, id, value: null }]);
   }
 
+  async removeCollection(id: string, database = this.database): Promise<void> {
+    const version = this.auth.accountVersion();
+    const current = () => database === this.database && version === this.auth.accountVersion();
+    const transactions: Dexie = database;
+    await transactions.transaction(
+      'rw',
+      database instanceof AccountDatabase
+        ? [database.recipes, database.collections, database.outbox]
+        : [database.recipes, database.collections],
+      async () => {
+        if (!current()) throw new Error('Account changed. Try again.');
+        if (!(await database.collections.get(id)))
+          throw new Error('Category not found. Reload to try again.');
+        const recipes = (await database.recipes.toArray())
+          .filter((recipe) => recipe.collectionIds?.includes(id))
+          .map((recipe) => ({
+            ...recipe,
+            collectionIds: (recipe.collectionIds ?? []).filter((categoryId) => categoryId !== id),
+            updatedAt: new Date().toISOString(),
+          }));
+        const changes: Pick<PendingChange, 'table' | 'id' | 'value'>[] = [
+          ...recipes.map((value) => ({
+            table: 'recipes' as const,
+            id: value.id,
+            value,
+          })),
+          { table: 'collections', id, value: null },
+        ];
+        // Memberships and the category tombstone commit together, including queued cloud writes.
+        for (const change of changes) {
+          if (!current()) throw new Error('Account changed. Try again.');
+          const table = database.table(change.table);
+          if (change.value) await table.put(change.value);
+          else await table.delete(change.id);
+          if (database instanceof AccountDatabase)
+            await database.outbox.put({
+              ...change,
+              key: `${change.table}:${change.id}`,
+              revision: crypto.randomUUID(),
+            });
+        }
+        if (!current()) throw new Error('Account changed. Try again.');
+      },
+    );
+    this.revision.update((value) => value + 1);
+    if (database instanceof AccountDatabase && current()) {
+      const pending = await database.outbox.count();
+      if (current()) {
+        this.pending.set(pending);
+        void this.sync();
+      }
+    }
+  }
+
   private async write(
     database: CookbookDatabase,
     changes: Pick<PendingChange, 'table' | 'id' | 'value'>[],
@@ -135,8 +189,16 @@ export class CloudCookbookService {
     await this.write(database, [
       ...collections
         .filter((c) => !savedCollections.has(c.id))
-        .map((value) => ({ table: 'collections' as const, id: value.id, value })),
-      ...added.map((value) => ({ table: 'recipes' as const, id: value.id, value })),
+        .map((value) => ({
+          table: 'collections' as const,
+          id: value.id,
+          value,
+        })),
+      ...added.map((value) => ({
+        table: 'recipes' as const,
+        id: value.id,
+        value,
+      })),
     ]);
     return { added: added.length, skipped: recipes.length - added.length };
   }

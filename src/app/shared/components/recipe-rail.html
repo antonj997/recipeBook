@@ -87,7 +87,7 @@
             [routerLink]="['/recipes', recipe.id]"
             [style.--card-color]="
               recipe.imageDataUrl
-                ? 'var(--color-' + cardColors[i % cardColors.length] + ')'
+                ? photoBackground(recipe.id)
                 : placeholderBackground(recipe.id)
             "
           >

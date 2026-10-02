@@ -1,6 +1,7 @@
-import { Component, input, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, ElementRef, inject, input, OnInit, OnDestroy, signal } from '@angular/core';
 import { FormArray, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark';
+import { AutoGrowTextareaDirective } from '../../../shared/directives/auto-grow-textarea';
 import { IconComponent } from '../../../shared/components/icon';
 
 export type StepFields = FormGroup<{
@@ -22,7 +23,7 @@ interface Position {
 // Both editors reuse the original text controls. Each instance owns its drag state.
 @Component({
   selector: 'app-recipe-groups',
-  imports: [ReactiveFormsModule, IconComponent, CheckboxMarkComponent],
+  imports: [ReactiveFormsModule, IconComponent, CheckboxMarkComponent, AutoGrowTextareaDirective],
   templateUrl: './recipe-groups.html',
   styleUrl: './recipe-groups.scss',
 })
@@ -39,6 +40,19 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
   message = signal('');
   selected = signal<Set<FormControl<string>>>(new Set());
   dragHeight = signal(52);
+  private host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  removed = signal<{
+    control: FormControl<string>;
+    groupId: number;
+    index: number;
+    detail?: StepFields;
+  } | null>(null);
+  private rowIds = new WeakMap<FormControl<string>, number>();
+  private nextRowId = 1;
+  rowId(control: FormControl<string>): string {
+    if (!this.rowIds.has(control)) this.rowIds.set(control, this.nextRowId++);
+    return this.kind() + '-text-' + this.rowIds.get(control);
+  }
   private details = new Map<FormControl<string>, StepFields>();
   private nextId = 1;
   private dragImage?: HTMLElement;
@@ -133,11 +147,53 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     this.message.set(this.kind() + ' added.');
   }
   remove(control: FormControl<string>) {
+    const group = this.groups().find((item) => item.rows.includes(control));
+    if (!group) return;
+    this.removed.set({
+      control,
+      groupId: group.id,
+      index: group.rows.indexOf(control),
+      detail: this.details.get(control),
+    });
     this.groups.update((groups) =>
       groups.map((g) => ({ ...g, rows: g.rows.filter((row) => row !== control) })),
     );
     this.details.delete(control);
     this.sync();
+    this.message.set(this.kind() + ' removed. Undo is available.');
+    queueMicrotask(() => this.host.querySelector<HTMLButtonElement>('.undo-remove')?.focus());
+  }
+  undoRemove() {
+    const removed = this.removed();
+    if (!removed) return;
+    if (removed.detail) this.details.set(removed.control, removed.detail);
+    this.groups.update((groups) =>
+      groups.map((group) => {
+        if (group.id !== removed.groupId) return group;
+        const rows = [...group.rows];
+        rows.splice(Math.min(removed.index, rows.length), 0, removed.control);
+        return { ...group, rows };
+      }),
+    );
+    this.removed.set(null);
+    this.sync();
+    this.message.set(this.kind() + ' restored.');
+    queueMicrotask(() => document.getElementById(this.rowId(removed.control))?.focus());
+  }
+  closeOptions(options: HTMLDetailsElement, control: FormControl<string>) {
+    options.removeAttribute('open');
+    queueMicrotask(() =>
+      document
+        .getElementById(this.rowId(control))
+        ?.closest('.editor-row')
+        ?.querySelector<HTMLElement>('summary')
+        ?.focus(),
+    );
+  }
+  inGroup(control: FormControl<string>, id: number): boolean {
+    return !!this.groups()
+      .find((group) => group.id === id)
+      ?.rows.includes(control);
   }
   pruneEmpty() {
     this.groups.update((groups) =>

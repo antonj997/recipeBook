@@ -6,8 +6,7 @@
     {{
       editingId
         ? 'Update your saved recipe.'
-        : 'Review your recipe before
-    saving it.'
+        : 'Add the ingredients and instructions, then review before saving.'
     }}
   </p>
 
@@ -17,55 +16,6 @@
     <p class="error" role="alert">{{ loadError() }}</p>
   } @else {
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="recipe-form" novalidate>
-      <!-- Photo controls use the existing image processing and removal handlers. -->
-      <div class="image-field">
-        <span id="photo-label">Recipe photo</span>
-        <div class="image-preview" [class.image-preview--empty]="!imageDataUrl()">
-          @if (imageDataUrl()) {
-            <img [src]="imageDataUrl()" alt="Recipe photo preview" referrerpolicy="no-referrer" />
-            <button
-              type="button"
-              class="photo-action remove-image"
-              [disabled]="processingImage() || saving()"
-              (click)="removeImage()"
-            >
-              <app-icon name="trash" />Remove photo
-            </button>
-          } @else {
-            <app-food-placeholder [seed]="editingId || 'new-recipe'" />
-            <button
-              type="button"
-              class="photo-action"
-              [disabled]="processingImage() || saving()"
-              (click)="photoInput.click()"
-            >
-              <app-icon name="plus" />Add photo
-            </button>
-          }
-        </div>
-        <input
-          #photoInput
-          id="recipe-image"
-          type="file"
-          hidden
-          aria-labelledby="photo-label"
-          accept="image/jpeg,image/png,image/webp"
-          [disabled]="processingImage() || saving()"
-          (change)="onImageSelected($event)"
-        />
-        @if (processingImage()) {
-          <p role="status">Processing photo…</p>
-        }
-        @if (imageError()) {
-          <p class="error" role="alert">{{ imageError() }}</p>
-          @if (importImageUrl && !processingImage()) {
-            <button type="button" [disabled]="saving()" (click)="photoInput.click()">
-              Add photo manually
-            </button>
-          }
-        }
-      </div>
-
       <!-- Recipe title -->
 
       <div class="field">
@@ -111,11 +61,63 @@
         }
       </div>
 
-      <app-recipe-extra-fields [form]="metadataForm" />
-
-      <app-recipe-collections [control]="collectionIds" [collections]="collections()" />
       <app-recipe-groups [items]="ingredients" [sections]="ingredientSections" />
       <app-recipe-groups kind="step" [items]="instructions" [stepDetails]="stepDetails" />
+
+      <div class="image-field">
+        <span id="photo-label">Photo <small>(optional)</small></span>
+        <div class="photo-controls">
+          @if (imageDataUrl()) {
+            <img
+              class="photo-preview"
+              [src]="imageDataUrl()"
+              alt="Recipe photo preview"
+              referrerpolicy="no-referrer"
+            />
+          }
+          <button
+            type="button"
+            [disabled]="processingImage() || saving()"
+            (click)="photoInput.click()"
+          >
+            <app-icon name="plus" />{{ imageDataUrl() ? 'Change photo' : 'Add photo' }}
+          </button>
+          @if (imageDataUrl() || importImageUrl) {
+            <button
+              type="button"
+              class="quiet-button"
+              [disabled]="processingImage() || saving()"
+              (click)="removeImage()"
+            >
+              Remove photo
+            </button>
+          }
+        </div>
+        <input
+          #photoInput
+          id="recipe-image"
+          type="file"
+          hidden
+          aria-labelledby="photo-label"
+          accept="image/jpeg,image/png,image/webp"
+          [disabled]="processingImage() || saving()"
+          (change)="onImageSelected($event)"
+        />
+        @if (processingImage()) {
+          <p role="status">Processing photo…</p>
+        }
+        @if (imageError()) {
+          <p class="error" role="alert">{{ imageError() }}</p>
+        }
+      </div>
+
+      <app-recipe-collections [control]="collectionIds" [collections]="collections()" />
+      <details class="optional-details" [open]="metadataForm.invalid && metadataForm.touched">
+        <summary class="disclosure">
+          Recipe details <span>Optional<app-icon name="chevron" /></span>
+        </summary>
+        <app-recipe-extra-fields [form]="metadataForm" />
+      </details>
 
       <!-- Submit -->
       @if (metadataForm.invalid && metadataForm.touched) {

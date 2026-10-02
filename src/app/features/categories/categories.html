@@ -1,0 +1,13 @@
+<section class="categories-page page page--narrow">
+  <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
+  <h1>Categories</h1>
+  <p class="scope">
+    {{
+      auth.user()
+        ? 'For your account cookbook.'
+        : 'For the cookbook on this
+    device.'
+    }}
+  </p>
+  <app-category-manager />
+</section>

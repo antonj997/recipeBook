@@ -1,173 +1,205 @@
-<article class="recipe-detail page" [class.draft-preview]="isDraft">
+<article
+  class="recipe-detail page"
+  [class.draft-preview]="isDraft"
+  [class.cooking]="cooking()"
+  [class.hide-completed]="hideCompleted()"
+>
   <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
   @if (loading()) {
-    <app-loading-state label="Loading recipe…" />
+  <app-loading-state label="Loading recipe…" />
   } @else if (error()) {
-    <p role="alert">{{ error() }}</p>
-  } @else {
-    @if (recipe(); as selectedRecipe) {
-      <div class="recipe-overview" [class.has-photo]="!!selectedRecipe.imageDataUrl">
-        @if (selectedRecipe.imageDataUrl; as photo) {
-          <img
-            class="recipe-hero"
-            [src]="photo"
-            referrerpolicy="no-referrer"
-            [alt]="selectedRecipe.title"
-          />
+  <p role="alert">{{ error() }}</p>
+  } @else { @if (recipe(); as selectedRecipe) {
+  <div
+    class="recipe-overview"
+    [class.has-photo]="!!selectedRecipe.imageDataUrl && !cooking()"
+  >
+    <header class="recipe-summary">
+      <h1>{{ selectedRecipe.title || 'New recipe' }}</h1>
+      @if (!isDraft) {
+      <div class="cooking-actions">
+        @if (cooking()) {
+        <button type="button" (click)="showOverview()">Recipe overview</button>
+        <button type="button" (click)="startOver()">Start over</button>
+        } @else {
+        <button type="button" class="primary" (click)="startCooking()">
+          {{ completedSteps().size ? 'Continue cooking' : 'Start cooking' }}
+        </button>
         }
-        <header class="recipe-summary">
-          <h1>{{ selectedRecipe.title || 'New recipe' }}</h1>
-          <app-recipe-summary-details [recipe]="selectedRecipe" />
-          @if (collectionNames().length) {
-            <p class="collection-names">{{ collectionNames().join(' · ') }}</p>
-          }
-        </header>
       </div>
-      <app-screen-awake />
-      <div class="section-switch" role="group" aria-label="Recipe section">
+      } @if (cooking()) {
+      <p class="cooking-facts">
+        @if (selectedRecipe.servings) {
+        <span>{{ selectedRecipe.servings }} servings</span> } @if
+        (selectedRecipe.totalTime) {
+        <span>{{ formatTime(selectedRecipe.totalTime!) }}</span> }
+      </p>
+      } @else {
+      <app-recipe-summary-details [recipe]="selectedRecipe" />
+      } @if (!cooking() && collectionNames().length) {
+      <p class="collection-names">{{ collectionNames().join(' · ') }}</p>
+      }
+    </header>
+    @if (!cooking() && selectedRecipe.imageDataUrl; as photo) {
+    <img
+      class="recipe-hero"
+      [src]="photo"
+      referrerpolicy="no-referrer"
+      [alt]="selectedRecipe.title"
+    />
+    }
+  </div>
+  <app-screen-awake />
+  <div
+    #sectionSwitch
+    class="section-switch"
+    role="group"
+    aria-label="Recipe section"
+  >
+    <button
+      type="button"
+      [attr.aria-pressed]="activeSection() === 'ingredients'"
+      aria-controls="ingredients-panel"
+      (click)="switchSection('ingredients')"
+    >
+      Ingredients
+    </button>
+    <button
+      type="button"
+      [attr.aria-pressed]="activeSection() === 'instructions'"
+      aria-controls="instructions-panel"
+      (click)="switchSection('instructions')"
+    >
+      Instructions
+    </button>
+  </div>
+  <div class="recipe-body">
+    <section
+      id="ingredients-panel"
+      [class.mobile-hidden]="activeSection() !== 'ingredients'"
+      class="ingredients"
+      aria-labelledby="ingredients-heading"
+    >
+      <h2 id="ingredients-heading">Ingredients</h2>
+      @for (group of ingredientGroups(); track $index) { @if (group.section) {
+      <h3 class="group-heading">{{ group.section }}</h3>
+      }
+      <ul>
+        @for (ingredient of group.ingredients; track $index) {
+        <li>{{ ingredient }}</li>
+        }
+      </ul>
+      }
+    </section>
+    <section
+      id="instructions-panel"
+      [class.mobile-hidden]="activeSection() !== 'instructions'"
+      class="instructions"
+      aria-labelledby="instructions-heading"
+    >
+      <h2 id="instructions-heading">Instructions</h2>
+      @if (!isDraft && selectedRecipe.instructions.length) {
+      <div class="step-progress">
+        <p role="status">
+          {{ completedSteps().size }} of {{ selectedRecipe.instructions.length
+          }} completed
+        </p>
         <button
           type="button"
-          [attr.aria-pressed]="activeSection() === 'ingredients'"
-          aria-controls="ingredients-panel"
-          (click)="activeSection.set('ingredients')"
+          [attr.aria-pressed]="hideCompleted()"
+          (click)="toggleHideCompleted()"
         >
-          Ingredients
-        </button>
-        <button
-          type="button"
-          [attr.aria-pressed]="activeSection() === 'instructions'"
-          aria-controls="instructions-panel"
-          (click)="activeSection.set('instructions')"
-        >
-          Instructions
+          {{ hideCompleted() ? 'Expand completed' : 'Collapse completed' }}
         </button>
       </div>
-      <div class="recipe-body">
-        <section
-          id="ingredients-panel"
-          [class.mobile-hidden]="activeSection() !== 'ingredients'"
-          class="ingredients"
-          aria-labelledby="ingredients-heading"
+      }
+      <ol>
+        @for (step of selectedRecipe.instructions; track $index) {
+        <li
+          class="cooking-step"
+          [class.completed]="completedSteps().has($index)"
         >
-          <h2 id="ingredients-heading">Ingredients</h2>
-          @for (group of ingredientGroups(); track $index) {
-            @if (group.section) {
-              <h3 class="group-heading">{{ group.section }}</h3>
-            }
-            <ul>
-              @for (ingredient of group.ingredients; track $index) {
-                <li>{{ ingredient }}</li>
-              }
-            </ul>
-          }
-        </section>
-        <section
-          id="instructions-panel"
-          [class.mobile-hidden]="activeSection() !== 'instructions'"
-          class="instructions"
-          aria-labelledby="instructions-heading"
-        >
-          <h2 id="instructions-heading">Instructions</h2>
-          <ol>
-            @for (step of selectedRecipe.instructions; track $index) {
-              <li class="cooking-step" [class.completed]="completedSteps().has($index)">
-                @if (selectedRecipe.stepDetails?.[$index]?.section; as section) {
-                  @if (
-                    $index === 0 || section !== selectedRecipe.stepDetails?.[$index - 1]?.section
-                  ) {
-                    <h3 class="group-heading">{{ section }}</h3>
-                  }
-                }
-                <label class="check-control">
-                  <input
-                    type="checkbox"
-                    [checked]="completedSteps().has($index)"
-                    (change)="toggleStep($index)"
-                    [attr.aria-label]="'Step ' + ($index + 1) + ': ' + step"
-                  />
-                  <app-checkbox-mark [number]="$index + 1" />
-                  <span class="step-copy"
-                    >{{ step
-                    }}<svg
-                      class="step-strike"
-                      viewBox="0 0 300 12"
-                      preserveAspectRatio="none"
-                      aria-hidden="true"
-                    >
-                      <path pathLength="1" d="M0 6 Q150 5 300 6" /></svg
-                  ></span>
-                </label>
-                @if (!completedSteps().has($index) && !failedStepPhotos().has($index)) {
-                  @if (
-                    selectedRecipe.stepDetails?.[$index]?.imageDataUrl ||
-                      loadedStepPhotos()[$index];
-                    as photo
-                  ) {
-                    <img
-                      class="step-photo"
-                      [src]="photo"
-                      [alt]="
+          @if (selectedRecipe.stepDetails?.[$index]?.section; as section) { @if
+          ( $index === 0 || section !== selectedRecipe.stepDetails?.[$index -
+          1]?.section ) {
+          <h3 class="group-heading">{{ section }}</h3>
+          } }
+          <label class="check-control">
+            <input
+              type="checkbox"
+              [checked]="completedSteps().has($index)"
+              (change)="toggleStep($index)"
+              [attr.aria-label]="'Step ' + ($index + 1) + ': ' + step"
+            />
+            <app-checkbox-mark [number]="$index + 1" />
+            <span class="step-copy">{{ step }}</span>
+          </label>
+          @if ((!hideCompleted() || !completedSteps().has($index)) &&
+          !failedStepPhotos().has($index)) { @if (
+          selectedRecipe.stepDetails?.[$index]?.imageDataUrl ||
+          loadedStepPhotos()[$index]; as photo ) {
+          <img
+            class="step-photo"
+            [src]="photo"
+            [alt]="
                         'Step ' +
                         ($index + 1) +
                         ': ' +
                         (selectedRecipe.stepDetails?.[$index]?.title || step)
                       "
-                      loading="lazy"
-                      referrerpolicy="no-referrer"
-                      (error)="hideStepPhoto($index)"
-                    />
-                  } @else if (canLoadStepPhoto($index)) {
-                    <button
-                      type="button"
-                      class="step-photo-load"
-                      [disabled]="loadingStepPhotos().has($index)"
-                      (click)="loadStepPhoto($index)"
-                    >
-                      {{ loadingStepPhotos().has($index) ? 'Loading photo…' : 'Load photo' }}
-                    </button>
-                  }
-                }
-              </li>
-            }
-          </ol>
-        </section>
-      </div>
-      @if (stepPhotoNotice()) {
-        <p role="status">{{ stepPhotoNotice() }}</p>
-      }
-      <app-recipe-extra-details [recipe]="selectedRecipe" />
-      @if (!isDraft) {
-        <div class="recipe-actions">
-          <a class="button edit-button" [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
-            >Edit Recipe</a
-          >
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            (error)="hideStepPhoto($index)"
+          />
+          } @else if (canLoadStepPhoto($index)) {
           <button
             type="button"
-            class="delete-button"
-            [disabled]="deleting()"
-            (click)="openDeleteDialog()"
+            class="step-photo-load"
+            [disabled]="loadingStepPhotos().has($index)"
+            (click)="loadStepPhoto($index)"
           >
-            {{ deleting() ? 'Deleting...' : 'Delete Recipe' }}
+            {{ loadingStepPhotos().has($index) ? 'Loading photo…' : 'Load photo'
+            }}
           </button>
-        </div>
-      }
-      @if (isDraft && drafts.photoNotice()) {
-        <p role="status">{{ drafts.photoNotice() }}</p>
-      }
-      @if (selectedRecipe.sourceUrl) {
-        <a
-          class="source-link"
-          [href]="selectedRecipe.sourceUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          >Original recipe <app-icon name="external"
-        /></a>
-      }
-    } @else {
-      <h1>Recipe not found</h1>
-      <p>The requested recipe does not exist.</p>
-    }
-  }
+          } }
+        </li>
+        }
+      </ol>
+    </section>
+  </div>
+  @if (stepPhotoNotice()) {
+  <p role="status">{{ stepPhotoNotice() }}</p>
+  } @if (!cooking()) { <app-recipe-extra-details [recipe]="selectedRecipe" /> }
+  @if (!isDraft && !cooking()) {
+  <div class="recipe-actions">
+    <a
+      class="button edit-button"
+      [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
+      >Edit Recipe</a
+    >
+    <button
+      type="button"
+      class="delete-button"
+      [disabled]="deleting()"
+      (click)="openDeleteDialog()"
+    >
+      {{ deleting() ? 'Deleting...' : 'Delete Recipe' }}
+    </button>
+  </div>
+  } @if (isDraft && drafts.photoNotice()) {
+  <p role="status">{{ drafts.photoNotice() }}</p>
+  } @if (selectedRecipe.sourceUrl) {
+  <a
+    class="source-link"
+    [href]="selectedRecipe.sourceUrl"
+    target="_blank"
+    rel="noopener noreferrer"
+    >Original recipe <app-icon name="external"
+  /></a>
+  } } @else {
+  <h1>Recipe not found</h1>
+  <p>The requested recipe does not exist.</p>
+  } }
 </article>
 <dialog
   #deleteDialog
@@ -178,15 +210,25 @@
   (close)="confirmOpen.set(false)"
 >
   @if (confirmOpen()) {
-    <app-food-doodle kind="discard" />
+  <app-food-doodle kind="discard" [playDiscard]="deleteSucceeded()" />
   }
-  <h2 id="delete-heading">Delete recipe?</h2>
-  <p id="delete-description">“{{ recipe()?.title }}” will be removed from your cookbook.</p>
+  <h2 id="delete-heading">
+    {{ deleteSucceeded() ? 'Recipe deleted' : 'Delete recipe?' }}
+  </h2>
+  <p id="delete-description" aria-live="polite">
+    {{ deleteSucceeded() ? 'Returning to your recipes…' : '“' + recipe()?.title
+    + '” will be removed from your cookbook.' }}
+  </p>
   @if (deleteError()) {
-    <p role="alert">{{ deleteError() }}</p>
+  <p role="alert">{{ deleteError() }}</p>
   }
   <div class="dialog-actions">
-    <button type="button" autofocus [disabled]="deleting()" (click)="closeDeleteDialog()">
+    <button
+      type="button"
+      autofocus
+      [disabled]="deleting()"
+      (click)="closeDeleteDialog()"
+    >
       Keep</button
     ><button
       type="button"
@@ -202,22 +244,24 @@
 </dialog>
 
 @if (isDraft && recipe()) {
-  <div class="draft-actions" aria-label="Review recipe">
-    @if (saveDraftError()) {
-      <p role="alert">{{ saveDraftError() }}</p>
-    }
-    <div>
-      <button
-        type="button"
-        class="primary"
-        [disabled]="savingDraft() || !recipe()?.title?.trim()"
-        [attr.aria-busy]="savingDraft()"
-        (click)="saveDraft()"
-      >
-        {{ savingDraft() ? 'Saving…' : 'looks good!' }}
-      </button>
-      <a class="button" routerLink="/">cancel</a>
-      <button type="button" [disabled]="savingDraft()" (click)="editDraft()">edit</button>
-    </div>
+<div class="draft-actions" aria-label="Review recipe">
+  @if (saveDraftError()) {
+  <p role="alert">{{ saveDraftError() }}</p>
+  }
+  <div>
+    <button
+      type="button"
+      class="primary"
+      [disabled]="savingDraft() || !recipe()?.title?.trim()"
+      [attr.aria-busy]="savingDraft()"
+      (click)="saveDraft()"
+    >
+      {{ savingDraft() ? 'Saving…' : 'looks good!' }}
+    </button>
+    <a class="button" routerLink="/">cancel</a>
+    <button type="button" [disabled]="savingDraft()" (click)="editDraft()">
+      edit
+    </button>
   </div>
+</div>
 }

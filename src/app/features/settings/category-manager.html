@@ -1,39 +1,41 @@
 <div class="category-heading">
-  <p>Group recipes your way, then filter them on the home page.</p>
+  <p>Group recipes, then filter your cookbook. A recipe can belong to several categories.</p>
   <button
     type="button"
-    (click)="creating.set(!creating())"
-    [disabled]="busy()"
+    (click)="toggleCreate()"
+    [disabled]="busy() || loading()"
     [attr.aria-expanded]="creating()"
     aria-controls="new-category"
   >
-    <app-icon name="plus" />New category
+    <app-icon [name]="creating() ? 'close' : 'plus'" />{{ creating() ? 'Cancel' : 'New category' }}
   </button>
 </div>
 @if (creating()) {
-  <div class="create-category" id="new-category">
+  <div class="name-editor" id="new-category">
     <label for="category-name">Category name</label>
-    <div class="create-row">
+    <div class="name-row">
       <input
-        #name
+        #nameInput
         id="category-name"
         placeholder="e.g. Weeknight dinners"
         maxlength="80"
+        [value]="newName()"
+        (input)="onName($event)"
         [disabled]="busy()"
-        (keydown.enter)="$event.preventDefault(); create(name)"
+        (keydown.enter)="$event.preventDefault(); create()"
       />
-      <button class="primary" type="button" (click)="create(name)" [disabled]="busy()">
-        Create
-      </button>
+      <button class="primary" type="button" (click)="create()" [disabled]="busy()">Create</button>
     </div>
   </div>
 }
 @if (loading()) {
   <p role="status">Loading categories…</p>
 } @else if (!categories().length) {
-  <p class="hint">No categories yet. Recipes can belong to more than one, or none.</p>
+  <p class="hint">
+    No categories yet. Create one when you need it; recipes can stay uncategorized.
+  </p>
 }
-<div class="categories">
+<div class="categories" [attr.aria-busy]="busy()">
   @for (category of categories(); track category.id) {
     <button
       type="button"
@@ -43,16 +45,61 @@
       [attr.aria-expanded]="activeId() === category.id"
       [attr.aria-controls]="activeId() === category.id ? 'category-recipes' : null"
     >
-      <span>{{ category.name }}</span
-      ><span class="category-count"
+      <span>{{ category.name }}</span>
+      <span class="category-count"
         >{{ count(category.id) }} {{ count(category.id) === 1 ? 'recipe' : 'recipes' }}</span
-      ><app-icon name="chevron" [class.open]="activeId() === category.id" />
+      >
+      <app-icon name="chevron" [class.open]="activeId() === category.id" />
     </button>
     @if (activeId() === category.id) {
       <div class="recipe-selection" id="category-recipes">
+        <div class="category-tools">
+          <button
+            type="button"
+            (click)="toggleRename()"
+            [disabled]="busy()"
+            [attr.aria-expanded]="renaming()"
+            aria-controls="rename-category"
+          >
+            {{ renaming() ? 'Cancel rename' : 'Rename' }}
+          </button>
+          <button
+            type="button"
+            class="delete-button"
+            (click)="requestRemove(category)"
+            [disabled]="busy()"
+          >
+            Remove category
+          </button>
+        </div>
+        @if (renaming()) {
+          <div class="name-editor" id="rename-category">
+            <label for="rename-name">Category name</label>
+            <div class="name-row">
+              <input
+                #renameInput
+                id="rename-name"
+                maxlength="80"
+                [value]="renameName()"
+                (input)="onRename($event)"
+                [disabled]="busy()"
+                (keydown.enter)="$event.preventDefault(); rename()"
+              />
+              <button
+                class="primary"
+                type="button"
+                (click)="rename()"
+                [disabled]="busy() || !renameChanged()"
+              >
+                Save name
+              </button>
+            </div>
+          </div>
+        }
         @if (recipes().length) {
           <div class="search-field" role="search">
-            <app-icon name="search" /><input
+            <app-icon name="search" />
+            <input
               type="search"
               aria-label="Find recipes to categorize"
               placeholder="Find recipes"
@@ -69,20 +116,23 @@
             <legend class="sr-only">Recipes in {{ category.name }}</legend>
             <div class="recipe-choices">
               @for (recipe of filteredRecipes(); track recipe.id) {
-                <label class="check-control"
-                  ><input
+                <label class="check-control">
+                  <input
                     type="checkbox"
                     [checked]="selected().has(recipe.id)"
                     (change)="toggle(recipe.id)"
-                  /><app-checkbox-mark /><span>{{ recipe.title }}</span></label
-                >
+                  />
+                  <app-checkbox-mark /><span>{{ recipe.title }}</span>
+                </label>
               } @empty {
                 <p class="hint">No matching recipes.</p>
               }
             </div>
           </fieldset>
           <div class="selection-actions">
-            <span role="status">{{ selected().size }} selected</span>
+            <span role="status"
+              >{{ selected().size }} selected{{ changed() ? ' · Unsaved' : '' }}</span
+            >
             <button type="button" (click)="resetSelection()" [disabled]="busy() || !changed()">
               Reset
             </button>
@@ -102,9 +152,38 @@
     }
   }
 </div>
-@if (error()) {
+@if (error() && !removing()) {
   <p class="category-error" role="alert">{{ error() }}</p>
 }
 @if (message()) {
   <p class="category-message" role="status">{{ message() }}</p>
 }
+<dialog
+  #removeDialog
+  aria-labelledby="remove-category-heading"
+  aria-describedby="remove-category-copy"
+  (cancel)="cancelRemove($event)"
+>
+  @if (removing(); as category) {
+    <h2 id="remove-category-heading">Remove {{ category.name }}?</h2>
+    <p id="remove-category-copy">
+      All {{ count(category.id) }}
+      {{ count(category.id) === 1 ? 'recipe stays' : 'recipes stay' }} in your cookbook. Only this
+      category is removed; other categories stay intact.
+    </p>
+    @if (changed() || renameChanged()) {
+      <p class="hint">Your unsaved changes to this category will also be discarded.</p>
+    }
+    @if (error()) {
+      <p class="category-error" role="alert">{{ error() }}</p>
+    }
+    <div class="dialog-actions">
+      <button type="button" autofocus (click)="cancelRemove()" [disabled]="busy()">
+        Keep category
+      </button>
+      <button type="button" class="delete-button" (click)="remove()" [disabled]="busy()">
+        {{ busy() ? 'Removing…' : 'Remove category' }}
+      </button>
+    </div>
+  }
+</dialog>

@@ -92,7 +92,12 @@ export class RecipeDraftService {
     }
   }
 
-  async fromImport(value: unknown, recipes: RecipeService): Promise<RecipeDraft> {
+  async fromImport(
+    value: unknown,
+    recipes: RecipeService,
+    signal?: AbortSignal,
+  ): Promise<RecipeDraft> {
+    signal?.throwIfAborted();
     const version = this.auth.accountVersion();
     const draft = this.parse(value);
     const category = (value as Record<string, unknown>)['category'];
@@ -105,20 +110,21 @@ export class RecipeDraftService {
     if (this.auth.accountVersion() !== version)
       throw new Error('Account changed. Import the recipe again.');
     const assertAccount = () => {
+      signal?.throwIfAborted();
       if (this.auth.accountVersion() !== version)
         throw new Error('Account changed. Import the recipe again.');
     };
     const proxy = this.auth.configured()
       ? (url: string) => {
           assertAccount();
-          return this.auth.invokeImporter({ url, action: 'photo' });
+          return this.auth.invokeImporter({ url, action: 'photo' }, signal);
         }
       : undefined;
     this.photoNotice.set('');
     let failed = 0;
     if (draft.imageUrl && !draft.imageDataUrl) {
       try {
-        draft.imageDataUrl = await downloadRecipePhoto(draft.imageUrl, 1200, proxy);
+        draft.imageDataUrl = await downloadRecipePhoto(draft.imageUrl, 1200, proxy, signal);
       } catch {
         failed++;
       }
@@ -131,7 +137,7 @@ export class RecipeDraftService {
         steps.slice(i, i + 2).map(async (step) => {
           if (!step.imageUrl || step.imageDataUrl) return;
           try {
-            step.imageDataUrl = await downloadRecipePhoto(step.imageUrl, 800, proxy);
+            step.imageDataUrl = await downloadRecipePhoto(step.imageUrl, 800, proxy, signal);
           } catch {
             failed++;
           }
@@ -140,6 +146,7 @@ export class RecipeDraftService {
     }
     if (this.auth.accountVersion() !== version)
       throw new Error('Account changed. Import the recipe again.');
+    assertAccount();
     if (failed)
       this.photoNotice.set('Some photos could not be saved offline. You can add them in Edit.');
     return draft;

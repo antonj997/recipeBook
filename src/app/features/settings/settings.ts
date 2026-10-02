@@ -1,17 +1,16 @@
 import { AppUpdateService } from '../../core/services/app-update.service';
 import { IconComponent } from '../../shared/components/icon';
-import { CategoryManagerComponent } from './category-manager';
 import { AccountAccessComponent } from './account-access';
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { RecipeService } from '../../core/services/recipe.service';
 import { CloudCookbookService } from '../../core/services/cloud-cookbook.service';
 
 @Component({
   selector: 'app-settings',
-  imports: [IconComponent, RouterLink, AccountAccessComponent, CategoryManagerComponent],
+  imports: [IconComponent, RouterLink, AccountAccessComponent],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
@@ -20,6 +19,9 @@ export class SettingsComponent {
   readonly cloud = inject(CloudCookbookService);
   readonly auth = this.cloud.auth;
   readonly app = inject(AppUpdateService);
+  readonly returnToImport =
+    inject(ActivatedRoute).snapshot.queryParamMap.get('returnTo') === '/recipes/import';
+  readonly keepDeviceSeparate = signal(false);
   private active = true;
   private current(version: number): boolean {
     return this.active && version === this.auth.accountVersion();
@@ -40,6 +42,16 @@ export class SettingsComponent {
   }
   readonly deviceRecipes = signal(0);
   constructor() {
+    let account = this.auth.accountVersion();
+    effect(() => {
+      const next = this.auth.accountVersion();
+      if (next !== account) {
+        account = next;
+        this.keepDeviceSeparate.set(false);
+        this.message.set('');
+        this.error.set('');
+      }
+    });
     effect(() => {
       this.cloud.revision();
       void this.cloud.deviceRecipeCount().then((count) => {
@@ -104,7 +116,7 @@ export class SettingsComponent {
   async copyDeviceRecipes(): Promise<void> {
     this.feedbackSection.set('account');
     const version = this.auth.accountVersion();
-    if (!this.current(version)) return;
+    if (!this.current(version) || !this.auth.user() || this.accountBusy()) return;
     if (
       !window.confirm(
         'Copy recipes from this device into your private cookbook? Existing recipes will be skipped. Your device copy will stay intact.',
@@ -113,6 +125,7 @@ export class SettingsComponent {
       return;
     this.accountBusy.set(true);
     this.error.set('');
+    this.message.set('');
     try {
       const result = await this.cloud.copyDeviceCookbook();
       if (!this.current(version)) return;

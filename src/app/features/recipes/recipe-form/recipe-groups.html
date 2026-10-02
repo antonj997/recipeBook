@@ -112,11 +112,12 @@
           ></span>
           <div class="row-content">
             @if (kind() === 'step') {
-              <label [for]="'step-text-' + number(control)">Step {{ number(control) }}</label>
+              <label [for]="rowId(control)">Step {{ number(control) }}</label>
               <textarea
-                [id]="'step-text-' + number(control)"
+                [id]="rowId(control)"
+                appAutoGrow
                 [formControl]="control"
-                rows="3"
+                rows="2"
                 placeholder="Describe this step"
                 [attr.aria-invalid]="control.touched && control.invalid"
               ></textarea>
@@ -134,42 +135,54 @@
                 </details>
               }
             } @else {
-              <input
+              <textarea
+                appAutoGrow
+                rows="1"
+                [id]="rowId(control)"
                 [formControl]="control"
                 [attr.aria-label]="'Ingredient ' + number(control)"
                 placeholder="Add an ingredient"
                 [attr.aria-invalid]="control.touched && control.invalid"
-              />
+              ></textarea>
             }
           </div>
-          <div class="row-actions">
-            <button
-              type="button"
-              class="icon-button up"
-              [attr.aria-label]="'Move ' + kind() + ' ' + number(control) + ' up'"
-              [disabled]="number(control) === 1"
-              (click)="shift(control, -1)"
-            >
-              <app-icon name="chevron" />
-            </button>
-            <button
-              type="button"
-              class="icon-button down"
-              [attr.aria-label]="'Move ' + kind() + ' ' + number(control) + ' down'"
-              [disabled]="number(control) === items().length"
-              (click)="shift(control, 1)"
-            >
-              <app-icon name="chevron" />
-            </button>
-            <button
-              type="button"
-              class="icon-button"
-              [attr.aria-label]="'Remove ' + kind() + ' ' + number(control)"
-              (click)="remove(control)"
-            >
-              <app-icon name="close" />
-            </button>
-          </div>
+          <details class="row-options" (keydown.escape)="closeOptions(options, control)" #options>
+            <summary [attr.aria-label]="'Options for ' + kind() + ' ' + number(control)">
+              Options
+            </summary>
+            <div class="row-options-menu">
+              <button
+                type="button"
+                [disabled]="number(control) === 1"
+                (click)="shift(control, -1); closeOptions(options, control)"
+              >
+                Move up
+              </button>
+              <button
+                type="button"
+                [disabled]="number(control) === items().length"
+                (click)="shift(control, 1); closeOptions(options, control)"
+              >
+                Move down
+              </button>
+              @if (groups().length > 1) {
+                <p>Move to group</p>
+                @for (target of groups(); track target.id) {
+                  @if (!inGroup(control, target.id)) {
+                    <button
+                      type="button"
+                      (click)="move(control, target.id); closeOptions(options, control)"
+                    >
+                      {{ target.name.value || 'Ungrouped' }}
+                    </button>
+                  }
+                }
+              }
+              <button type="button" class="remove-row" (click)="remove(control)">
+                Remove {{ kind() }}
+              </button>
+            </div>
+          </details>
         </div>
       }
       <div class="drop-slot" [class.active]="isSlot(group, null)" aria-hidden="true"></div>
@@ -180,9 +193,12 @@
       }
     </section>
   }
-  <p class="move-hint">
-    Drag the dotted handle to reorder. Use a group’s Add / move button to move
-    {{ kind() === 'step' ? 'steps' : 'ingredients' }} into it.
-  </p>
+  @if (removed()) {
+    <div class="removal-notice">
+      <span>{{ kind() === 'step' ? 'Step' : 'Ingredient' }} removed.</span>
+      <button type="button" class="undo-remove" (click)="undoRemove()">Undo</button>
+    </div>
+  }
+  <p class="move-hint">Use Options to reorder or move to a group, or drag the dotted handle.</p>
   <p class="sr-only" role="status">{{ message() }}</p>
 </section>

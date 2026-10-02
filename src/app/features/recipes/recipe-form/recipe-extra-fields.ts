@@ -8,6 +8,7 @@ import {
   type RecipeMetadata,
 } from '../../../core/models/recipe-metadata';
 import { RecipeTagPickerComponent } from './recipe-tag-picker';
+import { AutoGrowTextareaDirective } from '../../../shared/directives/auto-grow-textarea';
 import { IconComponent } from '../../../shared/components/icon';
 
 export function createMetadataForm(fb: FormBuilder) {
@@ -51,10 +52,17 @@ export function metadataFromForm(form: MetadataForm): RecipeMetadata {
 }
 @Component({
   selector: 'app-recipe-extra-fields',
-  imports: [ReactiveFormsModule, RecipeTagPickerComponent, IconComponent],
+  imports: [
+    ReactiveFormsModule,
+    RecipeTagPickerComponent,
+    IconComponent,
+    AutoGrowTextareaDirective,
+  ],
   template: `
     <div class="details-content" [formGroup]="form()">
-      <label>Description<textarea formControlName="description" rows="4"></textarea></label>
+      <label
+        >Description<textarea appAutoGrow formControlName="description" rows="2"></textarea>
+      </label>
       <div class="field-grid">
         <label
           >Total time (minutes)<input type="number" min="0" step="any" formControlName="totalTime"

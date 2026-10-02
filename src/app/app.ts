@@ -47,8 +47,8 @@ export class App {
       this.confirmation.answer(true);
       this.feedback.dismiss();
       // Keep account feedback visible; other views must leave the previous cookbook.
-      const target = this.router.url.split(/[?#]/)[0] === '/settings' ? '/settings' : '/';
-      void this.router.navigate([target]).finally(() => {
+      const target = this.router.url.split(/[?#]/)[0] === '/settings' ? this.router.url : '/';
+      void this.router.navigateByUrl(target).finally(() => {
         if (version === next) this.accountChanging.set(false);
       });
     });
@@ -58,7 +58,7 @@ export class App {
         this.cloud.auth.callbackError() ||
         this.cloud.auth.callbackNotice()
       )
-        void this.router.navigate(['/settings']);
+        if (this.router.url.split(/[?#]/)[0] !== '/settings') void this.router.navigate(['/settings']);
     });
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (!(event instanceof NavigationEnd)) return;

@@ -25,6 +25,12 @@ function hash(seed: string): number {
   return value >>> 0;
 }
 
+// Photo cards also keep their color when filtering, sorting or returning.
+export function photoCardBackground(seed: string): string {
+  const palette = ['blue', 'clay', 'sage', 'accent', 'beige', 'butter'];
+  return 'var(--color-' + palette[hash('card:' + seed) % palette.length] + ')';
+}
+
 // Cards and their missing-photo artwork share one stable color choice.
 export function foodPlaceholderBackground(seed: string): string {
   return 'var(--color-' + colors[hash('color:' + seed) % colors.length] + ')';

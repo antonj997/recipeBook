@@ -67,6 +67,7 @@
   background: var(--color-surface);
 }
 .editor-row {
+  scroll-margin-bottom: 110px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -88,8 +89,11 @@
   margin-bottom: 8px;
 }
 .drag-handle {
-  width: 20px;
-  flex: 0 0 20px;
+  width: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
   cursor: grab;
   color: var(--color-muted);
 }
@@ -101,14 +105,65 @@
 .dragging {
   opacity: 0.35;
 }
-.row-actions {
+.row-options {
+  position: relative;
+  flex-shrink: 0;
+}
+.row-options summary {
+  min-height: 44px;
+  padding: 10px 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  list-style: none;
+  border-radius: var(--radius-control);
+}
+.row-options summary::-webkit-details-marker {
+  display: none;
+}
+.row-options[open] summary {
+  background: var(--color-surface);
+}
+.row-options-menu {
+  position: absolute;
+  z-index: 12;
+  right: 0;
+  top: 100%;
+  width: 210px;
+  max-width: calc(100vw - 40px);
+  padding: 8px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: 0 6px 24px #14141326;
+}
+.row-options-menu button {
   display: flex;
+  width: 100%;
+  justify-content: flex-start;
+  background: transparent;
+  border-color: transparent;
+  text-align: left;
 }
-.up app-icon {
-  transform: rotate(90deg);
+.row-options-menu p {
+  padding: 10px 12px 4px;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  margin: 0;
 }
-.down app-icon {
-  transform: rotate(-90deg);
+.row-options-menu .remove-row {
+  color: var(--color-danger);
+  border-top: 1px solid var(--color-border);
+  margin-top: 4px;
+}
+.removal-notice {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.undo-remove {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: underline;
 }
 .step-row {
   align-items: flex-start;
@@ -117,8 +172,7 @@
 .step-row .drag-handle {
   margin-top: 38px;
 }
-.step-row .row-actions {
-  flex-direction: column;
+.step-row .row-options {
   margin-top: 24px;
 }
 .drop-slot {
@@ -190,15 +244,9 @@
   border: 0;
 }
 @media (max-width: 600px) {
-  .row-actions .up,
-  .row-actions .down {
-    display: none;
-  }
   .editor-row {
+    scroll-margin-bottom: 110px;
     gap: 4px;
-  }
-  .row-actions {
-    flex-shrink: 0;
   }
   .add-move {
     padding-inline: 4px;
@@ -242,4 +290,10 @@
 .selection-actions .primary {
   flex: 1;
   justify-content: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop-slot {
+    transition: none;
+  }
 }

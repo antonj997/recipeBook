@@ -40,6 +40,41 @@
   margin: 0 0 4px;
   overflow-wrap: anywhere;
 }
+.scope-note {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  max-width: 65ch;
+  margin-bottom: 12px;
+}
+.account-summary .scope-note {
+  margin: 0 0 4px;
+}
+.import-return {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  margin-bottom: 28px;
+}
+.import-return p {
+  margin: 0;
+  color: var(--color-muted);
+}
+.import-return a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.import-return app-icon {
+  transform: rotate(180deg);
+}
+.device-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 .sync-status {
   margin-bottom: 20px;
   color: var(--color-muted);

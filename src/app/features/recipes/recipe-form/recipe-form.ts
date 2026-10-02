@@ -17,7 +17,6 @@ import {
   type RecipeStepDetail,
   type RecipeMetadata,
 } from '../../../core/models/recipe-metadata';
-import { FoodPlaceholderComponent } from '../../../shared/components/food-placeholder';
 import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
 import { IconComponent } from '../../../shared/components/icon';
 import { Component, inject, OnInit, signal, viewChildren } from '@angular/core';
@@ -36,7 +35,6 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
   selector: 'app-recipe-form',
   host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
   imports: [
-    FoodPlaceholderComponent,
     FoodDoodleComponent,
     IconComponent,
     ReactiveFormsModule,
@@ -56,8 +54,9 @@ export class RecipeFormComponent implements OnInit {
 
   async canLeave(): Promise<boolean> {
     if (this.accountChanged()) return true;
-    if (this.leaving || this.loadError()) return true;
+    if (this.leaving || this.loadError() || this.loading()) return true;
     if (this.saving() || this.processingImage()) return false;
+    if (!this.hasUnsavedChanges()) return true;
     const leave = await this.confirmation.confirm(
       this.editingId
         ? 'Your changes to this recipe will not be saved.'
@@ -67,12 +66,44 @@ export class RecipeFormComponent implements OnInit {
     return leave;
   }
   onBeforeUnload(event: BeforeUnloadEvent): void {
-    if (!this.leaving && !this.loadError()) {
+    if (!this.leaving && !this.loadError() && !this.loading() && this.hasUnsavedChanges()) {
       event.preventDefault();
       event.returnValue = '';
     }
   }
 
+  private initialSnapshot = '';
+  private snapshot(): string {
+    return JSON.stringify({
+      recipe: this.form.getRawValue(),
+      metadata: this.metadataForm.getRawValue(),
+      categories: this.collectionIds.value,
+      sections: this.ingredientSections.getRawValue(),
+      steps: this.stepDetails.getRawValue(),
+      photo: this.imageDataUrl(),
+      remotePhoto: this.importImageUrl,
+    });
+  }
+  hasUnsavedChanges(): boolean {
+    if (this.editingId) return !!this.initialSnapshot && this.snapshot() !== this.initialSnapshot;
+    const data = this.form.getRawValue();
+    const metadata = this.metadataForm.getRawValue();
+    return !!(
+      data.title.trim() ||
+      data.servings !== 4 ||
+      data.ingredients.some((value) => value.trim()) ||
+      data.instructions.some((value) => value.trim()) ||
+      this.imageDataUrl() ||
+      this.importImageUrl ||
+      this.importSourceUrl ||
+      this.collectionIds.value.length ||
+      metadata.description.trim() ||
+      metadata.totalTime !== null ||
+      metadata.tags.length ||
+      Object.values(metadata.nutrition).some((value) => value !== null) ||
+      this.stepDetails.getRawValue().some((step) => step.imageDataUrl || step.imageUrl)
+    );
+  }
   private groupEditors = viewChildren(RecipeGroupsComponent);
   private fb = inject(FormBuilder);
   private feedback = inject(FeedbackService);
@@ -256,6 +287,7 @@ export class RecipeFormComponent implements OnInit {
           this.recipeService.matchCollections(recipe.category, this.collections()),
       );
       this.form.markAsPristine();
+      this.initialSnapshot = this.snapshot();
     } catch (error) {
       console.error('Failed to load recipe:', error);
 
@@ -280,6 +312,14 @@ export class RecipeFormComponent implements OnInit {
     if (this.form.invalid || this.metadataForm.invalid) {
       this.metadataForm.markAllAsTouched();
       this.form.markAllAsTouched();
+      const invalidId = this.form.controls.title.invalid
+        ? 'title'
+        : this.form.controls.servings.invalid
+          ? 'servings'
+          : null;
+      if (invalidId) document.getElementById(invalidId)?.focus();
+      else
+        document.querySelector<HTMLDetailsElement>('.optional-details')?.setAttribute('open', '');
       return;
     }
 

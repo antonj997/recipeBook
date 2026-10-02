@@ -43,7 +43,9 @@ export class RecipeService {
     if (!name || name.length > 80)
       throw new Error('Use a category name between 1 and 80 characters.');
     const database = this.cloud.database;
+    const version = this.accountVersion();
     const collections = await database.collections.toArray();
+    if (version !== this.accountVersion()) throw new Error('Account changed. Try again.');
     const existing = collections.find(
       (c) => c.name.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase(),
     );
@@ -55,6 +57,28 @@ export class RecipeService {
     };
     await this.cloud.put('collections', collection, database);
     return collection;
+  }
+  async renameCollection(id: string, name: string): Promise<void> {
+    name = name.trim();
+    if (!name || name.length > 80)
+      throw new Error('Use a category name between 1 and 80 characters.');
+    const database = this.cloud.database;
+    const version = this.accountVersion();
+    const collections = await database.collections.toArray();
+    if (version !== this.accountVersion()) throw new Error('Account changed. Try again.');
+    const collection = collections.find((item) => item.id === id);
+    if (!collection) throw new Error('Category not found. Reload to try again.');
+    if (
+      collections.some(
+        (item) =>
+          item.id !== id && item.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase(),
+      )
+    )
+      throw new Error('A category with that name already exists. Choose another name.');
+    await this.cloud.put('collections', { ...collection, name }, database);
+  }
+  async removeCollection(id: string): Promise<void> {
+    await this.cloud.removeCollection(id);
   }
   async assignCollection(
     id: string,
@@ -179,7 +203,11 @@ export class RecipeService {
         )
           throw new Error('Invalid collection in backup.');
         seen.add(item['id']);
-        collections.push({ id: item['id'], name: item['name'], sortOrder: item['sortOrder'] });
+        collections.push({
+          id: item['id'],
+          name: item['name'],
+          sortOrder: item['sortOrder'],
+        });
       }
     }
     const recipes: Recipe[] = [];

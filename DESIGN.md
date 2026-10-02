@@ -94,25 +94,33 @@ Use the owner's Anthropic references: off-white surfaces, near-black text, thin 
 
 The header and pages share a centered 1360px maximum width and `--page-gutter`. Forms use an 800px maximum. Mobile pages start with 20px top padding. Search and Add recipe share a row; focusing search condenses Add to its icon. Search fields share the green underline. Empty libraries show centered Create recipe, Import recipe and Import cookbook actions instead of the toolbar.
 
-Primary controls are dark, secondary controls outlined, destructive controls use `--color-danger`. Keyboard focus hugs each element with a 2px outline; touch input suppresses the ring without affecting keyboard navigation. Use the shared SVG checkbox everywhere. Recipe step boxes show their number until checked; completion draws a restrained line over the text and collapses it to one line.
+Primary controls are dark, secondary controls outlined, destructive controls use `--color-danger`. Keyboard focus hugs each element with a 2px outline; touch input suppresses the ring without affecting keyboard navigation. Use the shared SVG checkbox everywhere. Recipe step boxes show their number until checked; completion draws a restrained line over the text while keeping its reading position. An explicit Collapse completed control compacts finished rows.
 
 ## Recipe cards and carousel
 
-Cards have a flush 4:3 photo over a padded color block within a 16px radius. Photo cards rotate blue, clay, sage, lavender, beige and washed yellow. Missing-photo cards share the exact stable background choice with their food drawing. Card metadata shows total time when available. Titles never gain an underline on hover.
+Cards have a flush 4:3 photo over a padded color block within a 16px radius. Photo cards use a stable recipe-based choice of blue, clay, sage, lavender, beige or washed yellow. Missing-photo cards share the exact stable background choice with their food drawing. Card metadata shows total time when available. Titles never gain an underline on hover.
 
-Desktop cards are 240–340px wide with 28px gaps. Mobile cards are 78vw with 18px gaps and centered snapping. Preserve native horizontal scrolling, mandatory snap and `scroll-snap-stop: always`. Edge masks soften clipped neighbors; blur/displacement are optional enhancements that never intercept input. Arrow and keyboard navigation move by card. Compact centered dots expand smoothly with carousel position, hover and focus. Duplicate clamped desktop end positions share one dot.
+Desktop cards are 240–340px wide with 28px gaps. Mobile cards are 78vw with 18px gaps and centered snapping. Preserve native horizontal scrolling, mandatory snap and `scroll-snap-stop: always`. Edge masks soften clipped neighbors; blur/displacement are optional enhancements that never intercept input. Arrow and keyboard navigation move by card. Compact centered dots use fixed hit targets; only the inner marks expand with carousel position, hover and focus. Dragging across the strip scrubs the cards. Duplicate clamped desktop end positions share one dot.
 
 ## Motion
 
-The wordmark is upright medium-weight sans-serif and stays still on hover. The settings icon tilts slightly, with no hover fill. Card surfaces tilt smoothly toward the mouse, up to six degrees vertically and eight horizontally; scroll velocity adds a small temporary tilt that settles to zero. Carousel arrows stay still on hover. Section controls gently change fill and checkbox hover remains slight. Search hover fill is desktop-only; mobile retains the green focus underline. Restrict hover effects to devices that support hover, with pointer tilt limited to a fine pointer.
+The wordmark is upright medium-weight sans-serif and stays still on hover. The settings icon tilts slightly, with no hover fill. Card surfaces tilt smoothly toward the mouse, up to six degrees vertically and eight horizontally; desktop scroll velocity adds a small temporary tilt that settles to zero. Touch scrolling stays steady. Carousel arrows stay still on hover. Section controls gently change fill and checkbox hover remains slight. Search hover fill is desktop-only; mobile retains the green focus underline. Restrict hover effects to devices that support hover, with pointer tilt limited to a fine pointer.
 
-Import feedback shows a stirring pot, independently rising steam and a recipe-sheet check. Successful imports stay visible for at least three seconds, then finish the check before review opens. On mobile the illustration fills the viewport with one randomly chosen muted palette color. No falling ingredients. The existing paper-and-bin delete animation stays intact.
+Import feedback shows a stirring pot, independently rising steam and a recipe-sheet check. Import feedback follows the actual request, with a short readiness check before review opens and a visible Cancel control. On mobile the illustration fills the viewport with one randomly chosen muted palette color. No falling ingredients. The paper-and-bin illustration rests during confirmation, then animates only after deletion succeeds.
 
 Reduced motion removes transitions, continuous loops and tilt, and makes carousel scrolling immediate. Feedback and completed states remain visible.
 
 ## Recipe review and overlays
 
 Unsaved recipes reuse the saved recipe view. A compact floating action bar provides looks good!, cancel and edit. Approval alone saves to Dexie. Hide settings during review and editing. A shared native dialog protects discard and navigation; native browser warnings protect refresh and tab closing. Only floating controls, menus, dialogs and feedback use restrained shadows.
+
+## Browsing, editing and cooking
+
+Keep search and category selection, the Shelf/List view and reading position on the device, scoped to each account or device cookbook. Categories are managed from the library and chosen or created in the editor. Settings contains Account, Backups and App only.
+
+Manual recipes open the editor first. Name, servings, ingredients and instructions come before optional details. Use growing text areas, a sticky action bar, accessible row Options and Undo for removed rows. Confirm navigation only when edits exist or work is still saving.
+
+Start cooking switches to a compact view. Mobile section controls stay reachable. Remember checked steps and each section's reading position locally; Start over clears cooking progress without editing the recipe. Ignore outdated progress after steps change.
 
 ## Maintainability
 

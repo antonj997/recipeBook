@@ -1,15 +1,27 @@
 <section class="settings-page page page--narrow">
   <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
   <h1>Settings</h1>
-  <p class="description">Your account, categories and cookbook backups.</p>
+  <p class="description">Your account, cookbook backups and app.</p>
   <nav class="settings-nav" aria-label="Settings sections">
     <a href="#account" (click)="$event.preventDefault(); scrollTo('account')">Account</a>
-    <a href="#categories" (click)="$event.preventDefault(); scrollTo('categories')">Categories</a>
     <a href="#import-cookbook" (click)="$event.preventDefault(); scrollTo('import-cookbook')"
       >Backups</a
     >
     <a href="#app-settings" (click)="$event.preventDefault(); scrollTo('app-settings')">App</a>
   </nav>
+  @if (returnToImport) {
+    <div class="import-return">
+      <p>
+        {{
+          auth.user()
+            ? 'Continue with your recipe link.'
+            : 'Sign in below, then
+      return to your recipe link.'
+        }}
+      </p>
+      <a routerLink="/recipes/import">Back to import<app-icon name="chevron" /></a>
+    </div>
+  }
 
   <section class="settings-section" id="account" aria-labelledby="account-heading">
     <h2 id="account-heading">Account</h2>
@@ -20,7 +32,10 @@
         <div class="account-summary">
           <div>
             <p class="account-email">{{ user.email }}</p>
-            <p class="sync-status" role="status" aria-live="polite">{{ syncStatus() }}</p>
+            <p class="scope-note">You’re viewing this account’s cookbook.</p>
+            <p class="sync-status" role="status" aria-live="polite">
+              {{ syncStatus() }}
+            </p>
           </div>
           <button
             type="button"
@@ -61,26 +76,56 @@
         </details>
         @if (deviceRecipes()) {
           <div class="device-cookbook">
-            <h3>Bring your device recipes with you</h3>
+            <h3>Recipes on this device</h3>
             <p>
-              {{ deviceRecipes() }} recipes were saved without an account. Copy them into your
-              private cookbook to use them across devices.
+              {{ deviceRecipes() }}
+              {{
+                deviceRecipes() === 1
+                  ? 'recipe was'
+                  : 'recipes
+        were'
+              }}
+              saved without an account. Choose whether to copy them into this account or keep the
+              cookbooks separate.
             </p>
-            <button
-              type="button"
-              (click)="copyDeviceRecipes()"
-              [disabled]="accountBusy() || cloud.syncing() || importing() || exporting()"
-            >
-              Copy to my account
-            </button>
+            <div class="device-actions">
+              <button
+                type="button"
+                (click)="copyDeviceRecipes()"
+                [disabled]="accountBusy() || cloud.syncing() || importing() || exporting()"
+              >
+                Copy to my account
+              </button>
+              <button
+                type="button"
+                (click)="keepDeviceSeparate.set(true)"
+                [disabled]="keepDeviceSeparate() || accountBusy() || importing() || exporting()"
+              >
+                {{
+                  keepDeviceSeparate()
+                    ? 'Kept on this device'
+                    : 'Keep separate on
+          this device'
+                }}
+              </button>
+            </div>
+            @if (keepDeviceSeparate()) {
+              <p class="hint" role="status">
+                Your device cookbook stays separate. You can copy it here later.
+              </p>
+            }
             <p class="hint">The device copy stays intact. Existing recipes are skipped.</p>
           </div>
         }
       } @else {
+        <p class="scope-note">
+          You’re viewing the cookbook saved on this device. Signing in opens a separate account
+          cookbook; device recipes are only copied when you choose.
+        </p>
         <app-account-access [blocked]="importing() || exporting()" />
       }
     } @else {
-      <p>Your cookbook is saved on this device. Cloud sign-in is not configured.</p>
+      <p>Your cookbook is saved on this device. Account sign-in is unavailable.</p>
     }
     @if (feedbackSection() === 'account') {
       @if (message()) {
@@ -92,17 +137,13 @@
     }
   </section>
 
-  <section class="settings-section" id="categories" aria-labelledby="categories-heading">
-    <h2 id="categories-heading">Categories</h2>
-    <app-category-manager />
-  </section>
-
   <section class="settings-section" id="import-cookbook" aria-labelledby="backups-heading">
-    <h2 id="backups-heading">Cookbook backups</h2>
+    <h2 id="backups-heading">Backups</h2>
     <p>
       {{
         auth.user()
-          ? 'Back up the recipes and categories in your signed-in account.'
+          ? 'Back up the recipes and categories in your signed-in
+      account.'
           : 'Back up the recipes and categories saved on this device.'
       }}
       Photos are included.

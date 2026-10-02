@@ -95,7 +95,7 @@ small {
 .back-link {
   display: inline-flex;
   align-items: center;
-  min-height: 25px;
+  min-height: 44px;
   margin-bottom: 20px;
   color: var(--color-muted);
   font-size: 0.9rem;
@@ -534,4 +534,10 @@ body {
   body {
     touch-action: manipulation;
   }
+}
+
+/* Touch acknowledgment also remains visible when motion is reduced. */
+@media (pointer:coarse) {
+  :where(a, summary):active { opacity:.72; }
+  .check-control:active app-checkbox-mark { color:var(--color-ink); }
 }

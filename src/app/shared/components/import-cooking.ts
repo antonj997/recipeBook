@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-import-cooking',
@@ -34,11 +34,16 @@ import { Component, input } from '@angular/core';
       </g>
     </svg>
     <span>{{ ready() ? 'Ready to review' : 'Importing recipe…' }}</span>
+    @if (cancellable()) {
+      <button type="button" (click)="cancelled.emit()">Cancel import</button>
+    }
   </div>`,
   styleUrl: './import-cooking.scss',
 })
 export class ImportCookingComponent {
   ready = input(false);
+  cancellable = input(false);
+  cancelled = output<void>();
   readonly background =
     'var(--color-' +
     ['blue', 'clay', 'sage', 'accent', 'beige', 'butter'][Math.floor(Math.random() * 6)] +

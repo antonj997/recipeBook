@@ -97,7 +97,7 @@
   background: var(--card-color);
   transform: perspective(1000px) rotateX(var(--tilt-x, 0deg))
     rotateY(calc(var(--tilt-y, 0deg) + var(--swipe-tilt, 0deg)));
-  transition: transform 420ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: transform 180ms var(--ease-out);
 }
 .recipe-card__media {
   width: 100%;
@@ -242,8 +242,8 @@
 }
 .progress-dot {
   flex: 0 0 auto;
-  width: calc(24px + 20px * var(--dot-strength, 0));
-  min-width: 24px;
+  width: 32px;
+  min-width: 32px;
   min-height: 44px;
   display: grid;
   place-items: center;
@@ -251,7 +251,7 @@
   border: 0;
   background: transparent;
   border-radius: 6px;
-  // Width follows the carousel's continuous scroll position without retargeted transitions.
+  // Keep hit areas fixed; only the inner ink pill responds to position.
   transition: none;
 }
 .progress-dot span {
@@ -266,13 +266,11 @@
   width: 26px;
   opacity: 1;
 }
-.progress-dot:focus-visible {
-  width: 44px;
-}
+
 @media (hover: hover) {
   .carousel-progress:not(.is-scrubbing) .progress-dot:hover {
     background: transparent;
-    width: 44px;
+
   }
   .carousel-progress:not(.is-scrubbing) .progress-dot:hover span {
     width: 26px;

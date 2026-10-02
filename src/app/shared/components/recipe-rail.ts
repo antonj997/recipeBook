@@ -8,6 +8,8 @@ import {
   effect,
   ElementRef,
   input,
+  output,
+  untracked,
   linkedSignal,
   OnDestroy,
   signal,
@@ -15,7 +17,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { Recipe } from '../../core/models/recipe.model';
-import { FoodPlaceholderComponent, foodPlaceholderBackground } from './food-placeholder';
+import { FoodPlaceholderComponent, foodPlaceholderBackground, photoCardBackground } from './food-placeholder';
 
 @Component({
   selector: 'app-recipe-rail',
@@ -31,7 +33,12 @@ import { FoodPlaceholderComponent, foodPlaceholderBackground } from './food-plac
 export class RecipeRailComponent implements OnDestroy {
   formatTime = formatRecipeTime;
   placeholderBackground = foodPlaceholderBackground;
-  cardColors = ['blue', 'clay', 'sage', 'accent', 'beige', 'butter'];
+  photoBackground = photoCardBackground;
+  initialRecipeId = input('');
+  activeRecipeChange = output<string>();
+  private currentRecipeId = '';
+  private lastRestoreId = '';
+  private restoreFrame = 0;
   title = input.required<string>();
   recipes = input.required<Recipe[]>();
   railId = input.required<string>();
@@ -76,27 +83,29 @@ export class RecipeRailComponent implements OnDestroy {
   constructor() {
     afterNextRender(() => this.updateArrowState());
     effect(() => {
-      this.finishScrub(undefined, false);
-      this.needsMeasurement = true;
-      this.cardPositions = [];
-      this.restoreSnap();
-      if (!this.recipes().length) {
-        this.canScrollPrevious.set(false);
-        this.canScrollNext.set(false);
-        this.activeIndex.set(0);
-        this.progress.set(0);
-        this.swipeTilt.set(0);
-        return;
-      }
-      // A search changes the list. Start at its first result and refresh controls.
-      const rail = this.rail()?.nativeElement;
-      if (rail) {
-        this.targetIndex = null;
-        rail.scrollTo({ left: 0, behavior: 'instant' });
-        this.lastScroll = 0;
-        this.swipeTilt.set(0);
-        this.queueUpdate();
-      }
+      const recipes = this.recipes();
+      const restore = this.initialRecipeId();
+      untracked(() => {
+        const desired = restore !== this.lastRestoreId ? restore : this.currentRecipeId || restore;
+        this.lastRestoreId = restore;
+        this.finishScrub(undefined, false);
+        this.needsMeasurement = true;
+        this.cardPositions = [];
+        this.restoreSnap();
+        cancelAnimationFrame(this.restoreFrame);
+        this.restoreFrame = requestAnimationFrame(() => {
+          this.restoreFrame = 0;
+          const rail = this.rail()?.nativeElement;
+          if (!rail) return;
+          const index = Math.max(0, recipes.findIndex(recipe => recipe.id === desired));
+          const left = this.positions()[index] ?? 0;
+          this.targetIndex = null;
+          rail.scrollTo({left, behavior:'instant'});
+          this.lastScroll = left;
+          this.swipeTilt.set(0);
+          this.queueUpdate();
+        });
+      });
     });
   }
   private positions(): number[] {
@@ -162,6 +171,11 @@ export class RecipeRailComponent implements OnDestroy {
         nearest = i;
     });
     this.activeIndex.set(nearest);
+    const id = this.recipes()[nearest]?.id ?? '';
+    if (id && id !== this.currentRecipeId) {
+      this.currentRecipeId = id;
+      this.activeRecipeChange.emit(id);
+    }
   }
   queueUpdate(): void {
     if (this.frame) return;
@@ -169,7 +183,7 @@ export class RecipeRailComponent implements OnDestroy {
       this.frame = 0;
       const rail = this.rail()?.nativeElement;
       const now = performance.now();
-      if (rail && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (rail && matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)').matches) {
         const speed = (rail.scrollLeft - this.lastScroll) / Math.max(16, now - this.lastScrollTime);
         this.swipeTilt.set(Math.max(-4, Math.min(4, speed * -2.5)));
         this.lastScroll = rail.scrollLeft;
@@ -325,6 +339,7 @@ export class RecipeRailComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.finishScrub(undefined, false);
     cancelAnimationFrame(this.frame);
+    cancelAnimationFrame(this.restoreFrame);
     clearTimeout(this.settleTimer);
   }
 }

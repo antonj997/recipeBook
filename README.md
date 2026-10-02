@@ -8,7 +8,9 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 
 - Create recipes, import supported recipe links, and review imports before saving.
 - Create categories, assign several recipes at once, and filter or search your cookbook.
-- Group ingredients and instructions, adjust servings, and check off cooking steps.
+- Browse a recipe shelf or compact list, with your search, category and place remembered.
+- Group ingredients and instructions, adjust servings, and undo removed editor rows.
+- Use a compact cooking view with remembered step progress and a keep-screen-on toggle where supported.
 - Store photos, cooking time and available nutrition information.
 - Sign in with email and password for a private cookbook across devices.
 - Use saved recipes offline and install the app as a PWA.
@@ -46,7 +48,7 @@ The `Publish Recipebook` GitHub Actions workflow deploys `main` to GitHub Pages.
 
 ## Project structure
 
-- `src/app/features`: recipe browsing, cooking view, editor, importer and settings.
+- `src/app/features`: recipe browsing, categories, cooking view, editor, importer and settings.
 - `src/app/shared`: reusable controls, illustrations and animations.
 - `src/app/core`: storage, account synchronization, photos and recipe models.
 - `server`: local recipe importer.

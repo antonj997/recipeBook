@@ -1,4 +1,5 @@
 import { Component, inject, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormControl } from '@angular/forms';
 import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
 import { RecipeService } from '../../../core/services/recipe.service';
@@ -7,7 +8,7 @@ import { IconComponent } from '../../../shared/components/icon';
 
 @Component({
   selector: 'app-recipe-collections',
-  imports: [IconComponent, CheckboxMarkComponent],
+  imports: [IconComponent, CheckboxMarkComponent, RouterLink],
   template: `
     <details>
       <summary class="disclosure">
@@ -38,6 +39,7 @@ import { IconComponent } from '../../../shared/components/icon';
           <app-icon name="plus" />Create
         </button>
       </div>
+      <p><a routerLink="/categories">Manage categories</a></p>
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>
       }

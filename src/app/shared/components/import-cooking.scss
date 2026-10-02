@@ -88,3 +88,10 @@ span {
     transition: none;
   }
 }
+
+.cooking-card button {
+  margin-top: 24px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  min-height: 44px;
+}

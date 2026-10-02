@@ -29,7 +29,9 @@ export async function downloadRecipePhoto(
   url: string,
   maxSize = 1200,
   proxy?: (url: string) => Promise<Response>,
+  signal?: AbortSignal,
 ): Promise<string> {
+  signal?.throwIfAborted();
   if (!isSupportedRecipePhotoUrl(url)) throw new Error('This photo host is not supported.');
   const response = proxy
     ? await proxy(url)
@@ -39,7 +41,9 @@ export async function downloadRecipePhoto(
         cache: 'no-store',
         referrerPolicy: 'no-referrer',
         redirect: 'error',
-        signal: AbortSignal.timeout(10_000),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(10_000)])
+          : AbortSignal.timeout(10_000),
       });
   if (!response.ok) throw new Error('Photo unavailable.');
   if (Number(response.headers.get('content-length')) > maxBytes)
@@ -58,6 +62,7 @@ export async function downloadRecipePhoto(
     }
     chunks.push(new Uint8Array(value));
   }
+  signal?.throwIfAborted();
   return prepareRecipePhoto(
     new Blob(chunks, { type: response.headers.get('content-type')?.split(';')[0] }),
     maxSize,
