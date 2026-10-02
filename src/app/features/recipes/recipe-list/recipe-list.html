@@ -30,13 +30,9 @@
         <a class="button" routerLink="/recipes/import">Import recipe<app-icon name="link" /></a>
         <a class="button" routerLink="/settings" fragment="import-cookbook">Import cookbook</a>
       </div>
-      <a class="scope-link" routerLink="/settings">{{ cloud.auth.user() ? 'My recipes' : 'Saved on this device' }}</a>
       <a routerLink="/categories">Manage categories</a>
     </div>
   } @else {
-    <div class="library-tools">
-      <a class="scope-link" routerLink="/settings" [attr.aria-label]="cloud.auth.user() ? 'My private cookbook, account settings' : 'Cookbook saved on this device, account settings'">{{ cloud.auth.user() ? 'My recipes' : 'Saved on this device' }}</a>
-    </div>
     <ng-template #libraryHeading>
       <div class="category-picker">
         <h2 id="all-recipes-rail-heading">{{ categoryTitle() }}</h2>
