@@ -1,7 +1,16 @@
 import { LibraryViewToggleComponent } from '../../../shared/components/library-view-toggle';
 import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
 import { NgTemplateOutlet } from '@angular/common';
-import { afterRenderEffect, Component, computed, ElementRef, inject, effect, signal, viewChildren } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  effect,
+  signal,
+  viewChildren,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import type { Recipe } from '../../../core/models/recipe.model';
 import { formatRecipeTime } from '../../../core/models/recipe-metadata';
@@ -9,14 +18,26 @@ import { RecipeService } from '../../../core/services/recipe.service';
 import { CloudCookbookService } from '../../../core/services/cloud-cookbook.service';
 import { LibraryViewService } from '../../../core/services/library-view.service';
 import { RecipeRailComponent } from '../../../shared/components/recipe-rail';
-import { FoodPlaceholderComponent, photoCardBackground } from '../../../shared/components/food-placeholder';
+import {
+  FoodPlaceholderComponent,
+  photoCardBackground,
+} from '../../../shared/components/food-placeholder';
 import { IconComponent } from '../../../shared/components/icon';
 import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
 
 @Component({
   selector: 'app-recipe-list',
-  imports: [LibraryViewToggleComponent, NgTemplateOutlet, RecipeRailComponent, RouterLink, IconComponent, FoodDoodleComponent, LoadingStateComponent, FoodPlaceholderComponent],
+  imports: [
+    LibraryViewToggleComponent,
+    NgTemplateOutlet,
+    RecipeRailComponent,
+    RouterLink,
+    IconComponent,
+    FoodDoodleComponent,
+    LoadingStateComponent,
+    FoodPlaceholderComponent,
+  ],
   templateUrl: './recipe-list.html',
   styleUrl: './recipe-list.scss',
 })
@@ -34,32 +55,41 @@ export class RecipeListComponent {
   selectedCollectionId = signal(this.initial.categoryId);
   view = signal(this.initial.view);
   restoreRecipeId = signal(this.initial.recipeId);
-  categoryTitle = computed(() => this.collections().find(c => c.id === this.selectedCollectionId())?.name ?? 'All recipes');
+  categoryTitle = computed(
+    () =>
+      this.collections().find((c) => c.id === this.selectedCollectionId())?.name ?? 'All recipes',
+  );
   filteredRecipes = computed(() => {
     const words = this.query().trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
     const collectionId = this.selectedCollectionId();
-    return this.recipes().filter(recipe => {
+    return this.recipes().filter((recipe) => {
       if (collectionId && !recipe.collectionIds?.includes(collectionId)) return false;
-      const text = [recipe.title, ...recipe.ingredients, ...(recipe.tags ?? []), ...(recipe.tagIds ?? [])].join(' ').toLocaleLowerCase();
-      return words.every(word => text.includes(word));
+      const text = [
+        recipe.title,
+        ...recipe.ingredients,
+        ...(recipe.tags ?? []),
+        ...(recipe.tagIds ?? []),
+      ]
+        .join(' ')
+        .toLocaleLowerCase();
+      return words.every((word) => text.includes(word));
     });
   });
   loading = signal(true);
   error = signal('');
   private loadVersion = 0;
   private listRows = viewChildren<ElementRef<HTMLAnchorElement>>('listRow');
-  private restoredListId = '';
-
+  // Restore a row only when returning to the library, never when switching views.
+  private pendingListRestoreId = signal(this.initial.view === 'list' ? this.initial.recipeId : '');
 
   constructor() {
     afterRenderEffect(() => {
-      const id = this.restoreRecipeId();
+      const id = this.pendingListRestoreId();
       const rows = this.listRows();
-      if (this.view() !== 'list' || !id) { this.restoredListId = ''; return; }
-      if (id === this.restoredListId) return;
-      const row = rows.find(item => item.nativeElement.dataset['recipeId'] === id)?.nativeElement;
+      if (this.view() !== 'list' || !id) return;
+      const row = rows.find((item) => item.nativeElement.dataset['recipeId'] === id)?.nativeElement;
       if (!row) return;
-      this.restoredListId = id;
+      this.pendingListRestoreId.set('');
       const bounds = row.getBoundingClientRect();
       if (bounds.top < 80 || bounds.bottom > window.innerHeight)
         row.scrollIntoView({ block: 'center', behavior: 'instant' });
@@ -69,8 +99,8 @@ export class RecipeListComponent {
       const current = this.recipeService.accountVersion();
       if (current !== accountVersion) {
         accountVersion = current;
-        this.restoredListId = '';
         const saved = this.library.read();
+        this.pendingListRestoreId.set(saved.view === 'list' ? saved.recipeId : '');
         this.recipes.set([]);
         this.collections.set([]);
         this.query.set(saved.query);
@@ -99,27 +129,35 @@ export class RecipeListComponent {
     this.restoreRecipeId.set('');
     this.library.write({ query, recipeId: '' });
   }
-  onSearch(event: Event): void { this.search((event.target as HTMLInputElement).value); }
+  onSearch(event: Event): void {
+    this.search((event.target as HTMLInputElement).value);
+  }
   showAll(): void {
     this.selectedCollectionId.set('');
     this.restoreRecipeId.set('');
     this.library.write({ categoryId: '', recipeId: '' });
   }
   setView(view: 'shelf' | 'list'): void {
+    this.pendingListRestoreId.set('');
     this.restoreRecipeId.set(this.library.read().recipeId);
     this.view.set(view);
     this.library.write({ view });
   }
-  rememberRecipe(id: string): void { this.library.write({ recipeId: id }); }
+  rememberRecipe(id: string): void {
+    this.library.write({ recipeId: id });
+  }
   private async loadRecipes(): Promise<void> {
     const version = ++this.loadVersion;
     const account = this.recipeService.accountVersion();
     this.error.set('');
     try {
-      const [recipes, collections] = await Promise.all([this.recipeService.getRecipes(), this.recipeService.getCollections()]);
+      const [recipes, collections] = await Promise.all([
+        this.recipeService.getRecipes(),
+        this.recipeService.getCollections(),
+      ]);
       if (version !== this.loadVersion || account !== this.recipeService.accountVersion()) return;
       this.collections.set(collections);
-      if (!collections.some(c => c.id === this.selectedCollectionId())) {
+      if (!collections.some((c) => c.id === this.selectedCollectionId())) {
         this.selectedCollectionId.set('');
         this.library.write({ categoryId: '' });
       }

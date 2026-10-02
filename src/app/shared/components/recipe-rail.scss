@@ -226,8 +226,7 @@
   width: fit-content;
   max-width: 100%;
   margin: -12px auto 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow: hidden;
   touch-action: pan-y pinch-zoom;
   user-select: none;
   -webkit-user-select: none;
@@ -236,9 +235,6 @@
 }
 .carousel-progress.is-scrubbing {
   cursor: grabbing;
-}
-.carousel-progress::-webkit-scrollbar {
-  display: none;
 }
 .progress-dot {
   flex: 0 0 auto;
@@ -254,7 +250,8 @@
   // Keep hit areas fixed; only the inner ink pill responds to position.
   transition: none;
 }
-.progress-dot span {
+.progress-dot span,
+.progress-mark span {
   width: calc(6px + 20px * var(--dot-strength, 0));
   height: 6px;
   border-radius: 999px;
@@ -270,7 +267,6 @@
 @media (hover: hover) {
   .carousel-progress:not(.is-scrubbing) .progress-dot:hover {
     background: transparent;
-
   }
   .carousel-progress:not(.is-scrubbing) .progress-dot:hover span {
     width: 26px;
@@ -284,10 +280,58 @@
   }
 }
 
-.card-categories, .card-tags { display: flex; gap: 6px; margin-bottom: 10px; font-size: .75rem; line-height: 20px; }
-.card-categories { overflow: hidden; }
-.card-categories span { min-width: 0; padding-inline: 6px; border: 1px solid currentColor; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card-tags { flex-wrap: wrap; max-height: 50px; overflow: hidden; }
-.card-tags span { max-width: 100%; padding-inline: 8px; border-radius: 999px; background: #faf9f559; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card-categories + .card-tags { margin-top: 0; }
-@media (max-width: 700px) { .rail-controls { display: none; } }
+.card-categories,
+.card-tags {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 0.75rem;
+  line-height: 20px;
+}
+.card-categories {
+  overflow: hidden;
+}
+.card-categories span {
+  min-width: 0;
+  padding-inline: 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-tags {
+  flex-wrap: wrap;
+  max-height: 50px;
+  overflow: hidden;
+}
+.card-tags span {
+  max-width: 100%;
+  padding-inline: 8px;
+  border-radius: 999px;
+  background: #faf9f559;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-categories + .card-tags {
+  margin-top: 0;
+}
+@media (max-width: 700px) {
+  .rail-controls {
+    display: none;
+  }
+}
+
+.progress-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 44px;
+  pointer-events: none;
+}
+.carousel-progress[role='slider']:focus-visible {
+  border-radius: var(--radius-control);
+  outline-offset: 0;
+}

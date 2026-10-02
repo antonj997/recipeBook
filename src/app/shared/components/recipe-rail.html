@@ -87,9 +87,7 @@
             appCardTilt
             [routerLink]="['/recipes', recipe.id]"
             [style.--card-color]="
-              recipe.imageDataUrl
-                ? photoBackground(recipe.id)
-                : placeholderBackground(recipe.id)
+              recipe.imageDataUrl ? photoBackground(recipe.id) : placeholderBackground(recipe.id)
             "
           >
             <div class="recipe-card__media">
@@ -109,12 +107,16 @@
               <h3>{{ recipe.title }}</h3>
               @if (categoryLabels(recipe).length) {
                 <div class="card-categories">
-                  @for (category of categoryLabels(recipe); track category) { <span [title]="category">{{ category }}</span> }
+                  @for (category of categoryLabels(recipe); track category) {
+                    <span [title]="category">{{ category }}</span>
+                  }
                 </div>
               }
               @if (tagLabels(recipe).length) {
                 <div class="card-tags">
-                  @for (tag of tagLabels(recipe); track tag) { <span [title]="tag">{{ tag }}</span> }
+                  @for (tag of tagLabels(recipe); track tag) {
+                    <span [title]="tag">{{ tag }}</span>
+                  }
                 </div>
               }
               @if (recipe.totalTime != null) {
@@ -140,27 +142,46 @@
     <div
       #progressControls
       class="carousel-progress"
-      role="group"
+      [attr.role]="condensed() ? 'slider' : 'group'"
+      [attr.tabindex]="condensed() ? 0 : null"
+      [attr.aria-valuemin]="condensed() ? 1 : null"
+      [attr.aria-valuemax]="condensed() ? stops().length : null"
+      [attr.aria-valuenow]="condensed() ? currentStop() + 1 : null"
+      [attr.aria-valuetext]="condensed() ? positionLabel() : null"
+      [attr.aria-orientation]="condensed() ? 'horizontal' : null"
       [attr.aria-label]="title() + ' carousel position'"
+      [attr.aria-controls]="railId()"
+      (keydown)="onProgressKeydown($event)"
       (pointerdown)="startScrub($event)"
       (pointermove)="moveScrub($event)"
       (pointerup)="finishScrub($event)"
-      (pointercancel)="finishScrub($event)"
+      (pointercancel)="finishScrub($event, false)"
       (lostpointercapture)="onLostScrubCapture($event)"
     >
-      @for (stop of stops(); track stop.recipeIndex; let i = $index) {
-        <button
-          type="button"
-          class="progress-dot"
-          [attr.aria-label]="'Show ' + recipes()[stop.recipeIndex].title"
-          [attr.aria-controls]="railId()"
-          [attr.aria-current]="currentStop() === i ? 'true' : null"
-          [style.--dot-strength]="dotStrength(i)"
-          [attr.data-stop]="i"
-          (click)="onProgressClick($event, stop.recipeIndex)"
-        >
-          <span aria-hidden="true"></span>
-        </button>
+      @if (condensed()) {
+        @for (mark of indicatorMarks(); track mark) {
+          <span
+            class="progress-mark"
+            aria-hidden="true"
+            [style.--dot-strength]="indicatorStrength(mark)"
+            ><span></span
+          ></span>
+        }
+      } @else {
+        @for (stop of stops(); track stop.recipeIndex; let i = $index) {
+          <button
+            type="button"
+            class="progress-dot"
+            [attr.aria-label]="'Show ' + recipes()[stop.recipeIndex].title"
+            [attr.aria-controls]="railId()"
+            [attr.aria-current]="currentStop() === i ? 'true' : null"
+            [style.--dot-strength]="dotStrength(i)"
+            [attr.data-stop]="i"
+            (click)="onProgressClick($event, stop.recipeIndex)"
+          >
+            <span aria-hidden="true"></span>
+          </button>
+        }
       }
     </div>
   }

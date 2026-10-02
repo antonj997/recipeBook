@@ -100,7 +100,7 @@ Primary controls are dark, secondary controls outlined, destructive controls use
 
 Cards have a flush 4:3 photo over a padded color block within a 16px radius. Photo cards use a stable recipe-based choice of blue, clay, sage, lavender, beige or washed yellow. Missing-photo cards share the exact stable background choice with their food drawing. Card metadata shows total time when available. Titles never gain an underline on hover.
 
-Desktop cards are 240–340px wide with 28px gaps. Mobile cards are 78vw with 18px gaps and centered snapping. Preserve native horizontal scrolling, mandatory snap and `scroll-snap-stop: always`. Edge masks soften clipped neighbors; blur/displacement are optional enhancements that never intercept input. Desktop arrow and keyboard navigation move by card; mobile uses swiping and the scrub indicator. A shared icon toggle for Shelf/List sits in the library heading. Compact centered dots use fixed hit targets; only the inner marks expand with carousel position, hover and focus. Dragging across the strip scrubs the cards. Duplicate clamped desktop end positions share one dot.
+Desktop cards are 240–340px wide with 28px gaps. Mobile cards are 78vw with 18px gaps and centered snapping. Preserve native horizontal scrolling, mandatory snap and `scroll-snap-stop: always`. Edge masks soften clipped neighbors; blur/displacement are optional enhancements that never intercept input. Desktop arrow and keyboard navigation move by card; mobile uses swiping and the scrub indicator. A shared icon toggle for Shelf/List sits in the library heading. Compact centered dots use fixed hit targets; only the inner marks expand with carousel position, hover and focus. Dragging across the strip scrubs the cards. Duplicate clamped desktop end positions share one dot. Larger carousels use a condensed strip that fits the available width and maps across the full range; it supports dragging, taps and keyboard navigation.
 
 ## Motion
 
@@ -116,11 +116,11 @@ Unsaved recipes reuse the saved recipe view. A compact floating action bar provi
 
 ## Browsing, editing and cooking
 
-Keep search and category selection, the Shelf/List view and reading position on the device, scoped to each account or device cookbook. Categories are managed from the library and chosen or created in the editor. Settings contains Account, Backups and App only.
+Keep search and category selection, the Shelf/List view and reading position on the device, scoped to each account or device cookbook. Categories are managed from the library and chosen or created in the editor. Settings contains Account, Backups and App only. Switching between Shelf and List keeps the page in place; returning from a recipe can restore the remembered list row.
 
 Manual recipes open the editor first. Name, optional photo, default servings, ingredients and instructions come before optional details. Use growing text areas, a sticky action bar, accessible row Options and Undo for removed rows. Confirm navigation only when edits exist or work is still saving.
 
-Start cooking is a quiet text control with a downward chevron and tail, and switches to a compact view. The mobile overview puts the photo before the title. Completed steps always collapse to one line. A servings picker scales explicit ingredient quantities from the original saved amounts, without changing the recipe. Cards show up to three category labels and four tag pills within a compact metadata area. Mobile section controls stay reachable. Remember checked steps and each section's reading position locally; Start over clears cooking progress without editing the recipe. Ignore outdated progress after steps change.
+Start cooking is a quiet text control with a downward chevron and tail, and switches to a compact view. The mobile overview puts the photo before the title. Completed steps always collapse to one line. A servings picker scales explicit ingredient quantities from the original saved amounts, without changing the recipe. Recipe and editor serving pickers share a cream surface, thin control border, sans-serif labels and the existing downward chevron. Cards show up to three category labels and four tag pills within a compact metadata area. Mobile section controls stay reachable. Remember checked steps and each section's reading position locally; Start over clears cooking progress without editing the recipe. Ignore outdated progress after steps change.
 
 ## Maintainability
 
