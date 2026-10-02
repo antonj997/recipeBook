@@ -20,10 +20,6 @@
 #servings {
   max-width: 140px;
 }
-.image-field {
-  padding-top: 24px;
-  border-top: 1px solid var(--color-border);
-}
 .image-field small {
   color: var(--color-muted);
   font-weight: 400;
@@ -92,3 +88,5 @@
     flex: 1;
   }
 }
+
+#servings-hint { color: var(--color-muted); }

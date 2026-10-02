@@ -1,6 +1,7 @@
+import type { RecipeCollection } from '../../core/models/recipe-collection.model';
 import { CardTiltDirective } from './card-tilt';
 import { IconComponent } from './icon';
-import { formatRecipeTime } from '../../core/models/recipe-metadata';
+import { formatRecipeTime, metadataTags } from '../../core/models/recipe-metadata';
 import {
   afterNextRender,
   Component,
@@ -41,6 +42,12 @@ export class RecipeRailComponent implements OnDestroy {
   private restoreFrame = 0;
   title = input.required<string>();
   recipes = input.required<Recipe[]>();
+  collections = input<RecipeCollection[]>([]);
+  private collectionLabels = computed(() => new Map(this.collections().map(item => [item.id, item.name])));
+  categoryLabels(recipe: Recipe): string[] {
+    return (recipe.collectionIds ?? []).map(id => this.collectionLabels().get(id)).filter((name): name is string => !!name).slice(0, 3);
+  }
+  tagLabels(recipe: Recipe): string[] { return metadataTags(recipe).slice(0, 4); }
   railId = input.required<string>();
   filterId = computed(() => this.railId() + '-glass');
   rail = viewChild<ElementRef<HTMLDivElement>>('recipeRail');

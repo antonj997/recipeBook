@@ -123,13 +123,13 @@ li::marker {
 }
 
 .recipe-summary h1 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-weight: 400;
   letter-spacing: -0.035em;
   font-size: clamp(2.2rem, 4vw, 3.5rem);
 }
 .recipe-body li {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.13rem;
   line-height: 1.5;
 }
@@ -245,7 +245,7 @@ li::marker {
   text-decoration: line-through;
   text-decoration-thickness: 1px;
 }
-.hide-completed .completed .step-copy {
+.completed .step-copy {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -262,14 +262,6 @@ li::marker {
 .step-progress p {
   color: var(--color-muted);
   margin: 0;
-}
-.step-progress button {
-  font-size: 0.85rem;
-  padding: 8px 12px;
-}
-.step-progress button[aria-pressed="true"] {
-  background: var(--color-ink);
-  color: var(--color-surface);
 }
 @media (max-width: 700px) {
   .section-switch {
@@ -290,7 +282,7 @@ li::marker {
     border: 0;
     background: transparent;
   }
-  .section-switch button[aria-pressed="true"] {
+  .section-switch button[aria-pressed='true'] {
     background: var(--color-ink);
     color: var(--color-surface);
   }
@@ -360,10 +352,77 @@ li::marker {
   }
 }
 @media (hover: hover) {
-  .section-switch button:hover:not([aria-pressed="true"]) {
+  .section-switch button:hover:not([aria-pressed='true']) {
     background: var(--color-sage);
   }
-  .section-switch button:hover[aria-pressed="true"] {
+  .section-switch button:hover[aria-pressed='true'] {
     background: #363630;
+  }
+}
+
+.start-cooking {
+  min-height: 44px;
+  padding: 8px 0;
+  border-color: transparent;
+  background: transparent;
+  font-size: 0.95rem;
+}
+.start-cooking app-icon {
+  width: 18px;
+  height: 18px;
+  transition: transform 180ms var(--ease-out);
+}
+@media (hover: hover) {
+  .start-cooking:hover {
+    background: transparent;
+    border-color: transparent;
+  }
+  .start-cooking:hover app-icon {
+    transform: translateY(2px);
+  }
+}
+.ingredients-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.ingredients-heading h2 {
+  margin: 0;
+}
+.serving-picker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.serving-picker select {
+  appearance: none;
+  width: auto;
+  min-height: 44px;
+  padding: 8px 30px 8px 12px;
+  background: transparent;
+  font-size: 16px;
+}
+.serving-picker app-icon {
+  position: absolute;
+  right: 8px;
+  width: 16px;
+  height: 16px;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .start-cooking app-icon {
+    transition: none;
   }
 }

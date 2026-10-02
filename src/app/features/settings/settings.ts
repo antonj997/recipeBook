@@ -21,7 +21,6 @@ export class SettingsComponent {
   readonly app = inject(AppUpdateService);
   readonly returnToImport =
     inject(ActivatedRoute).snapshot.queryParamMap.get('returnTo') === '/recipes/import';
-  readonly keepDeviceSeparate = signal(false);
   private active = true;
   private current(version: number): boolean {
     return this.active && version === this.auth.accountVersion();
@@ -40,23 +39,15 @@ export class SettingsComponent {
       block: 'start',
     });
   }
-  readonly deviceRecipes = signal(0);
   constructor() {
     let account = this.auth.accountVersion();
     effect(() => {
       const next = this.auth.accountVersion();
       if (next !== account) {
         account = next;
-        this.keepDeviceSeparate.set(false);
         this.message.set('');
         this.error.set('');
       }
-    });
-    effect(() => {
-      this.cloud.revision();
-      void this.cloud.deviceRecipeCount().then((count) => {
-        if (this.active) this.deviceRecipes.set(count);
-      });
     });
     inject(DestroyRef).onDestroy(() => {
       this.active = false;
@@ -109,32 +100,6 @@ export class SettingsComponent {
     } catch (error) {
       if (this.current(version))
         this.error.set(error instanceof Error ? error.message : 'Could not sign out.');
-    } finally {
-      this.accountBusy.set(false);
-    }
-  }
-  async copyDeviceRecipes(): Promise<void> {
-    this.feedbackSection.set('account');
-    const version = this.auth.accountVersion();
-    if (!this.current(version) || !this.auth.user() || this.accountBusy()) return;
-    if (
-      !window.confirm(
-        'Copy recipes from this device into your private cookbook? Existing recipes will be skipped. Your device copy will stay intact.',
-      )
-    )
-      return;
-    this.accountBusy.set(true);
-    this.error.set('');
-    this.message.set('');
-    try {
-      const result = await this.cloud.copyDeviceCookbook();
-      if (!this.current(version)) return;
-      this.message.set(
-        `Copied ${result.added} recipes. Skipped ${result.skipped} existing recipes.`,
-      );
-    } catch (error) {
-      if (this.current(version))
-        this.error.set(error instanceof Error ? error.message : 'Could not copy recipes.');
     } finally {
       this.accountBusy.set(false);
     }

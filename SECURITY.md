@@ -1,6 +1,6 @@
 # Security and privacy
 
-Recipebook is a static Angular application on GitHub Pages, with Supabase Auth, private database rows and private photo storage. Dexie keeps the original device cookbook and separate offline copies for signed-in accounts.
+Recipebook is a static Angular application on GitHub Pages, with Supabase Auth, private database rows and private photo storage. Dexie stores guest recipes while signed out and an account-scoped offline cache while signed in. At sign-in, a required add-or-delete choice resolves guest recipes. Adding commits recipes, photos, category memberships and queued cloud writes to the account cache before removing unchanged guest records. Interrupted transfers keep remaining guest data, and account changes abort the transfer. Deletion touches only guest records.
 
 ## Security boundaries
 

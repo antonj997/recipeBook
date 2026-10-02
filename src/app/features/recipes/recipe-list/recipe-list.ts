@@ -1,3 +1,4 @@
+import { LibraryViewToggleComponent } from '../../../shared/components/library-view-toggle';
 import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
 import { NgTemplateOutlet } from '@angular/common';
 import { afterRenderEffect, Component, computed, ElementRef, inject, effect, signal, viewChildren } from '@angular/core';
@@ -15,7 +16,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
 
 @Component({
   selector: 'app-recipe-list',
-  imports: [NgTemplateOutlet, RecipeRailComponent, RouterLink, IconComponent, FoodDoodleComponent, LoadingStateComponent, FoodPlaceholderComponent],
+  imports: [LibraryViewToggleComponent, NgTemplateOutlet, RecipeRailComponent, RouterLink, IconComponent, FoodDoodleComponent, LoadingStateComponent, FoodPlaceholderComponent],
   templateUrl: './recipe-list.html',
   styleUrl: './recipe-list.scss',
 })

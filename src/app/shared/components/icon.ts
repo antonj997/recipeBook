@@ -47,6 +47,9 @@ import { Component, input } from '@angular/core';
       @case ('chevron') {
         <path d="m14 5-7 7 7 7" />
       }
+      @case ('arrow-down') { <path d="M12 4v15m-7-7 7 7 7-7" /> }
+      @case ('shelf') { <rect x="3" y="4" width="7" height="16" rx="1" /><rect x="14" y="4" width="7" height="16" rx="1" /><path d="M3 13h7m4 0h7" /> }
+      @case ('list') { <path d="M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1" /> }
       @case ('external') {
         <path d="M14 3h7v7m0-7L11 13M10 4H4v16h16v-6" />
       }
@@ -87,5 +90,8 @@ export class IconComponent {
     | 'trash'
     | 'chevron'
     | 'external'
+    | 'arrow-down'
+    | 'shelf'
+    | 'list'
   >();
 }

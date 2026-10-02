@@ -37,33 +37,6 @@
         }
       </div>
 
-      <!-- Servings -->
-
-      <div class="field">
-        <label for="servings">Servings</label>
-
-        <input
-          id="servings"
-          type="number"
-          min="1"
-          step="1"
-          formControlName="servings"
-          [attr.aria-invalid]="form.controls.servings.touched && form.controls.servings.invalid"
-          [attr.aria-describedby]="
-            form.controls.servings.touched && form.controls.servings.invalid
-              ? 'servings-error'
-              : null
-          "
-        />
-
-        @if (form.controls.servings.touched && form.controls.servings.invalid) {
-          <small id="servings-error" class="error"> Enter a valid number of servings. </small>
-        }
-      </div>
-
-      <app-recipe-groups [items]="ingredients" [sections]="ingredientSections" />
-      <app-recipe-groups kind="step" [items]="instructions" [stepDetails]="stepDetails" />
-
       <div class="image-field">
         <span id="photo-label">Photo <small>(optional)</small></span>
         <div class="photo-controls">
@@ -110,6 +83,26 @@
           <p class="error" role="alert">{{ imageError() }}</p>
         }
       </div>
+
+      <!-- Servings -->
+
+      <div class="field">
+        <label for="servings">Default servings</label>
+
+        <select id="servings" formControlName="servings" aria-describedby="servings-hint">
+          @for (count of servingChoices(); track count) {
+            <option [ngValue]="count">{{ count }} servings</option>
+          }
+        </select>
+        <small id="servings-hint">Ingredient amounts are for this number of servings.</small>
+
+        @if (form.controls.servings.touched && form.controls.servings.invalid) {
+          <small id="servings-error" class="error"> Enter a valid number of servings. </small>
+        }
+      </div>
+
+      <app-recipe-groups [items]="ingredients" [sections]="ingredientSections" />
+      <app-recipe-groups kind="step" [items]="instructions" [stepDetails]="stepDetails" />
 
       <app-recipe-collections [control]="collectionIds" [collections]="collections()" />
       <details class="optional-details" [open]="metadataForm.invalid && metadataForm.touched">

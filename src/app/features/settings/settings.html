@@ -74,53 +74,10 @@
             a backup before clearing Recipebook’s site data.
           </p>
         </details>
-        @if (deviceRecipes()) {
-          <div class="device-cookbook">
-            <h3>Recipes on this device</h3>
-            <p>
-              {{ deviceRecipes() }}
-              {{
-                deviceRecipes() === 1
-                  ? 'recipe was'
-                  : 'recipes
-        were'
-              }}
-              saved without an account. Choose whether to copy them into this account or keep the
-              cookbooks separate.
-            </p>
-            <div class="device-actions">
-              <button
-                type="button"
-                (click)="copyDeviceRecipes()"
-                [disabled]="accountBusy() || cloud.syncing() || importing() || exporting()"
-              >
-                Copy to my account
-              </button>
-              <button
-                type="button"
-                (click)="keepDeviceSeparate.set(true)"
-                [disabled]="keepDeviceSeparate() || accountBusy() || importing() || exporting()"
-              >
-                {{
-                  keepDeviceSeparate()
-                    ? 'Kept on this device'
-                    : 'Keep separate on
-          this device'
-                }}
-              </button>
-            </div>
-            @if (keepDeviceSeparate()) {
-              <p class="hint" role="status">
-                Your device cookbook stays separate. You can copy it here later.
-              </p>
-            }
-            <p class="hint">The device copy stays intact. Existing recipes are skipped.</p>
-          </div>
-        }
       } @else {
         <p class="scope-note">
-          You’re viewing the cookbook saved on this device. Signing in opens a separate account
-          cookbook; device recipes are only copied when you choose.
+          Recipes saved while signed out stay on this device. When you sign in, choose to add them
+          to your account or delete them before continuing.
         </p>
         <app-account-access [blocked]="importing() || exporting()" />
       }

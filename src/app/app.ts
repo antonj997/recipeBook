@@ -4,6 +4,8 @@ import { RecipeDraftService } from './core/services/recipe-draft.service';
 import { LeaveConfirmationService } from './core/services/leave-confirmation.service';
 import { AppUpdateService } from './core/services/app-update.service';
 import { LeaveConfirmationComponent } from './shared/components/leave-confirmation';
+import { GuestRecipesDialogComponent } from './shared/components/guest-recipes-dialog';
+import { GuestRecipesService } from './core/services/guest-recipes.service';
 import { Component, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 
@@ -12,7 +14,7 @@ import { IconComponent } from './shared/components/icon';
 import { FeedbackService } from './core/services/feedback.service';
 
 @Component({
-  imports: [RouterOutlet, RouterLink, IconComponent, LeaveConfirmationComponent],
+  imports: [RouterOutlet, RouterLink, IconComponent, LeaveConfirmationComponent, GuestRecipesDialogComponent],
   selector: 'app-root',
   host: {
     '[class.touch-input]': 'touchInput()',
@@ -34,6 +36,7 @@ export class App {
   private cloud = inject(CloudCookbookService);
   private drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
+  private guestRecipes = inject(GuestRecipesService);
   readonly accountChanging = signal(false);
 
   constructor() {
@@ -70,9 +73,10 @@ export class App {
       this.onSettings.set(settings);
       this.settingsTarget.set(settings ? this.settingsReturn : '/settings');
       if (!settings) this.lastPage = event.urlAfterRedirects;
-      requestAnimationFrame(() =>
-        document.getElementById('main-content')?.focus({ preventScroll: true }),
-      );
+      requestAnimationFrame(() => {
+        if (!this.guestRecipes.required())
+          document.getElementById('main-content')?.focus({ preventScroll: true });
+      });
     });
   }
   protected readonly touchInput = signal(false);

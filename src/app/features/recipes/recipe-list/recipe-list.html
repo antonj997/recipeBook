@@ -30,16 +30,12 @@
         <a class="button" routerLink="/recipes/import">Import recipe<app-icon name="link" /></a>
         <a class="button" routerLink="/settings" fragment="import-cookbook">Import cookbook</a>
       </div>
-      <a class="scope-link" routerLink="/settings">{{ cloud.auth.user() ? 'My cookbook' : 'Device cookbook' }}</a>
+      <a class="scope-link" routerLink="/settings">{{ cloud.auth.user() ? 'My recipes' : 'Saved on this device' }}</a>
       <a routerLink="/categories">Manage categories</a>
     </div>
   } @else {
     <div class="library-tools">
-      <a class="scope-link" routerLink="/settings" [attr.aria-label]="cloud.auth.user() ? 'My private cookbook, account settings' : 'Cookbook saved on this device, account settings'">{{ cloud.auth.user() ? 'My cookbook' : 'Device cookbook' }}</a>
-      <div class="view-switch" role="group" aria-label="Library view">
-        <button type="button" [attr.aria-pressed]="view() === 'shelf'" (click)="setView('shelf')">Shelf</button>
-        <button type="button" [attr.aria-pressed]="view() === 'list'" (click)="setView('list')">List</button>
-      </div>
+      <a class="scope-link" routerLink="/settings" [attr.aria-label]="cloud.auth.user() ? 'My private cookbook, account settings' : 'Cookbook saved on this device, account settings'">{{ cloud.auth.user() ? 'My recipes' : 'Saved on this device' }}</a>
     </div>
     <ng-template #libraryHeading>
       <div class="category-picker">
@@ -55,7 +51,8 @@
       </div>
     </ng-template>
     @if (view() === 'shelf') {
-      <app-recipe-rail [title]="categoryTitle()" railId="all-recipes-rail" [recipes]="filteredRecipes()" [initialRecipeId]="restoreRecipeId()" (activeRecipeChange)="rememberRecipe($event)">
+      <app-recipe-rail [title]="categoryTitle()" railId="all-recipes-rail" [recipes]="filteredRecipes()" [collections]="collections()" [initialRecipeId]="restoreRecipeId()" (activeRecipeChange)="rememberRecipe($event)">
+        <app-library-view-toggle rail-actions [view]="view()" (viewChange)="setView($event)" />
         <div rail-heading><ng-container [ngTemplateOutlet]="libraryHeading" /></div>
         <div rail-empty class="empty-state">
           <app-food-doodle />
@@ -66,7 +63,7 @@
       </app-recipe-rail>
     } @else {
       <section class="recipe-index" aria-labelledby="all-recipes-rail-heading">
-        <div class="index-heading"><ng-container [ngTemplateOutlet]="libraryHeading" /><span>{{ filteredRecipes().length }} {{ filteredRecipes().length === 1 ? 'recipe' : 'recipes' }}</span></div>
+        <div class="index-heading"><ng-container [ngTemplateOutlet]="libraryHeading" /><div class="index-actions"><span>{{ filteredRecipes().length }} {{ filteredRecipes().length === 1 ? 'recipe' : 'recipes' }}</span><app-library-view-toggle [view]="view()" (viewChange)="setView($event)" /></div></div>
         @for (recipe of filteredRecipes(); track recipe.id) {
           <a #listRow [attr.data-recipe-id]="recipe.id" class="index-row" [routerLink]="['/recipes', recipe.id]" (click)="rememberRecipe(recipe.id)">
             <span class="index-image" [style.background-color]="photoBackground(recipe.id)">

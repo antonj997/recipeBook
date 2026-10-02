@@ -9,8 +9,9 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 - Create recipes, import supported recipe links, and review imports before saving.
 - Create categories, assign several recipes at once, and filter or search your cookbook.
 - Browse a recipe shelf or compact list, with your search, category and place remembered.
-- Group ingredients and instructions, adjust servings, and undo removed editor rows.
-- Use a compact cooking view with remembered step progress and a keep-screen-on toggle where supported.
+- Group ingredients and instructions, choose default servings, and undo removed editor rows.
+- Scale explicit ingredient quantities for 2, 4, 6, 8 or 10 servings without changing the saved recipe. Written or ambiguous quantities are left unchanged.
+- Use a compact cooking view with remembered step progress and a keep-screen-on toggle where supported. Completed steps always collapse.
 - Store photos, cooking time and available nutrition information.
 - Sign in with email and password for a private cookbook across devices.
 - Use saved recipes offline and install the app as a PWA.
@@ -31,7 +32,7 @@ For cloud accounts and hosted link import, provide `SUPABASE_URL` and `SUPABASE_
 
 ## Accounts and storage
 
-Each signed-in account has its own cloud cookbook and offline cache. Recipes created while signed out belong to the device cookbook. **Settings → Copy to my account** copies those recipes after signing in without deleting the original copy.
+Each signed-in account has a private cloud cookbook and offline cache. Recipes created or imported while signed out stay on the device. After signing in, choose to add these recipes and categories to the account or delete them. Adding first saves the account copy and queued cloud changes, then removes unchanged guest records. There is no separate-cookbook option.
 
 Passwords require at least eight characters, without character-composition rules. Email confirmation and password recovery use Supabase. Its default email sender only supports project team addresses and has a low sending limit; configure custom SMTP before offering accounts to friends outside the project team.
 

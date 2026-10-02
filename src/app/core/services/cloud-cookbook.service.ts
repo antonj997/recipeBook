@@ -203,14 +203,129 @@ export class CloudCookbookService {
     return { added: added.length, skipped: recipes.length - added.length };
   }
 
-  async copyDeviceCookbook() {
-    const database = this.cache;
-    if (!database) throw new Error('Sign in first.');
-    return this.importRecords(await db.recipes.toArray(), await db.collections.toArray(), database);
+  async deviceRecords() {
+    return db.transaction('r', db.recipes, db.collections, async () => ({
+      recipes: await db.recipes.toArray(),
+      collections: await db.collections.toArray(),
+    }));
   }
 
-  deviceRecipeCount(): Promise<number> {
-    return db.recipes.count();
+  async deviceRecordCounts() {
+    return db.transaction('r', db.recipes, db.collections, async () => ({
+      recipes: await db.recipes.count(),
+      collections: await db.collections.count(),
+    }));
+  }
+
+  async resolveDeviceRecipes(choice: 'add' | 'delete'): Promise<void> {
+    const database = this.database;
+    const userId = this.auth.user()?.id;
+    const version = this.auth.accountVersion();
+    if (!(database instanceof AccountDatabase) || !userId) throw new Error('Sign in first.');
+    const assertCurrent = () => {
+      if (this.auth.user()?.id !== userId || this.auth.accountVersion() !== version)
+        throw new Error('Account changed. Your remaining device recipes are safe. Try again.');
+    };
+    const source = await this.deviceRecords();
+    assertCurrent();
+    if (choice === 'add') {
+      // Compute retry IDs before the transaction: Web Crypto must not suspend a Dexie transaction.
+      const recipeIds = new Map(
+        await Promise.all(
+          source.recipes.map(
+            async (recipe) => [recipe.id, await deviceCopyId(userId, 'recipes', recipe)] as const,
+          ),
+        ),
+      );
+      const categoryIds = new Map(
+        await Promise.all(
+          source.collections.map(
+            async (category) =>
+              [category.id, await deviceCopyId(userId, 'collections', category)] as const,
+          ),
+        ),
+      );
+      assertCurrent();
+      await database.transaction(
+        'rw',
+        database.recipes,
+        database.collections,
+        database.outbox,
+        async () => {
+          const remapped = new Map<string, string>();
+          const save = async (table: CookbookTable, value: Recipe | RecipeCollection) => {
+            assertCurrent();
+            await database.table(table).put(value);
+            await database.outbox.put({
+              key: `${table}:${value.id}`,
+              table,
+              id: value.id,
+              value,
+              revision: crypto.randomUUID(),
+            });
+          };
+          for (const category of source.collections) {
+            assertCurrent();
+            const existing = await database.collections.get(category.id);
+            const id =
+              existing && !sameDeviceContent(existing, category)
+                ? categoryIds.get(category.id)!
+                : category.id;
+            remapped.set(category.id, id);
+            // A stable collision ID also recognizes copies made before interrupted cleanup.
+            const copy = { ...category, id };
+            const priorCopy = await database.collections.get(id);
+            if (priorCopy && !sameDeviceContent(priorCopy, copy))
+              throw new Error(
+                'A previously transferred category has changed. Device recipes are kept.',
+              );
+            if (!priorCopy) await save('collections', copy);
+          }
+          for (const recipe of source.recipes) {
+            assertCurrent();
+            const value = {
+              ...recipe,
+              collectionIds: recipe.collectionIds?.map((id) => remapped.get(id) ?? id),
+            };
+            const existing = await database.recipes.get(recipe.id);
+            if (existing && sameDeviceContent(existing, value)) continue;
+            const id = existing ? recipeIds.get(recipe.id)! : recipe.id;
+            const copy = { ...value, id };
+            const priorCopy = await database.recipes.get(id);
+            if (priorCopy && !sameDeviceContent(priorCopy, copy))
+              throw new Error(
+                'A previously transferred recipe has changed. Device recipes are kept.',
+              );
+            if (!priorCopy) await save('recipes', copy);
+          }
+          assertCurrent();
+        },
+      );
+    }
+    assertCurrent();
+    // Account cache and outbox are durable before removing anything from the guest database.
+    // Concurrent guest edits and new records stay available for another explicit choice.
+    await db.transaction('rw', db.recipes, db.collections, async () => {
+      for (const recipe of source.recipes) {
+        assertCurrent();
+        if (sameDeviceRecord(await db.recipes.get(recipe.id), recipe)) {
+          await db.recipes.delete(recipe.id);
+        }
+      }
+      const remaining = await db.recipes.toArray();
+      for (const category of source.collections) {
+        assertCurrent();
+        if (remaining.some((recipe) => recipe.collectionIds?.includes(category.id))) continue;
+        if (sameDeviceRecord(await db.collections.get(category.id), category))
+          await db.collections.delete(category.id);
+      }
+      assertCurrent();
+    });
+    this.revision.update((value) => value + 1);
+    const pending = await database.outbox.count();
+    assertCurrent();
+    this.pending.set(pending);
+    if (choice === 'add') void this.sync();
   }
 
   async prepareSignOut(): Promise<number> {
@@ -352,6 +467,46 @@ export class CloudCookbookService {
       }
     }
   }
+}
+
+// Stable IDs preserve different recipes with the same ID and make interrupted transfers retryable.
+async function deviceCopyId(
+  userId: string,
+  table: CookbookTable,
+  value: Recipe | RecipeCollection,
+) {
+  const digest = new Uint8Array(
+    await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(`${userId}:${table}:${deviceContent(value)}`),
+    ),
+  );
+  digest[6] = (digest[6] & 0x0f) | 0x50;
+  digest[8] = (digest[8] & 0x3f) | 0x80;
+  const hex = Array.from(digest.slice(0, 16), (byte) => byte.toString(16).padStart(2, '0')).join(
+    '',
+  );
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function sameDeviceRecord(a: unknown, b: unknown): boolean {
+  return a !== undefined && canonicalRecord(a) === canonicalRecord(b);
+}
+
+function sameDeviceContent(a: Recipe | RecipeCollection, b: Recipe | RecipeCollection): boolean {
+  return deviceContent(a) === deviceContent(b);
+}
+
+function deviceContent(value: Recipe | RecipeCollection): string {
+  const { createdAt, updatedAt, ...content } = value as Recipe;
+  return canonicalRecord(content);
+}
+
+function canonicalRecord(value: unknown): string {
+  return JSON.stringify(value, (_, item: unknown) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
 }
 
 function readCloudRecipe(value: unknown): Recipe {

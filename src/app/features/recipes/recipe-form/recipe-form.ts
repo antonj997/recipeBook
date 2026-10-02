@@ -167,6 +167,11 @@ export class RecipeFormComponent implements OnInit {
     );
   }
   // Our reactive form.
+  servingChoices(): number[] {
+    const current = this.form.controls.servings.value;
+    return [...new Set([2, 4, 6, 8, 10, ...(Number.isSafeInteger(current) && current > 0 ? [current] : [])])].sort((a, b) => a - b);
+  }
+
   form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.pattern(/\S/)]],
 
@@ -250,7 +255,7 @@ export class RecipeFormComponent implements OnInit {
       // Populate normal fields.
       this.form.patchValue({
         title: recipe.title,
-        servings: recipe.servings,
+        servings: recipe.servings ?? 4,
       });
 
       this.imageDataUrl.set(recipe.imageDataUrl ?? '');

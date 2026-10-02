@@ -15,11 +15,6 @@ import {
     @if (description()) {
       <p class="recipe-description">{{ description() }}</p>
     }
-    @if (recipe().servings) {
-      <p class="servings">
-        {{ recipe().servings + ' servings' }}
-      </p>
-    }
     @if (recipe().totalTime != null) {
       <dl class="recipe-facts">
         @if (recipe().totalTime) {
@@ -41,13 +36,6 @@ import {
   styles: `
     :host {
       display: block;
-    }
-    .servings {
-      display: inline-block;
-      margin: 8px 0 0;
-      padding: 5px 12px;
-      border-radius: 8px;
-      background: var(--color-blue);
     }
     .recipe-description {
       max-width: 65ch;
