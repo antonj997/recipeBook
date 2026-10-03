@@ -94,14 +94,15 @@
   white-space: nowrap;
 }
 @media (max-width: 600px) {
+  .recipe-list { padding-top: 16px; }
   .page-intro {
     margin-bottom: 24px;
   }
   .home-tools {
     gap: 12px;
     flex-wrap: nowrap;
-    margin-bottom: 32px;
-    padding-bottom: 24px;
+    margin-bottom: 16px;
+    padding-bottom: 0;
   }
   .search-field {
     flex: 1 1 0;
@@ -212,7 +213,7 @@
   }
 }
 
-.index-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
+.index-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; }
 .index-actions > span { color:var(--color-muted); font-size:.8rem; }
 .index-row { display:flex; align-items:center; gap:20px; padding:16px 0; border-bottom:1px solid var(--color-border); text-decoration:none; }
 .index-image { display:block; flex:0 0 86px; width:86px; height:72px; border-radius:8px; overflow:hidden; }
@@ -225,7 +226,7 @@
 @media (max-width:600px) { .index-row { gap:14px; } .index-image { flex-basis:72px; width:72px; height:64px; } .index-title { font-size:1.2rem; } }
 
 .index-actions { display: flex; align-items: center; gap: 12px; }
-@media (max-width: 600px) { .index-heading { gap: 8px; flex-wrap: wrap; } }
+@media (max-width: 600px) { .index-heading { gap: 8px; flex-wrap: wrap; margin-bottom: 4px; } }
 
 @media (max-width: 600px) {
   :host:has(.shelf-view) {
@@ -235,14 +236,12 @@
   .shelf-view {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 0;
     height: 100%;
     padding-block: 16px max(16px, env(safe-area-inset-bottom));
   }
   .shelf-view .home-tools {
     flex: 0 0 auto;
-    margin: 0;
-    padding: 0;
   }
   .shelf-view app-recipe-rail {
     flex: 1;
@@ -250,5 +249,11 @@
   }
 }
 @media (max-width: 600px) and (max-height: 650px) {
-  .shelf-view { gap: 12px; padding-top: 12px; }
+  .recipe-list { padding-top: 12px; }
+  .home-tools { margin-bottom: 12px; }
+  .index-heading { margin-bottom: 0; }
+}
+
+@media (max-width: 360px) {
+  .index-actions > span { display: none; }
 }
