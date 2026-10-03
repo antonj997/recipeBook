@@ -592,3 +592,22 @@ body {
     transition: none;
   }
 }
+
+/* Fit the mobile shelf to the screen; other pages retain normal document scrolling. */
+@media (max-width: 600px) {
+  app-root:has(.recipe-list.shelf-view) {
+    display: flex;
+    flex-direction: column;
+    height: 100svh;
+    min-height: 100svh;
+  }
+  app-root:has(.recipe-list.shelf-view) > .app-header {
+    flex: 0 0 auto;
+    width: 100%;
+    margin: 0 auto;
+  }
+  app-root:has(.recipe-list.shelf-view) > main {
+    flex: 1;
+    min-height: 0;
+  }
+}

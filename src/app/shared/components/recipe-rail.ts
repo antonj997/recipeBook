@@ -30,6 +30,7 @@ import {
   templateUrl: './recipe-rail.html',
   styleUrl: './recipe-rail.scss',
   host: {
+    '[class.compact]': 'compact()',
     '(window:resize)': 'onResize()',
     '(window:blur)': 'finishScrub()',
     '(window:pointerup)': 'finishScrub($event)',
@@ -39,6 +40,7 @@ export class RecipeRailComponent implements OnDestroy {
   formatTime = formatRecipeTime;
   placeholderBackground = foodPlaceholderBackground;
   photoBackground = photoCardBackground;
+  compact = input(false);
   initialRecipeId = input('');
   activeRecipeChange = output<string>();
   private currentRecipeId = '';

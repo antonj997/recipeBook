@@ -1,4 +1,4 @@
-<section class="recipe-list page">
+<section class="recipe-list page" [class.shelf-view]="view() === 'shelf' && !loading() && !error() && recipes().length > 0">
   @if (!loading() && !error() && recipes().length > 0) {
     <div class="home-tools">
       <div class="search-field" role="search">
@@ -47,7 +47,7 @@
       </div>
     </ng-template>
     @if (view() === 'shelf') {
-      <app-recipe-rail [title]="categoryTitle()" railId="all-recipes-rail" [recipes]="filteredRecipes()" [collections]="collections()" [initialRecipeId]="restoreRecipeId()" (activeRecipeChange)="rememberRecipe($event)">
+      <app-recipe-rail [compact]="true" [title]="categoryTitle()" railId="all-recipes-rail" [recipes]="filteredRecipes()" [collections]="collections()" [initialRecipeId]="restoreRecipeId()" (activeRecipeChange)="rememberRecipe($event)">
         <app-library-view-toggle rail-actions [view]="view()" (viewChange)="setView($event)" />
         <div rail-heading><ng-container [ngTemplateOutlet]="libraryHeading" /></div>
         <div rail-empty class="empty-state">
