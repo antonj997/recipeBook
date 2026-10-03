@@ -411,7 +411,7 @@
     margin-bottom: 8px;
   }
   :host(.compact) .card-tags {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     max-height: 20px;
   }
   :host(.compact) .card-tags span {
