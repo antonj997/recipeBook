@@ -115,24 +115,30 @@ main:focus {
 
 .app-update {
   position: fixed;
-  bottom: 20px;
+  bottom: max(20px, env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
-  padding: 8px 12px 8px 18px;
+  width: min(440px, calc(100% - 2 * var(--page-gutter)));
+  padding: 8px 8px 8px 18px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
+  border-radius: 8px;
   background: var(--color-surface);
-  max-width: calc(100vw - 32px);
+  color: var(--color-ink);
   font-size: 0.9rem;
+  line-height: 1.4;
+}
+.app-update span {
+  min-width: 0;
+}
+.app-update button {
+  flex-shrink: 0;
 }
 
 .toast-region.editing {
   bottom: calc(104px + env(safe-area-inset-bottom));
-}
-.app-update {
-  bottom: max(20px, env(safe-area-inset-bottom));
 }
