@@ -136,6 +136,8 @@ export class RecipeService {
       'category',
       'cuisine',
       'dietaryNotes',
+      'tags',
+      'tagIds',
     ])
       delete recipe[key];
     await this.cloud.put('recipes', recipe, database);
@@ -168,6 +170,8 @@ export class RecipeService {
           'category',
           'cuisine',
           'dietaryNotes',
+          'tags',
+          'tagIds',
         ])
           delete clean[key];
         return { ...clean, ...readRecipeMetadata(recipe) };
@@ -272,7 +276,7 @@ export class RecipeService {
           recipe[key] = item[key];
         }
       }
-      for (const key of ['tagIds', 'collectionIds'] as const) {
+      for (const key of ['collectionIds'] as const) {
         const values = item[key];
         if (values !== undefined) {
           if (!Array.isArray(values) || !values.every(isNonEmptyString))

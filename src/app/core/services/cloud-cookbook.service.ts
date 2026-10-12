@@ -539,7 +539,7 @@ function readCloudRecipe(value: unknown): Recipe {
   }
   for (const field of ['notes', 'createdAt', 'updatedAt'] as const)
     if (typeof raw[field] === 'string') recipe[field] = raw[field];
-  for (const field of ['tagIds', 'collectionIds'] as const)
+  for (const field of ['collectionIds'] as const)
     if (Array.isArray(raw[field]) && raw[field].every((v) => typeof v === 'string'))
       recipe[field] = raw[field];
   return recipe;

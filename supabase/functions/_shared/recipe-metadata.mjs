@@ -178,10 +178,6 @@ export function extractMetadata(recipe, html, sourceUrl, ingredients, steps) {
     if (v) nutrition[key] = v;
   }
   const category = list(recipe.recipeCategory).join(', ');
-  const cuisine = list(recipe.recipeCuisine).join(', ');
-  const diet = list(recipe.suitableForDiet).map((v) =>
-    v.replace(/^https?:\/\/schema.org\//, '').replace(/([a-z])([A-Z])/g, '$1 $2'),
-  );
   const extras = pageExtras($, sourceUrl, ingredients);
   // ICA's conditional allergy substitutions and climate advice are not recipe details.
   // Also guard JSON fields when a publisher appends the same labelled blocks there.
@@ -198,11 +194,7 @@ export function extractMetadata(recipe, html, sourceUrl, ingredients, steps) {
       ).join('\n\n') || undefined,
     totalTime: minutes(recipe.totalTime),
     category: category || undefined,
-    cuisine: cuisine || undefined,
-    tags: unique(list(recipe.keywords)),
     nutrition: perPortionNutrition(extras.nutrition || nutrition),
-    dietaryNotes:
-      [...diet, recipeText(recipe.dietaryNotes)].filter(Boolean).join('\n') || undefined,
     ingredientSections: extras.ingredientSections || ingredients.map((i) => i.section),
     stepDetails: steps.map(({ section, imageUrl }) => ({ section, imageUrl })),
   };

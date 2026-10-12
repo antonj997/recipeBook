@@ -4,7 +4,7 @@
 
 Import title, description, ingredients, instructions, servings, total time, photos and nutrition per portion (kcal, protein, carbs and fat). Do not collect author, rating, difficulty, yield, separate preparation/cooking times or cooking tips. Explicit substitutions can join the description. ICA “För alla” and “Klimatanpassa” advice is ignored. Existing descriptions containing unlabelled advice are not rewritten automatically because it cannot be separated safely from user text.
 
-Imported categories match existing collection names after trimming and ignoring case. Unmatched categories never create collections. Cuisine/dietary labels become tags only if recognized in the app's catalog. Imported keyword tags belong to the recipe and do not expand that catalog.
+Imported categories match existing collection names after trimming and ignoring case. Unmatched categories never create collections. Keywords, cuisine and dietary labels are ignored. Categories are created manually in the app.
 
 ## Unsaved review
 

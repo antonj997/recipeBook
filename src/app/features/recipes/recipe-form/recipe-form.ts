@@ -5,7 +5,6 @@ import { prepareRecipePhoto } from '../../../core/services/recipe-photo';
 import { RecipeGroupsComponent } from './recipe-groups';
 import { RecipeCollectionsComponent } from './recipe-collections';
 import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
-import { RECIPE_TAGS } from '../../../core/models/recipe-tag.model';
 import {
   RecipeExtraFieldsComponent,
   createMetadataForm,
@@ -101,7 +100,6 @@ export class RecipeFormComponent implements OnInit {
       this.collectionIds.value.length ||
       metadata.description.trim() ||
       metadata.totalTime !== null ||
-      metadata.tags.length ||
       Object.values(metadata.nutrition).some((value) => value !== null) ||
       this.stepDetails.getRawValue().some((step) => step.imageDataUrl || step.imageUrl)
     );
@@ -149,13 +147,6 @@ export class RecipeFormComponent implements OnInit {
   }
   private loadMetadata(recipe: RecipeMetadata): void {
     const metadata = readRecipeMetadata(recipe);
-    const legacyIds = (recipe as Recipe).tagIds ?? [];
-    metadata.tags = [
-      ...new Set([
-        ...(metadata.tags ?? []),
-        ...RECIPE_TAGS.filter((tag) => legacyIds.includes(tag.id)).map((tag) => tag.label),
-      ]),
-    ];
     populateMetadataForm(this.metadataForm, metadata);
     this.ingredientSections.clear();
     this.ingredients.controls.forEach((_, i) =>
@@ -347,11 +338,6 @@ export class RecipeFormComponent implements OnInit {
     const recipeData = {
       ...metadataFromForm(this.metadataForm),
       collectionIds: this.collectionIds.value,
-      tagIds: RECIPE_TAGS.filter((tag) =>
-        this.metadataForm.controls.tags.value.some(
-          (label) => label.toLocaleLowerCase() === tag.label.toLocaleLowerCase(),
-        ),
-      ).map((tag) => tag.id),
       ingredientSections: this.ingredientSections.getRawValue().map((s) => s.trim()),
       stepDetails: this.stepDetails.getRawValue().map((detail) => ({
         section: detail.section.trim() || undefined,

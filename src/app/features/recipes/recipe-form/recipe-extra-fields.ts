@@ -7,7 +7,6 @@ import {
   perPortionNutrition,
   type RecipeMetadata,
 } from '../../../core/models/recipe-metadata';
-import { RecipeTagPickerComponent } from './recipe-tag-picker';
 import { AutoGrowTextareaDirective } from '../../../shared/directives/auto-grow-textarea';
 import { IconComponent } from '../../../shared/components/icon';
 
@@ -18,7 +17,6 @@ export function createMetadataForm(fb: FormBuilder) {
   return fb.group({
     description: fb.nonNullable.control(''),
     totalTime: fb.control<number | null>(null, Validators.min(0)),
-    tags: fb.nonNullable.control<string[]>([]),
     nutrition: fb.group(nutrition),
   });
 }
@@ -28,7 +26,6 @@ export function populateMetadataForm(form: MetadataForm, value: RecipeMetadata) 
   form.patchValue({
     description: combinedDescription(value) ?? '',
     totalTime: value.totalTime ?? null,
-    tags: value.tags ?? [],
     nutrition: Object.fromEntries(
       nutritionFields.map(({ key }) => [
         key,
@@ -52,12 +49,7 @@ export function metadataFromForm(form: MetadataForm): RecipeMetadata {
 }
 @Component({
   selector: 'app-recipe-extra-fields',
-  imports: [
-    ReactiveFormsModule,
-    RecipeTagPickerComponent,
-    IconComponent,
-    AutoGrowTextareaDirective,
-  ],
+  imports: [ReactiveFormsModule, IconComponent, AutoGrowTextareaDirective],
   template: `
     <div class="details-content" [formGroup]="form()">
       <label
@@ -68,7 +60,6 @@ export function metadataFromForm(form: MetadataForm): RecipeMetadata {
           >Total time (minutes)<input type="number" min="0" step="any" formControlName="totalTime"
         /></label>
       </div>
-      <app-recipe-tag-picker [control]="form().controls.tags" />
 
       <details [open]="form().controls.nutrition.invalid">
         <summary class="disclosure">Nutrition per portion<app-icon name="chevron" /></summary>

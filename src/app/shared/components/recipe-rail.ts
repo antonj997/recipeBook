@@ -1,7 +1,7 @@
 import type { RecipeCollection } from '../../core/models/recipe-collection.model';
 import { CardTiltDirective } from './card-tilt';
 import { IconComponent } from './icon';
-import { formatRecipeTime, metadataTags } from '../../core/models/recipe-metadata';
+import { formatRecipeTime } from '../../core/models/recipe-metadata';
 import {
   afterNextRender,
   Component,
@@ -57,9 +57,6 @@ export class RecipeRailComponent implements OnDestroy {
       .map((id) => this.collectionLabels().get(id))
       .filter((name): name is string => !!name)
       .slice(0, 3);
-  }
-  tagLabels(recipe: Recipe): string[] {
-    return metadataTags(recipe).slice(0, 4);
   }
   railId = input.required<string>();
   filterId = computed(() => this.railId() + '-glass');

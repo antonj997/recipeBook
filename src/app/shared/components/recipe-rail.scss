@@ -295,8 +295,7 @@
   }
 }
 
-.card-categories,
-.card-tags {
+.card-categories {
   display: flex;
   gap: 6px;
   margin-bottom: 10px;
@@ -314,23 +313,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.card-tags {
-  flex-wrap: wrap;
-  max-height: 50px;
-  overflow: hidden;
-}
-.card-tags span {
-  max-width: 100%;
-  padding-inline: 8px;
-  border-radius: 999px;
-  background: #faf9f559;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.card-categories + .card-tags {
-  margin-top: 0;
 }
 @media (max-width: 700px) {
   .rail-controls {
@@ -419,16 +401,8 @@
     font-size: 1.3rem;
     margin-bottom: 8px;
   }
-  :host(.compact) .card-categories,
-  :host(.compact) .card-tags {
+  :host(.compact) .card-categories {
     margin-bottom: 8px;
-  }
-  :host(.compact) .card-tags {
-    flex-wrap: wrap;
-    max-height: 20px;
-  }
-  :host(.compact) .card-tags span {
-    flex-shrink: 0;
   }
   :host(.compact) .carousel-progress {
     flex-shrink: 0;

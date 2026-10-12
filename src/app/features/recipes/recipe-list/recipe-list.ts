@@ -71,14 +71,7 @@ export class RecipeListComponent {
     const collectionId = this.selectedCollectionId();
     return this.recipes().filter((recipe) => {
       if (collectionId && !recipe.collectionIds?.includes(collectionId)) return false;
-      const text = [
-        recipe.title,
-        ...recipe.ingredients,
-        ...(recipe.tags ?? []),
-        ...(recipe.tagIds ?? []),
-      ]
-        .join(' ')
-        .toLocaleLowerCase();
+      const text = [recipe.title, ...recipe.ingredients].join(' ').toLocaleLowerCase();
       return words.every((word) => text.includes(word));
     });
   });

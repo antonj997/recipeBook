@@ -112,13 +112,6 @@
                     }
                   </div>
                 }
-                @if (tagLabels(recipe).length) {
-                  <div class="card-tags">
-                    @for (tag of tagLabels(recipe); track tag) {
-                      <span [title]="tag">{{ tag }}</span>
-                    }
-                  </div>
-                }
                 @if (recipe.totalTime != null) {
                   <p><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</p>
                 }

@@ -5,7 +5,6 @@ import {
   formatRecipeTime,
   nutritionFields,
   combinedDescription,
-  metadataTags,
   perPortionNutrition,
 } from '../../../core/models/recipe-metadata';
 
@@ -24,13 +23,6 @@ import {
           </div>
         }
       </dl>
-    }
-    @if (visibleTags().length) {
-      <div class="recipe-tags">
-        @for (tag of visibleTags(); track tag) {
-          <span>{{ tag }}</span>
-        }
-      </div>
     }
   `,
   styles: `
@@ -51,8 +43,7 @@ import {
     .recipe-facts:empty {
       display: none;
     }
-    .recipe-facts dt,
-    .recipe-tags {
+    .recipe-facts dt {
       color: var(--color-muted);
       font-size: 0.9rem;
     }
@@ -60,25 +51,12 @@ import {
       margin: 2px 0 0;
       overflow-wrap: anywhere;
     }
-    .recipe-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 16px;
-    }
-    .recipe-tags span {
-      padding: 4px 12px;
-      border-radius: 999px;
-      background: var(--color-blue);
-      color: var(--color-ink);
-    }
   `,
 })
 export class RecipeSummaryDetailsComponent {
   recipe = input.required<Recipe>();
   description = computed(() => combinedDescription(this.recipe()));
   formatTime = formatRecipeTime;
-  visibleTags = computed(() => metadataTags(this.recipe()));
 }
 
 @Component({

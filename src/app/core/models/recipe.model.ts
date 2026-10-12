@@ -11,7 +11,6 @@ export interface Recipe extends RecipeMetadata {
   ingredients: string[];
   instructions: string[];
 
-  tagIds?: string[];
   collectionIds?: string[];
   notes?: string;
 

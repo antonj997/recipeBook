@@ -1,4 +1,3 @@
-import { RECIPE_TAGS } from './recipe-tag.model';
 export const nutritionFields = [
   { key: 'calories', label: 'Energy', unit: 'kcal' },
   { key: 'proteinContent', label: 'Protein', unit: 'g' },
@@ -18,11 +17,8 @@ export interface RecipeStepDetail {
 export interface RecipeMetadata {
   description?: string;
   totalTime?: number;
-  // Accepted from import drafts and older saves; collections replace these fields when saved.
+  // Imported category names can only match categories the user has already created.
   category?: string;
-  cuisine?: string;
-  tags?: string[];
-  dietaryNotes?: string;
   nutrition?: RecipeNutrition;
   // One entry per ingredient/step keeps the original string arrays compatible.
   ingredientSections?: string[];
@@ -68,7 +64,7 @@ export function readRecipeMetadata(value: unknown, strict = false): RecipeMetada
     if (typeof v === 'number' && Number.isFinite(v) && v >= 0) result[key] = v;
     else invalid();
   }
-  for (const key of ['tags', 'ingredientSections'] as const) {
+  for (const key of ['ingredientSections'] as const) {
     const v = value[key];
     if (v == null) continue;
     if (Array.isArray(v) && v.every((x) => typeof x === 'string')) {
@@ -124,7 +120,6 @@ export function readRecipeMetadata(value: unknown, strict = false): RecipeMetada
     } else invalid();
   }
   result.description = combinedDescription(value);
-  result.tags = metadataTags(value);
   return result;
 }
 
@@ -177,49 +172,6 @@ export function formatRecipeTime(minutes: number): string {
   return [hours ? hours + ' hr' : '', rest ? rest + ' min' : ''].filter(Boolean).join(' ');
 }
 
-const tagKey = (value: string) =>
-  value
-    .replace(/^https?:\/\/schema.org\//i, '')
-    .replace(/diet$/i, '')
-    .replace(/[^\p{L}\p{N}]/gu, '')
-    .toLocaleLowerCase();
-export function metadataTags(value: unknown): string[] {
-  if (!object(value)) return [];
-  const aliases: Record<string, string> = {
-    vegetarisk: 'vegetarian',
-    vegetariskt: 'vegetarian',
-    vegansk: 'vegan',
-    veganskt: 'vegan',
-    glutenfri: 'glutenfree',
-    glutenfritt: 'glutenfree',
-    mjölkfri: 'dairyfree',
-    mjölkfritt: 'dairyfree',
-    italiensk: 'italian',
-    italienskt: 'italian',
-    svensk: 'swedish',
-    svenskt: 'swedish',
-    mexikansk: 'mexican',
-    mexikanskt: 'mexican',
-    indisk: 'indian',
-    indiskt: 'indian',
-    japansk: 'japanese',
-    japanskt: 'japanese',
-  };
-  const tags = Array.isArray(value['tags'])
-    ? value['tags']
-        .filter((v): v is string => typeof v === 'string' && !!v.trim())
-        .map((v) => v.trim())
-    : [];
-  const candidates = [value['cuisine'], value['dietaryNotes']].flatMap((v) =>
-    typeof v === 'string' ? v.split(/[,;\n]/) : [],
-  );
-  for (const candidate of candidates) {
-    const key = tagKey(candidate);
-    const match = RECIPE_TAGS.find((tag) => tagKey(tag.label) === (aliases[key] ?? key));
-    if (match) tags.push(match.label);
-  }
-  return [...new Map(tags.map((tag) => [tag.toLocaleLowerCase(), tag])).values()];
-}
 export function instructionText(text: string, detail?: RecipeStepDetail): string {
   const title = detail?.title?.trim();
   return title && !text.toLocaleLowerCase().startsWith(title.toLocaleLowerCase())
