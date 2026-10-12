@@ -108,12 +108,14 @@
                 @if (categoryLabels(recipe).length) {
                   <div class="card-categories">
                     @for (category of categoryLabels(recipe); track category) {
-                      <span [title]="category">{{ category }}</span>
+                      <span class="recipe-category" [title]="category">{{ category }}</span>
                     }
                   </div>
                 }
                 @if (recipe.totalTime != null) {
-                  <p><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</p>
+                  <p class="recipe-time">
+                    <app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}
+                  </p>
                 }
               </div>
             </div>

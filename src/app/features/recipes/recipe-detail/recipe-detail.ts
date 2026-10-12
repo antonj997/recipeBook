@@ -8,7 +8,7 @@ import {
 import { ScreenAwakeComponent } from '../../../shared/components/screen-awake';
 import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
 import { LeaveConfirmationService } from '../../../core/services/leave-confirmation.service';
-import { formatRecipeTime, instructionText } from '../../../core/models/recipe-metadata';
+import { instructionText } from '../../../core/models/recipe-metadata';
 import {
   CookingSessionService,
   stepFingerprint,
@@ -40,7 +40,6 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
   selector: 'app-recipe-detail',
   host: {
     '(window:beforeunload)': 'onBeforeUnload($event)',
-    '(window:scroll)': 'schedulePositionSave()',
     '(window:pagehide)': 'saveCookingSession()',
   },
   imports: [
@@ -128,28 +127,18 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   collectionNames = signal<string[]>([]);
   activeSection = signal<CookingSection>('ingredients');
-  cooking = signal(false);
-  readonly formatTime = formatRecipeTime;
+  sectionHeight = signal(0);
+  recipeBody = viewChild<ElementRef<HTMLElement>>('recipeBody');
   private cookingSessions = inject(CookingSessionService);
-  private sectionPositions: Record<CookingSection, number> = {
-    ingredients: 0,
-    instructions: 0,
-  };
-  private positionTimer?: ReturnType<typeof setTimeout>;
-  private restoringPosition = false;
   private destroyed = false;
   constructor() {
     effect(() => {
       if (this.accountChanged()) {
         this.completedSteps.set(new Set());
-        this.cooking.set(false);
         this.activeSection.set('ingredients');
-        this.sectionPositions = { ingredients: 0, instructions: 0 };
-        clearTimeout(this.positionTimer);
       }
     });
   }
-  sectionSwitch = viewChild<ElementRef<HTMLElement>>('sectionSwitch');
   // Progress is local to this account and never changes the saved recipe.
   completedSteps = signal<Set<number>>(new Set());
   toggleStep(index: number): void {
@@ -162,78 +151,43 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     this.saveCookingSession();
   }
 
-  startCooking(): void {
-    if (this.accountChanged()) return;
-    this.cooking.set(true);
-    this.saveCookingSession(false);
-    this.restoreSectionPosition();
-  }
-
-  showOverview(): void {
-    if (this.accountChanged()) return;
-    this.capturePosition();
-    this.cooking.set(false);
-    this.saveCookingSession(false);
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }
-
-  startOver(): void {
+  resetInstructions(): void {
     if (this.accountChanged()) return;
     this.completedSteps.set(new Set());
-    this.sectionPositions = { ingredients: 0, instructions: 0 };
-    this.activeSection.set('ingredients');
-    this.saveCookingSession(false);
-    this.restoreSectionPosition();
+    this.saveCookingSession();
   }
 
   switchSection(section: CookingSection): void {
     if (section === this.activeSection() || this.accountChanged()) return;
-    this.capturePosition();
+    const body = this.recipeBody()?.nativeElement;
+    if (body && window.matchMedia('(max-width: 700px)').matches) {
+      // Retain space only when scrolled down, so a shorter panel cannot clamp the page upward.
+      this.sectionHeight.set(
+        window.scrollY > 0
+          ? Math.max(this.sectionHeight(), body.getBoundingClientRect().height)
+          : 0,
+      );
+    }
     this.activeSection.set(section);
-    this.saveCookingSession(false);
-    this.restoreSectionPosition();
+    this.saveCookingSession();
   }
 
-  schedulePositionSave(): void {
-    if (this.isDraft || !this.recipe() || this.restoringPosition) return;
-    clearTimeout(this.positionTimer);
-    this.positionTimer = setTimeout(() => this.saveCookingSession(), 200);
-  }
-
-  private capturePosition(): void {
-    if (this.restoringPosition) return;
-    const panel = document.getElementById(this.activeSection() + '-panel');
-    if (!panel) return;
-    const switchHeight = this.sectionSwitch()?.nativeElement.getBoundingClientRect().height ?? 0;
-    const panelTop = panel.getBoundingClientRect().top + window.scrollY;
-    // Looking at the overview must not erase the position kept for cooking.
-    if (window.scrollY + switchHeight < panelTop) return;
-    this.sectionPositions[this.activeSection()] = Math.max(
-      0,
-      window.scrollY + switchHeight - panelTop,
-    );
-  }
-
-  saveCookingSession(capture = true): void {
+  saveCookingSession(): void {
     const recipe = this.recipe();
     if (this.isDraft || !recipe || this.accountChanged() || this.deleteSucceeded()) return;
-    if (capture) this.capturePosition();
     this.cookingSessions.save(recipe.id, {
-      cooking: this.cooking(),
       section: this.activeSection(),
       servings: this.selectedServings(),
       completed: [...this.completedSteps()].map((index) => ({
         index,
         fingerprint: stepFingerprint(recipe, index),
       })),
-      positions: { ...this.sectionPositions },
     });
   }
 
   private restoreCookingSession(recipe: Recipe): void {
     const saved = this.cookingSessions.read(recipe.id);
     if (!saved) return;
-    this.cooking.set(saved.cooking);
     this.activeSection.set(saved.section);
     if (saved.servings && this.servingOptions().includes(saved.servings))
       this.selectedServings.set(saved.servings);
@@ -248,46 +202,11 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
           .map((step) => step.index),
       ),
     );
-    this.sectionPositions = saved.positions;
-    if (saved.cooking || saved.positions[saved.section] > 0) this.restoreSectionPosition();
-  }
-
-  private restoreSectionPosition(): void {
-    this.restoringPosition = true;
-    clearTimeout(this.positionTimer);
-    // Wait for the section/compact presentation to be rendered before measuring it.
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        if (this.destroyed || this.accountChanged()) {
-          this.restoringPosition = false;
-          return;
-        }
-        const panel = document.getElementById(this.activeSection() + '-panel');
-        if (panel) {
-          const switchHeight =
-            this.sectionSwitch()?.nativeElement.getBoundingClientRect().height ?? 0;
-          window.scrollTo({
-            top: Math.max(
-              0,
-              panel.getBoundingClientRect().top +
-                window.scrollY -
-                switchHeight +
-                this.sectionPositions[this.activeSection()],
-            ),
-            behavior: 'instant',
-          });
-        }
-        requestAnimationFrame(() => {
-          this.restoringPosition = false;
-        });
-      }),
-    );
   }
 
   ngOnDestroy(): void {
     this.saveCookingSession();
     this.destroyed = true;
-    clearTimeout(this.positionTimer);
   }
 
   private auth = inject(SupabaseService);
@@ -349,7 +268,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     const value = Number(selection);
     if (this.accountChanged() || !this.servingOptions().includes(value)) return;
     this.selectedServings.set(value);
-    this.saveCookingSession(false);
+    this.saveCookingSession();
   }
   ingredientGroups = computed(() => {
     const recipe = this.recipe();

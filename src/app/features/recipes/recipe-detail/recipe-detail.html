@@ -1,4 +1,4 @@
-<article class="recipe-detail page" [class.draft-preview]="isDraft" [class.cooking]="cooking()">
+<article class="recipe-detail page" [class.draft-preview]="isDraft">
   <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
   @if (loading()) {
     <app-loading-state label="Loading recipe…" />
@@ -6,8 +6,8 @@
     <p role="alert">{{ error() }}</p>
   } @else {
     @if (recipe(); as selectedRecipe) {
-      <div class="recipe-overview" [class.has-photo]="!!selectedRecipe.imageDataUrl && !cooking()">
-        @if (!cooking() && selectedRecipe.imageDataUrl; as photo) {
+      <div class="recipe-overview" [class.has-photo]="!!selectedRecipe.imageDataUrl">
+        @if (selectedRecipe.imageDataUrl; as photo) {
           <img
             class="recipe-hero"
             [src]="photo"
@@ -17,36 +17,11 @@
         }
         <header class="recipe-summary">
           <h1>{{ selectedRecipe.title || 'New recipe' }}</h1>
-          @if (!isDraft) {
-            <div class="cooking-actions">
-              @if (cooking()) {
-                <button type="button" (click)="showOverview()">Recipe overview</button>
-                <button type="button" (click)="startOver()">Start over</button>
-              } @else {
-                <button type="button" class="start-cooking" (click)="startCooking()">
-                  {{ completedSteps().size ? 'Continue cooking' : 'Start cooking' }}
-                  <app-icon name="arrow-down" />
-                </button>
-              }
-            </div>
-          }
-          @if (cooking()) {
-            <p class="cooking-facts">
-              <span>{{ selectedServings() }} servings</span>
-              @if (selectedRecipe.totalTime) {
-                <span>{{ formatTime(selectedRecipe.totalTime!) }}</span>
-              }
-            </p>
-          } @else {
-            <app-recipe-summary-details [recipe]="selectedRecipe" />
-          }
-          @if (!cooking() && collectionNames().length) {
-            <p class="collection-names">{{ collectionNames().join(' · ') }}</p>
-          }
+          <app-recipe-summary-details [recipe]="selectedRecipe" [categories]="collectionNames()" />
         </header>
       </div>
       <app-screen-awake />
-      <div #sectionSwitch class="section-switch" role="group" aria-label="Recipe section">
+      <div class="section-switch" role="group" aria-label="Recipe section">
         <button
           type="button"
           [attr.aria-pressed]="activeSection() === 'ingredients'"
@@ -64,7 +39,7 @@
           Instructions
         </button>
       </div>
-      <div class="recipe-body">
+      <div #recipeBody class="recipe-body" [style.--section-height]="sectionHeight() + 'px'">
         <section
           id="ingredients-panel"
           [class.mobile-hidden]="activeSection() !== 'ingredients'"
@@ -98,7 +73,20 @@
           class="instructions"
           aria-labelledby="instructions-heading"
         >
-          <h2 id="instructions-heading">Instructions</h2>
+          <div class="instructions-heading">
+            <h2 id="instructions-heading">Instructions</h2>
+            @if (selectedRecipe.instructions.length) {
+              <button
+                type="button"
+                class="reset-instructions"
+                aria-label="Reset instructions"
+                [disabled]="!completedSteps().size"
+                (click)="resetInstructions()"
+              >
+                Reset
+              </button>
+            }
+          </div>
           @if (!isDraft && selectedRecipe.instructions.length) {
             <div class="step-progress">
               <p role="status">
@@ -164,10 +152,8 @@
       @if (stepPhotoNotice()) {
         <p role="status">{{ stepPhotoNotice() }}</p>
       }
-      @if (!cooking()) {
-        <app-recipe-extra-details [recipe]="selectedRecipe" />
-      }
-      @if (!isDraft && !cooking()) {
+      <app-recipe-extra-details [recipe]="selectedRecipe" />
+      @if (!isDraft) {
         <div class="recipe-actions">
           <a class="button edit-button" [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
             >Edit Recipe</a

@@ -10,19 +10,22 @@ import {
 
 @Component({
   selector: 'app-recipe-summary-details',
+  imports: [IconComponent],
   template: `
     @if (description()) {
       <p class="recipe-description">{{ description() }}</p>
     }
-    @if (recipe().totalTime != null) {
-      <dl class="recipe-facts">
-        @if (recipe().totalTime) {
-          <div>
-            <dt>Total time</dt>
-            <dd>{{ formatTime(recipe().totalTime!) }}</dd>
-          </div>
+    @if (categories().length || recipe().totalTime != null) {
+      <div class="recipe-metadata">
+        @for (category of categories(); track category) {
+          <span class="recipe-category" [title]="category">{{ category }}</span>
         }
-      </dl>
+        @if (recipe().totalTime != null) {
+          <p class="recipe-time" aria-label="Total time">
+            <app-icon name="clock" />{{ formatTime(recipe().totalTime!) }}
+          </p>
+        }
+      </div>
     }
   `,
   styles: `
@@ -34,27 +37,21 @@ import {
       white-space: pre-line;
       margin-block: 16px;
     }
-    .recipe-facts {
+    .recipe-metadata {
       display: flex;
+      align-items: center;
       flex-wrap: wrap;
-      gap: 16px 28px;
-      margin-block: 24px 0;
+      gap: 10px 12px;
+      margin-top: 16px;
     }
-    .recipe-facts:empty {
-      display: none;
-    }
-    .recipe-facts dt {
-      color: var(--color-muted);
-      font-size: 0.9rem;
-    }
-    .recipe-facts dd {
-      margin: 2px 0 0;
-      overflow-wrap: anywhere;
+    .recipe-time {
+      margin: 0;
     }
   `,
 })
 export class RecipeSummaryDetailsComponent {
   recipe = input.required<Recipe>();
+  categories = input<string[]>([]);
   description = computed(() => combinedDescription(this.recipe()));
   formatTime = formatRecipeTime;
 }

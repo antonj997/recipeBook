@@ -69,6 +69,30 @@ p {
   margin: 0 0 20px;
   overflow-wrap: anywhere;
 }
+.recipe-category {
+  min-width: 0;
+  max-width: 100%;
+  padding-inline: 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  color: var(--color-ink);
+  font-size: 0.75rem;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recipe-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-ink);
+  font-size: 0.8rem;
+}
+.recipe-time app-icon {
+  width: 16px;
+  height: 16px;
+}
 small {
   font-size: 0.875rem;
 }

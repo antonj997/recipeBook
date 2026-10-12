@@ -1,3 +1,6 @@
+.recipe-detail {
+  overflow-anchor: none;
+}
 .recipe-overview {
   display: grid;
   align-items: center;
@@ -13,25 +16,6 @@
 .recipe-overview.has-photo .recipe-hero {
   grid-column: 1;
   grid-row: 1;
-}
-.cooking-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 18px;
-}
-.cooking-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
-  color: var(--color-muted);
-  margin: 16px 0 0;
-}
-.cooking-facts:empty {
-  display: none;
-}
-.cooking .recipe-summary h1 {
-  font-size: clamp(1.8rem, 3vw, 2.5rem);
 }
 .recipe-hero {
   display: block;
@@ -227,12 +211,6 @@ li::marker {
 .cooking-step app-checkbox-mark {
   margin-top: -2px;
 }
-.collection-names {
-  color: var(--color-muted);
-  font-size: 0.9rem;
-  margin-top: 16px;
-}
-
 .step-copy {
   position: relative;
   flex: 0 1 auto;
@@ -286,6 +264,7 @@ li::marker {
     color: var(--color-surface);
   }
   .recipe-body {
+    min-height: var(--section-height, 0px);
     margin-top: 0;
     gap: 0;
   }
@@ -359,35 +338,16 @@ li::marker {
   }
 }
 
-.start-cooking {
-  min-height: 44px;
-  padding: 8px 0;
-  border-color: transparent;
-  background: transparent;
-  font-size: 0.95rem;
-}
-.start-cooking app-icon {
-  width: 18px;
-  height: 18px;
-  transition: transform 180ms var(--ease-out);
-}
-@media (hover: hover) {
-  .start-cooking:hover {
-    background: transparent;
-    border-color: transparent;
-  }
-  .start-cooking:hover app-icon {
-    transform: translateY(2px);
-  }
-}
-.ingredients-heading {
+.ingredients-heading,
+.instructions-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 20px;
 }
-.ingredients-heading h2 {
+.ingredients-heading h2,
+.instructions-heading h2 {
   margin: 0;
 }
 .sr-only {
@@ -398,8 +358,11 @@ li::marker {
   clip-path: inset(50%);
   white-space: nowrap;
 }
-@media (prefers-reduced-motion: reduce) {
-  .start-cooking app-icon {
-    transition: none;
-  }
+.reset-instructions {
+  border: 0;
+  padding: 6px;
+  min-width: 44px;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.8rem;
 }

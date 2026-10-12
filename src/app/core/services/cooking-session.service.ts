@@ -4,11 +4,9 @@ import { SupabaseService } from './supabase.service';
 
 export type CookingSection = 'ingredients' | 'instructions';
 export interface CookingSession {
-  cooking: boolean;
   section: CookingSection;
   servings?: number;
   completed: { index: number; fingerprint: string }[];
-  positions: Record<CookingSection, number>;
 }
 
 export function stepFingerprint(recipe: Recipe, index: number): string {
@@ -35,20 +33,11 @@ export class CookingSessionService {
       if (!value || typeof value !== 'object') return this.memory.get(key) ?? null;
       const state = value as Record<string, unknown>;
       if (
-        typeof state['cooking'] !== 'boolean' ||
         !['ingredients', 'instructions'].includes(String(state['section'])) ||
-        !Array.isArray(state['completed']) ||
-        !state['positions'] ||
-        typeof state['positions'] !== 'object'
+        !Array.isArray(state['completed'])
       )
         return null;
-      const positions = state['positions'] as Record<string, unknown>;
-      const position = (section: CookingSection): number => {
-        const offset = positions[section];
-        return typeof offset === 'number' && Number.isFinite(offset) ? Math.max(0, offset) : 0;
-      };
       return {
-        cooking: state['cooking'],
         servings:
           typeof state['servings'] === 'number' &&
           Number.isSafeInteger(state['servings']) &&
@@ -68,10 +57,6 @@ export class CookingSessionService {
             );
           },
         ),
-        positions: {
-          ingredients: position('ingredients'),
-          instructions: position('instructions'),
-        },
       };
     } catch {
       return this.memory.get(key) ?? null;
