@@ -104,7 +104,7 @@
                 }
               </div>
               <div class="recipe-card__content">
-                <h3>{{ recipe.title }}</h3>
+                <h3 [title]="recipe.title">{{ recipe.title }}</h3>
                 @if (categoryLabels(recipe).length) {
                   <div class="card-categories">
                     @for (category of categoryLabels(recipe); track category) {

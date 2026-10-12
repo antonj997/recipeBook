@@ -8,7 +8,7 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 26px;
+  margin-bottom: 20px;
 }
 .collection-heading h2 {
   margin: 0;
@@ -59,10 +59,10 @@
   --card-width: clamp(240px, 27vw, 340px);
   position: relative;
   display: flex;
-  gap: 28px;
+  gap: 24px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 12px var(--page-gutter) 24px;
+  padding: 10px var(--page-gutter) 18px;
   // Let the final desktop card align with the first, keeping one stop per recipe.
   padding-inline-end: max(var(--page-gutter), calc(100% - var(--card-width) - var(--page-gutter)));
   scroll-padding-inline: var(--page-gutter);
@@ -129,14 +129,18 @@
   object-fit: cover;
 }
 .recipe-card__content {
-  padding: 22px 22px 24px;
-  min-height: 148px;
+  padding: 18px 20px;
+  min-height: 128px;
   display: flex;
   flex-direction: column;
   flex: 1;
 }
 .recipe-card h3 {
-  margin: 0 0 14px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 0 0 10px;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.55rem;
   font-weight: 400;
@@ -301,8 +305,6 @@
   margin-bottom: 10px;
   font-size: 0.75rem;
   line-height: 20px;
-}
-.card-categories {
   overflow: hidden;
 }
 .card-categories span {
@@ -372,8 +374,8 @@
   }
   :host(.compact) .rail-window {
     flex: 1;
-    min-height: 290px;
-    max-height: 390px;
+    min-height: 264px;
+    max-height: 340px;
   }
   :host(.compact) .recipe-rail {
     height: 100%;
@@ -390,14 +392,10 @@
   }
   :host(.compact) .recipe-card__content {
     flex: 1 0 auto;
-    min-height: 128px;
-    padding: 14px 18px 16px;
+    min-height: 112px;
+    padding: 14px 18px;
   }
   :host(.compact) .recipe-card h3 {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
     font-size: 1.3rem;
     margin-bottom: 8px;
   }
@@ -421,7 +419,7 @@
     margin-bottom: 8px;
   }
   :host(.compact) .rail-window {
-    min-height: 274px;
+    min-height: 252px;
   }
 }
 
