@@ -1,18 +1,40 @@
-<section class="recipe-list page" [class.shelf-view]="view() === 'shelf' && !loading() && !error() && recipes().length > 0">
+<section
+  class="recipe-list page"
+  [class.shelf-view]="view() === 'shelf' && !loading() && !error() && recipes().length > 0"
+>
   @if (!loading() && !error() && recipes().length > 0) {
     <div class="home-tools">
       <div class="search-field" role="search">
         <app-icon name="search" />
-        <input type="search" aria-label="Search recipes" placeholder="Search recipes" [value]="query()" (input)="onSearch($event)" />
+        <input
+          type="search"
+          aria-label="Search recipes"
+          placeholder="Search recipes"
+          [value]="query()"
+          (input)="onSearch($event)"
+        />
         @if (query()) {
-          <button type="button" aria-label="Clear search" (click)="search('')"><app-icon name="close" /></button>
+          <button type="button" aria-label="Clear search" (click)="search('')">
+            <app-icon name="close" />
+          </button>
         }
       </div>
       <div class="add-control">
-        <button type="button" class="primary" aria-label="Add recipe" popovertarget="add-recipe-options"><app-icon name="plus" /><span class="add-label">Add recipe</span></button>
-        <div id="add-recipe-options" popover #addOptions>
-          <a routerLink="/recipes/new/edit" (click)="addOptions.hidePopover()"><app-icon name="book" />Write a recipe</a>
-          <a routerLink="/recipes/import" (click)="addOptions.hidePopover()"><app-icon name="link" />Import from a link</a>
+        <button
+          type="button"
+          class="primary"
+          aria-label="Add recipe"
+          popovertarget="add-recipe-options"
+        >
+          <app-icon name="plus" /><span class="add-label">Add recipe</span>
+        </button>
+        <div id="add-recipe-options" class="glass-menu" popover #addOptions>
+          <a routerLink="/recipes/new/edit" (click)="addOptions.hidePopover()"
+            ><app-icon name="book" />Write a recipe</a
+          >
+          <a routerLink="/recipes/import" (click)="addOptions.hidePopover()"
+            ><app-icon name="link" />Import from a link</a
+          >
         </div>
       </div>
     </div>
@@ -26,7 +48,9 @@
       <app-food-doodle />
       <h2>No recipes yet</h2>
       <div class="empty-actions">
-        <a class="button primary" routerLink="/recipes/new/edit">Create recipe<app-icon name="plus" /></a>
+        <a class="button primary" routerLink="/recipes/new/edit"
+          >Create recipe<app-icon name="plus"
+        /></a>
         <a class="button" routerLink="/recipes/import">Import recipe<app-icon name="link" /></a>
         <a class="button" routerLink="/settings" fragment="import-cookbook">Import cookbook</a>
       </div>
@@ -34,51 +58,92 @@
     </div>
   } @else {
     <ng-template #libraryHeading>
-      <div class="category-picker">
-        <h2 id="all-recipes-rail-heading">{{ categoryTitle() }}</h2>
-        <app-icon name="chevron" />
-        <select aria-label="Recipe category" [value]="selectedCollectionId()" (change)="onCategoryChange($event)">
-          <option value="" [selected]="!selectedCollectionId()">All recipes</option>
-          @for (collection of collections(); track collection.id) {
-            <option [value]="collection.id" [selected]="selectedCollectionId() === collection.id">{{ collection.name }}</option>
-          }
-          <option value="manage-categories">Manage categories…</option>
-        </select>
-      </div>
+      <h2 class="category-picker" id="all-recipes-rail-heading" [attr.aria-label]="categoryTitle()">
+        <app-select-menu
+          menuId="recipe-category-menu"
+          label="Recipe category"
+          variant="heading"
+          [value]="selectedCollectionId()"
+          [options]="categoryOptions()"
+          (valueChange)="onCategoryChange($event)"
+        />
+      </h2>
     </ng-template>
     @if (view() === 'shelf') {
-      <app-recipe-rail [compact]="true" [title]="categoryTitle()" railId="all-recipes-rail" [recipes]="filteredRecipes()" [collections]="collections()" [initialRecipeId]="restoreRecipeId()" (activeRecipeChange)="rememberRecipe($event)">
+      <app-recipe-rail
+        [compact]="true"
+        [title]="categoryTitle()"
+        railId="all-recipes-rail"
+        [recipes]="filteredRecipes()"
+        [collections]="collections()"
+        [initialRecipeId]="restoreRecipeId()"
+        (activeRecipeChange)="rememberRecipe($event)"
+      >
         <app-library-view-toggle rail-actions [view]="view()" (viewChange)="setView($event)" />
         <div rail-heading><ng-container [ngTemplateOutlet]="libraryHeading" /></div>
         <div rail-empty class="empty-state">
           <app-food-doodle />
           <h3>{{ query().trim() ? 'No matching recipes' : 'No recipes in this category' }}</h3>
-          @if (query().trim()) { <button type="button" (click)="search('')">Clear search</button> }
-          @else { <button type="button" (click)="showAll()">Show all recipes</button> }
+          @if (query().trim()) {
+            <button type="button" (click)="search('')">Clear search</button>
+          } @else {
+            <button type="button" (click)="showAll()">Show all recipes</button>
+          }
         </div>
       </app-recipe-rail>
     } @else {
       <section class="recipe-index" aria-labelledby="all-recipes-rail-heading">
-        <div class="index-heading"><ng-container [ngTemplateOutlet]="libraryHeading" /><div class="index-actions"><span>{{ filteredRecipes().length }} {{ filteredRecipes().length === 1 ? 'recipe' : 'recipes' }}</span><app-library-view-toggle [view]="view()" (viewChange)="setView($event)" /></div></div>
+        <div class="index-heading">
+          <ng-container [ngTemplateOutlet]="libraryHeading" />
+          <div class="index-actions">
+            <span
+              >{{ filteredRecipes().length }}
+              {{ filteredRecipes().length === 1 ? 'recipe' : 'recipes' }}</span
+            ><app-library-view-toggle [view]="view()" (viewChange)="setView($event)" />
+          </div>
+        </div>
         @for (recipe of filteredRecipes(); track recipe.id) {
-          <a #listRow [attr.data-recipe-id]="recipe.id" class="index-row" [routerLink]="['/recipes', recipe.id]" (click)="rememberRecipe(recipe.id)">
+          <a
+            #listRow
+            [attr.data-recipe-id]="recipe.id"
+            class="index-row"
+            [routerLink]="['/recipes', recipe.id]"
+            (click)="rememberRecipe(recipe.id)"
+          >
             <span class="index-image" [style.background-color]="photoBackground(recipe.id)">
-              @if (recipe.imageDataUrl) { <img [src]="recipe.imageDataUrl" alt="" loading="lazy" decoding="async" /> }
-              @else { <app-food-placeholder [seed]="recipe.id" /> }
+              @if (recipe.imageDataUrl) {
+                <img [src]="recipe.imageDataUrl" alt="" loading="lazy" decoding="async" />
+              } @else {
+                <app-food-placeholder [seed]="recipe.id" />
+              }
             </span>
-            <span class="index-copy"><span class="index-title">{{ recipe.title }}</span>
-              @if (recipe.totalTime != null) { <span class="index-time"><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</span> }
+            <span class="index-copy"
+              ><span class="index-title">{{ recipe.title }}</span>
+              @if (recipe.totalTime != null) {
+                <span class="index-time"
+                  ><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</span
+                >
+              }
             </span>
             <app-icon name="chevron" class="row-chevron" />
           </a>
         } @empty {
-          <div class="empty-state"><h3>{{ query().trim() ? 'No matching recipes' : 'No recipes in this category' }}</h3>
-            @if (query().trim()) { <button type="button" (click)="search('')">Clear search</button> }
-            @else { <button type="button" (click)="showAll()">Show all recipes</button> }
+          <div class="empty-state">
+            <h3>{{ query().trim() ? 'No matching recipes' : 'No recipes in this category' }}</h3>
+            @if (query().trim()) {
+              <button type="button" (click)="search('')">Clear search</button>
+            } @else {
+              <button type="button" (click)="showAll()">Show all recipes</button>
+            }
           </div>
         }
       </section>
     }
   }
-  <span class="sr-only" role="status">{{ !loading() && query().trim() ? filteredRecipes().length + (filteredRecipes().length === 1 ? ' recipe found' : ' recipes found') : '' }}</span>
+  <span class="sr-only" role="status">{{
+    !loading() && query().trim()
+      ? filteredRecipes().length +
+        (filteredRecipes().length === 1 ? ' recipe found' : ' recipes found')
+      : ''
+  }}</span>
 </section>

@@ -185,11 +185,10 @@ li::marker {
 }
 @media (hover: hover) {
   .dialog-actions button:hover:not(:disabled) {
-    background: var(--color-surface);
+    opacity: 0.85;
   }
   .dialog-actions .delete-button:hover:not(:disabled) {
-    background: var(--color-danger);
-    color: var(--color-surface);
+    border-color: var(--color-danger);
   }
 }
 @keyframes dialog-in {
@@ -353,10 +352,10 @@ li::marker {
 }
 @media (hover: hover) {
   .section-switch button:hover:not([aria-pressed='true']) {
-    background: var(--color-sage);
+    transform: translateY(-1px);
   }
   .section-switch button:hover[aria-pressed='true'] {
-    background: #363630;
+    transform: translateY(-1px);
   }
 }
 

@@ -64,7 +64,8 @@
 .icon-button:hover,
 .quiet-button:hover,
 .add-move:hover {
-  background: var(--color-surface);
+  background: transparent;
+  border-color: transparent;
 }
 .editor-row {
   scroll-margin-bottom: 110px;
@@ -121,7 +122,8 @@
   display: none;
 }
 .row-options[open] summary {
-  background: var(--color-surface);
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .row-options-menu {
   position: absolute;
@@ -131,9 +133,6 @@
   width: 210px;
   max-width: calc(100vw - 40px);
   padding: 8px;
-  border-radius: var(--radius-control);
-  background: var(--color-surface);
-  box-shadow: 0 6px 24px #14141326;
 }
 .row-options-menu button {
   display: flex;

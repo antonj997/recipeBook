@@ -73,21 +73,13 @@
         >
           <div class="ingredients-heading">
             <h2 id="ingredients-heading">Ingredients</h2>
-            <label class="serving-picker">
-              <span class="sr-only">Servings</span>
-              <select
-                [value]="selectedServings()"
-                (change)="changeServings($event)"
-                aria-label="Servings"
-              >
-                @for (count of servingOptions(); track count) {
-                  <option [value]="count" [selected]="count === selectedServings()">
-                    {{ count }} servings
-                  </option>
-                }
-              </select>
-              <app-icon name="chevron" />
-            </label>
+            <app-select-menu
+              menuId="recipe-servings-menu"
+              label="Servings"
+              [value]="selectedServings().toString()"
+              [options]="servingMenuOptions()"
+              (valueChange)="changeServings($event)"
+            />
           </div>
           @for (group of ingredientGroups(); track $index) {
             @if (group.section) {

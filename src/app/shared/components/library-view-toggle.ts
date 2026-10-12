@@ -40,18 +40,16 @@ import { IconComponent } from './icon';
     .view-toggle {
       position: relative;
       display: flex;
-      padding: 2px;
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-control);
+      gap: 0;
     }
     .active-view {
       position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 44px;
-      height: 44px;
-      background: var(--color-surface);
-      border-radius: calc(var(--radius-control) - 2px);
+      bottom: 3px;
+      left: 13px;
+      width: 18px;
+      height: 2px;
+      background: var(--color-ink);
+      border-radius: 999px;
       transition: transform 180ms var(--ease-out);
       pointer-events: none;
     }
@@ -74,14 +72,22 @@ import { IconComponent } from './icon';
     button[aria-pressed='true'] {
       color: var(--color-ink);
     }
-    @media (hover: hover) {
+    app-icon {
+      transition: transform 180ms var(--ease-out);
+    }
+    @media (hover: hover) and (pointer: fine) {
       button:hover {
         background: transparent;
         color: var(--color-ink);
+        transform: none;
+      }
+      button:hover app-icon {
+        transform: translateY(-1px);
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      .active-view {
+      .active-view,
+      app-icon {
         transition: none;
       }
     }

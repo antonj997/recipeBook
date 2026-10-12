@@ -102,9 +102,6 @@ export class RecipeRailComponent implements OnDestroy {
   });
   currentStop = computed(() => Math.round(this.progress()));
   progressControls = viewChild<ElementRef<HTMLDivElement>>('progressControls');
-  swipeTilt = signal(0);
-  private lastScroll = 0;
-  private lastScrollTime = 0;
   private frame = 0;
   private edgeFrame = 0;
   private targetIndex: number | null = null;
@@ -166,8 +163,6 @@ export class RecipeRailComponent implements OnDestroy {
           const left = this.positions()[index] ?? 0;
           this.targetIndex = null;
           rail.scrollTo({ left, behavior: 'instant' });
-          this.lastScroll = left;
-          this.swipeTilt.set(0);
           this.queueUpdate();
         });
       });
@@ -229,18 +224,6 @@ export class RecipeRailComponent implements OnDestroy {
     if (this.frame) return;
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
-      const rail = this.rail()?.nativeElement;
-      const now = performance.now();
-      if (
-        rail &&
-        matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)')
-          .matches
-      ) {
-        const speed = (rail.scrollLeft - this.lastScroll) / Math.max(16, now - this.lastScrollTime);
-        this.swipeTilt.set(Math.max(-4, Math.min(4, speed * -2.5)));
-        this.lastScroll = rail.scrollLeft;
-        this.lastScrollTime = now;
-      }
       this.updateArrowState();
     });
   }
@@ -250,7 +233,6 @@ export class RecipeRailComponent implements OnDestroy {
     if (this.scrub?.moved) return;
     this.settleTimer = setTimeout(() => {
       this.targetIndex = null;
-      this.swipeTilt.set(0);
       this.updateArrowState();
       this.restoreSnap();
     }, 180);

@@ -83,7 +83,7 @@ main:focus {
   padding: 10px;
 }
 .toast button:hover {
-  background: #363630;
+  opacity: 0.8;
   color: inherit;
 }
 @keyframes toast-in {
@@ -130,5 +130,9 @@ main:focus {
   font-size: 0.9rem;
 }
 
-.toast-region.editing { bottom: calc(104px + env(safe-area-inset-bottom)); }
-.app-update { bottom: max(20px, env(safe-area-inset-bottom)); }
+.toast-region.editing {
+  bottom: calc(104px + env(safe-area-inset-bottom));
+}
+.app-update {
+  bottom: max(20px, env(safe-area-inset-bottom));
+}

@@ -1,0 +1,116 @@
+:host {
+  display: inline-block;
+  min-width: 0;
+}
+.menu-trigger {
+  max-width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  gap: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-control-border);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 180ms var(--ease-out);
+}
+.menu-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.menu-trigger app-icon {
+  width: 16px;
+  height: 16px;
+  transform: rotate(-90deg);
+  transition: transform 180ms var(--ease-out);
+}
+.menu-trigger app-icon.is-open {
+  transform: rotate(90deg);
+}
+:host(.heading-menu) .menu-trigger {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  gap: 8px;
+  text-align: left;
+}
+:host(.heading-menu) .menu-trigger app-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--color-muted);
+}
+:host(.heading-menu) .menu-trigger:focus-visible {
+  outline: none;
+}
+:host(.heading-menu) .menu-trigger:focus-visible .menu-label {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+.menu-panel {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.4;
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 8px;
+  max-height: min(320px, calc(100svh - 32px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-control-border) transparent;
+}
+.menu-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.menu-option > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  transition: transform 150ms var(--ease-out);
+}
+.menu-option app-icon {
+  width: 18px;
+  height: 18px;
+}
+.menu-option.is-active > span {
+  transform: translateX(2px);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.menu-option.is-action {
+  border-top: 1px solid var(--color-border);
+  margin-top: 4px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .menu-trigger:hover:not(:disabled) {
+    background: var(--color-surface);
+    border-color: var(--color-ink);
+    transform: none;
+  }
+  :host(.heading-menu) .menu-trigger:hover {
+    background: transparent;
+  }
+  :host(.heading-menu) .menu-trigger:hover app-icon {
+    color: var(--color-ink);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-trigger,
+  .menu-trigger app-icon,
+  .menu-option > span {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-option.is-active > span {
+    transform: none;
+  }
+}

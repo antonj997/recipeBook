@@ -1,3 +1,4 @@
+import { SelectMenuComponent } from '../../../shared/components/select-menu';
 import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
 import { LeaveConfirmationService } from '../../../core/services/leave-confirmation.service';
 import { prepareRecipePhoto } from '../../../core/services/recipe-photo';
@@ -35,6 +36,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
   selector: 'app-recipe-form',
   host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
   imports: [
+    SelectMenuComponent,
     FoodDoodleComponent,
     IconComponent,
     ReactiveFormsModule,
@@ -167,9 +169,20 @@ export class RecipeFormComponent implements OnInit {
     );
   }
   // Our reactive form.
-  servingChoices(): number[] {
+  servingChoices(): { value: string; label: string }[] {
     const current = this.form.controls.servings.value;
-    return [...new Set([2, 4, 6, 8, 10, ...(Number.isSafeInteger(current) && current > 0 ? [current] : [])])].sort((a, b) => a - b);
+    return [
+      ...new Set([
+        2,
+        4,
+        6,
+        8,
+        10,
+        ...(Number.isSafeInteger(current) && current > 0 ? [current] : []),
+      ]),
+    ]
+      .sort((a, b) => a - b)
+      .map((count) => ({ value: String(count), label: count + ' servings' }));
   }
 
   form = this.fb.nonNullable.group({

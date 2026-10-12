@@ -1,3 +1,4 @@
+import { SelectMenuComponent } from '../../../shared/components/select-menu';
 import { scaleIngredient } from '../../../core/models/ingredient-quantity';
 import { SupabaseService } from '../../../core/services/supabase.service';
 import {
@@ -43,6 +44,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
     '(window:pagehide)': 'saveCookingSession()',
   },
   imports: [
+    SelectMenuComponent,
     ScreenAwakeComponent,
     CheckboxMarkComponent,
     RecipeSummaryDetailsComponent,
@@ -340,8 +342,11 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   servingOptions = computed(() =>
     [...new Set([2, 4, 6, 8, 10, this.baseServings()])].sort((a, b) => a - b),
   );
-  changeServings(event: Event): void {
-    const value = Number((event.target as HTMLSelectElement).value);
+  servingMenuOptions = computed(() =>
+    this.servingOptions().map((count) => ({ value: String(count), label: count + ' servings' })),
+  );
+  changeServings(selection: string): void {
+    const value = Number(selection);
     if (this.accountChanged() || !this.servingOptions().includes(value)) return;
     this.selectedServings.set(value);
     this.saveCookingSession(false);

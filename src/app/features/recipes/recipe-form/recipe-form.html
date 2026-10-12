@@ -89,14 +89,16 @@
       <div class="field">
         <label for="servings">Default servings</label>
 
-        <div class="serving-picker">
-          <select id="servings" formControlName="servings" aria-describedby="servings-hint">
-            @for (count of servingChoices(); track count) {
-              <option [ngValue]="count">{{ count }} servings</option>
-            }
-          </select>
-          <app-icon name="chevron" />
-        </div>
+        <app-select-menu
+          menuId="default-servings-menu"
+          controlId="servings"
+          label="Default servings"
+          describedBy="servings-hint"
+          valueType="number"
+          [options]="servingChoices()"
+          formControlName="servings"
+        />
+
         <small id="servings-hint">Ingredient amounts are for this number of servings.</small>
 
         @if (form.controls.servings.touched && form.controls.servings.invalid) {

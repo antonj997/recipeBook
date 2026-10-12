@@ -1,3 +1,4 @@
+import { SelectMenuComponent } from '../../../shared/components/select-menu';
 import { LibraryViewToggleComponent } from '../../../shared/components/library-view-toggle';
 import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
 import { NgTemplateOutlet } from '@angular/common';
@@ -29,6 +30,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
 @Component({
   selector: 'app-recipe-list',
   imports: [
+    SelectMenuComponent,
     LibraryViewToggleComponent,
     NgTemplateOutlet,
     RecipeRailComponent,
@@ -52,6 +54,11 @@ export class RecipeListComponent {
   recipes = signal<Recipe[]>([]);
   query = signal(this.initial.query);
   collections = signal<RecipeCollection[]>([]);
+  categoryOptions = computed(() => [
+    { value: '', label: 'All recipes' },
+    ...this.collections().map((collection) => ({ value: collection.id, label: collection.name })),
+    { value: 'manage-categories', label: 'Manage categories…', action: true },
+  ]);
   selectedCollectionId = signal(this.initial.categoryId);
   view = signal(this.initial.view);
   restoreRecipeId = signal(this.initial.recipeId);
@@ -113,15 +120,13 @@ export class RecipeListComponent {
       void this.loadRecipes();
     });
   }
-  onCategoryChange(event: Event): void {
-    const picker = event.target as HTMLSelectElement;
-    if (picker.value === 'manage-categories') {
-      picker.value = this.selectedCollectionId();
+  onCategoryChange(value: string): void {
+    if (value === 'manage-categories') {
       void this.router.navigate(['/categories']);
     } else {
-      this.selectedCollectionId.set(picker.value);
+      this.selectedCollectionId.set(value);
       this.restoreRecipeId.set('');
-      this.library.write({ categoryId: picker.value, recipeId: '' });
+      this.library.write({ categoryId: value, recipeId: '' });
     }
   }
   search(query: string): void {
