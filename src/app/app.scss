@@ -19,22 +19,13 @@
   border-bottom: 1px solid var(--color-border);
   transition:
     padding-block 280ms var(--ease-out),
-    background-color 320ms var(--ease-out),
-    border-color 320ms var(--ease-out),
-    -webkit-backdrop-filter 320ms var(--ease-out),
-    backdrop-filter 320ms var(--ease-out);
+    background-color 420ms cubic-bezier(0.42, 0, 1, 1),
+    border-color 420ms cubic-bezier(0.42, 0, 1, 1);
 }
 :host(.compact-header) .app-header {
-  padding-block: calc(2px + var(--app-top-inset)) 2px;
-}
-/* The material covers the whole header, including the status-bar safe area. */
-@supports (backdrop-filter: blur(18px)) or (-webkit-backdrop-filter: blur(18px)) {
-  :host(.compact-header) .app-header {
-    background-color: color-mix(in srgb, var(--color-surface) 64%, transparent);
-    border-bottom-color: color-mix(in srgb, var(--color-surface) 70%, transparent);
-    -webkit-backdrop-filter: blur(18px) saturate(1.12);
-    backdrop-filter: blur(18px) saturate(1.12);
-  }
+  padding-block: var(--app-top-inset) 0;
+  background-color: var(--page-background, var(--color-surface));
+  border-bottom-color: transparent;
 }
 :host(.recipe-page) {
   background: var(--color-surface);
@@ -63,7 +54,7 @@
   transition: transform 280ms var(--ease-out);
 }
 :host(.compact-header) .brand-word {
-  transform: scale(0.88);
+  transform: scale(0.8);
 }
 .settings-link {
   position: relative;
@@ -162,15 +153,6 @@ main:focus {
   }
   .settings-link:hover {
     transform: none;
-  }
-}
-
-@media (prefers-reduced-transparency: reduce), (forced-colors: active) {
-  :host(.compact-header) .app-header {
-    background-color: var(--color-surface);
-    border-bottom-color: var(--color-border);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 }
 

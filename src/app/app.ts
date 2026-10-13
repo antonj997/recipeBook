@@ -69,6 +69,31 @@ export class App {
     afterNextRender(() => {
       const header = this.appHeader()?.nativeElement;
       if (!header) return;
+      const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+      const originalThemeColor = themeColor?.content;
+      let themeFrame = 0;
+      const syncThemeColor = () => {
+        const color = getComputedStyle(header).backgroundColor;
+        if (themeColor && themeColor.content !== color) themeColor.content = color;
+      };
+      const queueThemeColor = () => {
+        cancelAnimationFrame(themeFrame);
+        themeFrame = requestAnimationFrame(() => {
+          themeFrame = 0;
+          syncThemeColor();
+        });
+      };
+      const onHeaderTransition = (event: TransitionEvent) => {
+        if (event.target !== header || event.propertyName !== 'background-color') return;
+        cancelAnimationFrame(themeFrame);
+        const until = performance.now() + 500;
+        const tick = () => {
+          syncThemeColor();
+          themeFrame = performance.now() < until ? requestAnimationFrame(tick) : 0;
+        };
+        themeFrame = requestAnimationFrame(tick);
+      };
+      header.addEventListener('transitionrun', onHeaderTransition);
       // Keep sticky tabs below the real header, including safe-area changes and enlarged text.
       const updateHeight = () => {
         const height = header.getBoundingClientRect().height;
@@ -78,11 +103,19 @@ export class App {
       const observer = new ResizeObserver(updateHeight);
       observer.observe(header, { box: 'border-box' });
       this.updateHeaderForScroll();
-      const onScroll = () => this.updateHeaderForScroll();
+      queueThemeColor();
+      const onScroll = () => {
+        const wasCompact = this.compactHeader();
+        this.updateHeaderForScroll();
+        if (wasCompact !== this.compactHeader()) queueThemeColor();
+      };
       window.addEventListener('scroll', onScroll, { passive: true });
       this.destroyRef.onDestroy(() => {
         observer.disconnect();
         window.removeEventListener('scroll', onScroll);
+        header.removeEventListener('transitionrun', onHeaderTransition);
+        cancelAnimationFrame(themeFrame);
+        if (themeColor && originalThemeColor) themeColor.content = originalThemeColor;
       });
     });
     let version = this.cloud.auth.accountVersion();
