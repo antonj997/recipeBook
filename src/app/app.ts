@@ -38,6 +38,7 @@ import { FeedbackService } from './core/services/feedback.service';
     '[style.--page-background]': 'appearance.background()',
     '[style.--app-header-height]': 'headerHeight()',
     '[class.recipe-page]': '!!appearance.background()',
+    '[class.compact-header]': 'compactHeader()',
     '(document:pointerdown)': 'onPointerDown($event)',
     '(document:keydown)': 'onNavigationKey($event)',
   },
@@ -47,6 +48,7 @@ import { FeedbackService } from './core/services/feedback.service';
 export class App {
   protected readonly appearance = inject(PageAppearanceService);
   protected readonly headerHeight = signal<string | null>(null);
+  protected readonly compactHeader = signal(false);
   private readonly appHeader = viewChild<ElementRef<HTMLElement>>('appHeader');
   private readonly destroyRef = inject(DestroyRef);
   protected readonly hideSettings = signal(false);
@@ -69,12 +71,19 @@ export class App {
       if (!header) return;
       // Keep sticky tabs below the real header, including safe-area changes and enlarged text.
       const updateHeight = () => {
-        this.headerHeight.set(Math.ceil(header.getBoundingClientRect().height) + 'px');
+        const height = header.getBoundingClientRect().height;
+        if (height > 0) this.headerHeight.set(height + 'px');
       };
       updateHeight();
       const observer = new ResizeObserver(updateHeight);
-      observer.observe(header);
-      this.destroyRef.onDestroy(() => observer.disconnect());
+      observer.observe(header, { box: 'border-box' });
+      this.updateHeaderForScroll();
+      const onScroll = () => this.updateHeaderForScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+      this.destroyRef.onDestroy(() => {
+        observer.disconnect();
+        window.removeEventListener('scroll', onScroll);
+      });
     });
     let version = this.cloud.auth.accountVersion();
     effect(() => {
@@ -117,6 +126,11 @@ export class App {
     });
   }
   protected readonly touchInput = signal(false);
+
+  private updateHeaderForScroll(): void {
+    // Shrinking the header changes document height. Separate thresholds avoid flickering.
+    this.compactHeader.set(this.compactHeader() ? window.scrollY > 8 : window.scrollY >= 80);
+  }
 
   protected onPointerDown(event: PointerEvent): void {
     this.touchInput.set(event.pointerType === 'touch' || event.pointerType === 'pen');
