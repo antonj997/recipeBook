@@ -1,3 +1,4 @@
+import { PageAppearanceService } from '../../../core/services/page-appearance.service';
 import { recipeBackground } from '../../../core/models/recipe-color';
 import { RecipeActionsService } from '../../../core/services/recipe-actions.service';
 import { SelectMenuComponent } from '../../../shared/components/select-menu';
@@ -108,7 +109,7 @@ export class RecipeDetailComponent implements OnInit {
   private router = inject(Router);
   private feedback = inject(FeedbackService);
   private actions = inject(RecipeActionsService);
-  readonly recipeBackground = recipeBackground;
+  private appearance = inject(PageAppearanceService);
   openDeleteDialog(): void {
     const recipe = this.recipe();
     if (!recipe || this.accountChanged()) return;
@@ -121,6 +122,11 @@ export class RecipeDetailComponent implements OnInit {
   recipeBody = viewChild<ElementRef<HTMLElement>>('recipeBody');
   private cookingSessions = inject(CookingSessionService);
   constructor() {
+    effect((onCleanup) => {
+      const recipe = this.recipe();
+      if (recipe && !this.accountChanged())
+        onCleanup(this.appearance.useBackground(recipeBackground(recipe)));
+    });
     effect(() => {
       if (this.accountChanged()) {
         this.completedSteps.set(new Set());

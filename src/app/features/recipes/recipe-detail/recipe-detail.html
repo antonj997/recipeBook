@@ -1,30 +1,35 @@
-<article class="recipe-detail page" [class.draft-preview]="isDraft">
-  <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
+<article class="recipe-detail" [class.draft-preview]="isDraft">
+  <div class="recipe-navigation page">
+    <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
+  </div>
   @if (loading()) {
-    <app-loading-state label="Loading recipe…" />
+    <div class="recipe-message page"><app-loading-state label="Loading recipe…" /></div>
   } @else if (error()) {
-    <p role="alert">{{ error() }}</p>
+    <div class="recipe-message page">
+      <p role="alert">{{ error() }}</p>
+    </div>
   } @else {
     @if (recipe(); as selectedRecipe) {
-      <div
-        class="recipe-overview"
-        [class.has-photo]="!!selectedRecipe.imageDataUrl"
-        [style.--recipe-color]="recipeBackground(selectedRecipe)"
-      >
-        @if (selectedRecipe.imageDataUrl; as photo) {
-          <img
-            class="recipe-hero"
-            [src]="photo"
-            referrerpolicy="no-referrer"
-            [alt]="selectedRecipe.title"
-          />
-        }
-        <header class="recipe-summary">
-          <h1>{{ selectedRecipe.title || 'New recipe' }}</h1>
-          <app-recipe-summary-details [recipe]="selectedRecipe" [categories]="collectionNames()" />
-        </header>
+      <div class="recipe-intro page">
+        <div class="recipe-overview" [class.has-photo]="!!selectedRecipe.imageDataUrl">
+          @if (selectedRecipe.imageDataUrl; as photo) {
+            <img
+              class="recipe-hero"
+              [src]="photo"
+              referrerpolicy="no-referrer"
+              [alt]="selectedRecipe.title"
+            />
+          }
+          <header class="recipe-summary">
+            <h1>{{ selectedRecipe.title || 'New recipe' }}</h1>
+            <app-recipe-summary-details
+              [recipe]="selectedRecipe"
+              [categories]="collectionNames()"
+            />
+          </header>
+        </div>
+        <app-screen-awake />
       </div>
-      <app-screen-awake />
       <div class="recipe-sections">
         <div
           class="section-switch"
@@ -170,35 +175,39 @@
           </section>
         </div>
       </div>
-      @if (stepPhotoNotice()) {
-        <p role="status">{{ stepPhotoNotice() }}</p>
-      }
-      <app-recipe-extra-details [recipe]="selectedRecipe" />
-      @if (!isDraft) {
-        <div class="recipe-actions">
-          <a class="button edit-button" [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
-            >Edit Recipe</a
-          >
-          <button type="button" class="delete-button" (click)="openDeleteDialog()">
-            Delete Recipe
-          </button>
-        </div>
-      }
-      @if (isDraft && drafts.photoNotice()) {
-        <p role="status">{{ drafts.photoNotice() }}</p>
-      }
-      @if (selectedRecipe.sourceUrl) {
-        <a
-          class="source-link"
-          [href]="selectedRecipe.sourceUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          >Original recipe <app-icon name="external"
-        /></a>
-      }
+      <div class="recipe-footer page">
+        @if (stepPhotoNotice()) {
+          <p role="status">{{ stepPhotoNotice() }}</p>
+        }
+        <app-recipe-extra-details [recipe]="selectedRecipe" />
+        @if (!isDraft) {
+          <div class="recipe-actions">
+            <a class="button edit-button" [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
+              >Edit Recipe</a
+            >
+            <button type="button" class="delete-button" (click)="openDeleteDialog()">
+              Delete Recipe
+            </button>
+          </div>
+        }
+        @if (isDraft && drafts.photoNotice()) {
+          <p role="status">{{ drafts.photoNotice() }}</p>
+        }
+        @if (selectedRecipe.sourceUrl) {
+          <a
+            class="source-link"
+            [href]="selectedRecipe.sourceUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Original recipe <app-icon name="external"
+          /></a>
+        }
+      </div>
     } @else {
-      <h1>Recipe not found</h1>
-      <p>The requested recipe does not exist.</p>
+      <div class="recipe-message page">
+        <h1>Recipe not found</h1>
+        <p>The requested recipe does not exist.</p>
+      </div>
     }
   }
 </article>

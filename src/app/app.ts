@@ -1,3 +1,4 @@
+import { PageAppearanceService } from './core/services/page-appearance.service';
 import { RecipeActionsOverlayComponent } from './shared/components/recipe-actions-overlay';
 import { effect } from '@angular/core';
 import { CloudCookbookService } from './core/services/cloud-cookbook.service';
@@ -26,6 +27,7 @@ import { FeedbackService } from './core/services/feedback.service';
   selector: 'app-root',
   host: {
     '[class.touch-input]': 'touchInput()',
+    '[style.--page-background]': 'appearance.background()',
     '(document:pointerdown)': 'onPointerDown($event)',
     '(document:keydown)': 'onNavigationKey($event)',
   },
@@ -33,6 +35,7 @@ import { FeedbackService } from './core/services/feedback.service';
   templateUrl: './app.html',
 })
 export class App {
+  protected readonly appearance = inject(PageAppearanceService);
   protected readonly hideSettings = signal(false);
   private router = inject(Router);
   protected readonly onSettings = signal(false);
