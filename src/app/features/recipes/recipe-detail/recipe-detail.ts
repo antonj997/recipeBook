@@ -27,6 +27,7 @@ import {
   ElementRef,
   inject,
   OnInit,
+  OnDestroy,
   signal,
   viewChild,
 } from '@angular/core';
@@ -55,7 +56,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
   templateUrl: './recipe-detail.html',
   styleUrl: './recipe-detail.scss',
 })
-export class RecipeDetailComponent implements OnInit {
+export class RecipeDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   readonly drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
@@ -123,6 +124,8 @@ export class RecipeDetailComponent implements OnInit {
   activeSection = signal<CookingSection>('ingredients');
   sectionHeight = signal(0);
   recipeBody = viewChild<ElementRef<HTMLElement>>('recipeBody');
+  tabIndicator = viewChild<ElementRef<HTMLElement>>('tabIndicator');
+  private tabMotion?: Animation;
   private cookingSessions = inject(CookingSessionService);
   constructor() {
     effect((onCleanup) => {
@@ -180,8 +183,42 @@ export class RecipeDetailComponent implements OnInit {
           : 0,
       );
     }
+    this.animateTab(section);
     this.activeSection.set(section);
     this.saveCookingSession();
+  }
+
+  private animateTab(section: CookingSection): void {
+    const indicator = this.tabIndicator()?.nativeElement;
+    if (!indicator) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      this.tabMotion?.cancel();
+      return;
+    }
+    if (typeof indicator.animate !== 'function') return;
+    // Start from the visible shape, so reversing a tab mid-motion never snaps.
+    const style = getComputedStyle(indicator);
+    const transform = style.transform;
+    const radius = style.borderRadius;
+    const from = new DOMMatrixReadOnly(transform === 'none' ? undefined : transform).m41;
+    const to = section === 'instructions' ? Number.parseFloat(style.width) : 0;
+    this.tabMotion?.cancel();
+    this.tabMotion = indicator.animate(
+      [
+        { transform, borderRadius: radius },
+        {
+          transform: 'translateX(' + (from + (to - from) * 0.55) + 'px) scaleX(1.08)',
+          borderRadius: '22px 22px 3px 3px',
+          offset: 0.55,
+        },
+        { transform: 'translateX(' + to + 'px)', borderRadius: '14px 14px 0 0' },
+      ],
+      { duration: 360, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.tabMotion?.cancel();
   }
 
   saveCookingSession(): void {

@@ -20,6 +20,11 @@
   padding-inline: max(var(--page-gutter), calc((100% - 1360px) / 2 + var(--page-gutter)));
   background: var(--color-surface);
 }
+@media (min-width: 701px) {
+  :host(.recipe-page) {
+    background: var(--page-background, var(--color-canvas));
+  }
+}
 .brand {
   position: relative;
   font-family: Arial, Helvetica, sans-serif;
