@@ -207,13 +207,13 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       [
         { transform, borderRadius: radius },
         {
-          transform: 'translateX(' + (from + (to - from) * 0.55) + 'px) scaleX(1.08)',
-          borderRadius: '22px 22px 3px 3px',
+          transform: 'translateX(' + (from + (to - from) * 0.55) + 'px) scaleX(1.04)',
+          borderRadius: '14px 14px 1px 1px',
           offset: 0.55,
         },
-        { transform: 'translateX(' + to + 'px)', borderRadius: '14px 14px 0 0' },
+        { transform: 'translateX(' + to + 'px)', borderRadius: '10px 10px 0 0' },
       ],
-      { duration: 360, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      { duration: 280, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
     );
   }
 

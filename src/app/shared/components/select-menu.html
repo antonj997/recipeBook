@@ -2,6 +2,9 @@
   #trigger
   type="button"
   class="menu-trigger"
+  [class.drag-enabled]="dragSelect()"
+  [class.is-dragging]="dragging()"
+  [attr.title]="dragSelect() ? 'Hold and drag to select' : null"
   role="combobox"
   [id]="controlId() || menuId() + '-trigger'"
   [attr.aria-label]="label()"
@@ -12,16 +15,24 @@
   [attr.aria-activedescendant]="open() ? menuId() + '-option-' + activeIndex() : null"
   [attr.popovertarget]="menuId()"
   [disabled]="isDisabled()"
+  (pointerdown)="beginDrag($event, true)"
+  (pointermove)="moveDrag($event)"
+  (pointerup)="endDrag($event)"
+  (pointercancel)="cancelDrag($event)"
+  (lostpointercapture)="cancelDrag($event)"
+  (click)="triggerClick($event)"
   (keydown)="onKeydown($event)"
   (blur)="onBlur()"
 >
-  <span class="menu-label">{{ currentLabel() }}</span
+  <span class="menu-label">{{ displayLabel() }}</span
   ><app-icon name="chevron" [class.is-open]="open()" />
 </button>
 <div
   #panel
   [id]="menuId()"
   class="menu-panel glass-menu"
+  [class.drag-enabled]="dragSelect()"
+  [class.is-dragging]="dragging()"
   popover
   role="listbox"
   [attr.aria-label]="label()"
@@ -29,6 +40,11 @@
   [style.top.px]="top()"
   [style.width.px]="width()"
   (beforetoggle)="beforeToggle($event)"
+  (pointerdown)="beginDrag($event, false)"
+  (pointermove)="moveDrag($event)"
+  (pointerup)="endDrag($event)"
+  (pointercancel)="cancelDrag($event)"
+  (lostpointercapture)="cancelDrag($event)"
 >
   @for (option of options(); track option.value; let i = $index) {
     <div
@@ -41,7 +57,7 @@
       [class.is-action]="option.action"
       (pointermove)="activeIndex.set(i)"
       (pointerdown)="$event.preventDefault()"
-      (click)="choose(i)"
+      (click)="optionClick(i, $event)"
     >
       <span>{{ option.label }}</span>
       @if (currentValue() === option.value) {

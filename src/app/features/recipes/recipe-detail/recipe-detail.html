@@ -93,6 +93,7 @@
                 <h2 id="ingredients-heading">Ingredients</h2>
                 <app-select-menu
                   menuId="recipe-servings-menu"
+                  [dragSelect]="true"
                   label="Servings"
                   [value]="selectedServings().toString()"
                   [options]="servingMenuOptions()"

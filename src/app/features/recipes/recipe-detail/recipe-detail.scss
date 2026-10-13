@@ -174,25 +174,13 @@ li::marker {
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
-.section-switch::after {
-  content: '';
-  position: absolute;
-  inset: 100% 0 auto;
-  height: 12px;
-  background: linear-gradient(var(--color-surface), transparent);
-  pointer-events: none;
-}
 .section-tabs {
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  width: min(100%, 400px);
-  border-radius: 14px 14px 0 0;
-  background: color-mix(
-    in srgb,
-    var(--page-background, var(--color-canvas)) 30%,
-    var(--color-surface)
-  );
+  width: min(100%, 360px);
+  border-radius: 10px 10px 0 0;
+  background: transparent;
   isolation: isolate;
 }
 .tab-indicator {
@@ -201,7 +189,7 @@ li::marker {
   width: 50%;
   border: 1px solid var(--color-border);
   border-bottom-color: var(--color-surface);
-  border-radius: 14px 14px 0 0;
+  border-radius: 10px 10px 0 0;
   background: var(--color-surface);
   transform: translateX(0);
   transform-origin: center bottom;
@@ -213,15 +201,16 @@ li::marker {
 .section-tabs button {
   position: relative;
   min-width: 0;
-  min-height: 52px;
-  padding: 14px 12px;
+  min-height: 44px;
+  padding: 12px;
   border: 0;
-  border-radius: 14px 14px 0 0;
+  border-radius: 10px 10px 0 0;
   background: transparent;
-  color: var(--color-ink);
+  color: var(--color-muted);
   transform: none;
 }
 .section-tabs button[aria-selected='true'] {
+  color: var(--color-ink);
   font-weight: 600;
 }
 .section-tabs button:focus-visible {

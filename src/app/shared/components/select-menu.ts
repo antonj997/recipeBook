@@ -43,6 +43,11 @@ export class SelectMenuComponent implements ControlValueAccessor, OnDestroy {
   valueType = input<'string' | 'number'>('string');
   variant = input<'field' | 'heading'>('field');
   disabled = input(false);
+  dragSelect = input(false);
+  dragging = signal(false);
+  private dragIndex = signal(-1);
+  private gesture?: { id: number; capture: HTMLElement; closeOnTrigger: boolean };
+  private ignoreClick = false;
   valueChange = output<string>();
   open = signal(false);
   activeIndex = signal(0);
@@ -57,6 +62,11 @@ export class SelectMenuComponent implements ControlValueAccessor, OnDestroy {
     () =>
       this.options().find((option) => option.value === this.currentValue())?.label ??
       this.currentValue(),
+  );
+  displayLabel = computed(() =>
+    this.dragging() && this.dragIndex() >= 0
+      ? (this.options()[this.dragIndex()]?.label ?? this.currentLabel())
+      : this.currentLabel(),
   );
   isDisabled = computed(() => this.disabled() || this.formDisabled());
   trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
@@ -100,7 +110,10 @@ export class SelectMenuComponent implements ControlValueAccessor, OnDestroy {
         this.renderFrame = 0;
         this.revealActive();
       });
-    } else this.touched();
+    } else {
+      this.releaseDrag();
+      this.touched();
+    }
   }
   private position(): void {
     const rect = this.trigger()?.nativeElement.getBoundingClientRect();
@@ -119,6 +132,7 @@ export class SelectMenuComponent implements ControlValueAccessor, OnDestroy {
     if (!this.isDisabled() && !this.open()) this.panel()?.nativeElement.showPopover();
   }
   close(): void {
+    this.releaseDrag();
     if (this.open()) this.panel()?.nativeElement.hidePopover();
   }
   choose(index: number, returnFocus = true): void {
@@ -130,6 +144,84 @@ export class SelectMenuComponent implements ControlValueAccessor, OnDestroy {
     this.close();
     if (returnFocus) this.trigger()?.nativeElement.focus({ preventScroll: true });
   }
+  // Opt-in press-and-drag selection; values change only on a valid release.
+  beginDrag(event: PointerEvent, fromTrigger: boolean): void {
+    if (
+      !this.dragSelect() ||
+      this.isDisabled() ||
+      !event.isPrimary ||
+      event.button !== 0 ||
+      this.gesture
+    )
+      return;
+    this.ignoreClick = false;
+    const capture = event.currentTarget as HTMLElement;
+    this.gesture = { id: event.pointerId, capture, closeOnTrigger: fromTrigger && this.open() };
+    this.dragging.set(true);
+    capture.setPointerCapture(event.pointerId);
+    this.show();
+    this.previewAt(event.clientX, event.clientY);
+  }
+  moveDrag(event: PointerEvent): void {
+    if (this.gesture?.id !== event.pointerId) return;
+    event.preventDefault();
+    this.previewAt(event.clientX, event.clientY);
+  }
+  endDrag(event: PointerEvent): void {
+    const gesture = this.gesture;
+    if (!gesture || gesture.id !== event.pointerId) return;
+    if (this.isDisabled()) {
+      this.close();
+      return;
+    }
+    const index = this.optionAt(event.clientX, event.clientY);
+    const trigger = this.trigger()?.nativeElement.getBoundingClientRect();
+    const onTrigger = !!trigger && this.contains(trigger, event.clientX, event.clientY);
+    this.ignoreClick = true;
+    this.releaseDrag();
+    if (index >= 0) this.choose(index);
+    else if (gesture.closeOnTrigger || !onTrigger) this.close();
+  }
+  cancelDrag(event: PointerEvent): void {
+    if (this.gesture?.id === event.pointerId) this.close();
+  }
+  triggerClick(event: MouseEvent): void {
+    this.consumeDragClick(event);
+  }
+  optionClick(index: number, event: MouseEvent): void {
+    if (!this.consumeDragClick(event)) this.choose(index);
+  }
+  private consumeDragClick(event: MouseEvent): boolean {
+    if (!this.ignoreClick || event.detail === 0) return false;
+    this.ignoreClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+    return true;
+  }
+  private contains(rect: DOMRect, x: number, y: number): boolean {
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  }
+  private optionAt(x: number, y: number): number {
+    const panel = this.panel()?.nativeElement;
+    if (!panel || !this.contains(panel.getBoundingClientRect(), x, y)) return -1;
+    return Array.from(panel.querySelectorAll<HTMLElement>('[data-option]')).findIndex((option) =>
+      this.contains(option.getBoundingClientRect(), x, y),
+    );
+  }
+  private previewAt(x: number, y: number): void {
+    const index = this.optionAt(x, y);
+    this.dragIndex.set(index);
+    if (index >= 0) this.activeIndex.set(index);
+  }
+  private releaseDrag(): void {
+    const gesture = this.gesture;
+    this.gesture = undefined;
+    this.dragging.set(false);
+    this.dragIndex.set(-1);
+    if (gesture?.capture.hasPointerCapture(gesture.id))
+      gesture.capture.releasePointerCapture(gesture.id);
+  }
+
   onKeydown(event: KeyboardEvent): void {
     if (this.isDisabled() || event.ctrlKey || event.metaKey) return;
     const wasOpen = this.open();
@@ -199,6 +291,7 @@ export class SelectMenuComponent implements ControlValueAccessor, OnDestroy {
       panel.scrollTop = option.offsetTop + option.offsetHeight - panel.clientHeight;
   }
   ngOnDestroy(): void {
+    this.releaseDrag();
     cancelAnimationFrame(this.renderFrame);
   }
 }
