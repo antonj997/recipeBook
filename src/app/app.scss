@@ -1,21 +1,19 @@
 :host {
   display: block;
   min-height: 100dvh;
-  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0
-    env(safe-area-inset-left, 0px);
+  padding: var(--app-top-inset) env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px);
   background: var(--page-background, var(--color-canvas));
 }
-/* Keep scrolled content below the device status bar, even after the header leaves view. */
-:host::before {
-  content: '';
+/* A real fixed element gives WebKit a stable edge to sample, including a zero safe inset. */
+.status-bar-surface {
   position: fixed;
   inset: 0 0 auto;
-  height: env(safe-area-inset-top, 0px);
+  height: var(--app-top-inset);
   background: var(--color-canvas);
   pointer-events: none;
   z-index: 40;
 }
-:host(.recipe-page)::before {
+:host(.recipe-page) .status-bar-surface {
   background: var(--color-surface);
 }
 .app-header {
@@ -75,7 +73,7 @@ main:focus {
 }
 .skip-link {
   position: fixed;
-  top: 8px;
+  top: calc(8px + var(--app-top-inset));
   left: 8px;
   z-index: 10;
   padding: 12px 20px;
