@@ -8,6 +8,9 @@
 >
   <div class="editor-heading">
     <h2>{{ kind() === 'step' ? 'Instructions' : 'Ingredients' }}</h2>
+    @if (removed().length) {
+      <button type="button" class="undo-remove" (click)="undoRemove()">Undo</button>
+    }
     <button type="button" class="quiet-button" (click)="createGroup()">
       <app-icon name="plus" />Create group
     </button>
@@ -27,20 +30,6 @@
           />
         }
         <div class="group-actions">
-          <button
-            type="button"
-            class="add-move"
-            [attr.aria-label]="
-              (group.ungrouped ? 'Add ' : 'Add or move ') +
-              kind() +
-              ' to ' +
-              (group.name.value || 'Ungrouped')
-            "
-            [attr.aria-expanded]="group.ungrouped ? null : addingTo() === group.id"
-            (click)="group.ungrouped ? add(group.id) : openMenu(group.id)"
-          >
-            <app-icon name="plus" /><span>{{ group.ungrouped ? 'Add' : 'Add / move' }}</span>
-          </button>
           @if (!group.ungrouped) {
             <button
               type="button"
@@ -53,6 +42,107 @@
           }
         </div>
       </header>
+      @for (control of group.rows; track control) {
+        <div class="drop-slot" [class.active]="isSlot(group, control)" aria-hidden="true"></div>
+        <div
+          class="editor-row"
+          [class.dragging]="dragging() === control"
+          [class.step-row]="kind() === 'step'"
+        >
+          <button
+            type="button"
+            class="row-remove"
+            [attr.aria-label]="'Remove ' + kind() + ' ' + number(control)"
+            (click)="remove(control)"
+          >
+            <app-icon name="minus" />
+          </button>
+          <div class="row-content">
+            @if (kind() === 'step') {
+              <label [for]="rowId(control)">Step {{ number(control) }}</label>
+              <textarea
+                [id]="rowId(control)"
+                appAutoGrow
+                [formControl]="control"
+                (paste)="pasteRows($event, control, group.id)"
+                rows="2"
+                placeholder="Describe this step"
+                [attr.aria-invalid]="control.touched && control.invalid"
+              ></textarea>
+              @if (photo(control); as photo) {
+                <details class="step-photo">
+                  <summary class="disclosure">Photo<app-icon name="chevron" /></summary>
+                  <img
+                    [src]="photo"
+                    [alt]="'Photo for step ' + number(control)"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  /><button type="button" [disabled]="photosBusy()" (click)="removePhoto(control)">
+                    Remove photo
+                  </button>
+                </details>
+              }
+            } @else {
+              <textarea
+                appAutoGrow
+                rows="1"
+                [id]="rowId(control)"
+                [formControl]="control"
+                (keydown)="ingredientEnter($event, control, group.id)"
+                (paste)="pasteRows($event, control, group.id)"
+                [attr.aria-label]="'Ingredient ' + number(control)"
+                placeholder="Add an ingredient"
+                [attr.aria-invalid]="control.touched && control.invalid"
+              ></textarea>
+            }
+          </div>
+          <button
+            type="button"
+            class="drag-handle"
+            draggable="true"
+            (dragstart)="startDrag($event, control)"
+            (dragend)="endDrag()"
+            [title]="'Drag ' + kind()"
+            (pointerdown)="touchStart($event, control)"
+            (pointermove)="touchMove($event)"
+            (pointerup)="touchEnd($event)"
+            (pointercancel)="touchCancel()"
+            (keydown)="handleKey($event, control)"
+            [attr.aria-label]="'Move ' + kind() + ' ' + number(control)"
+          >
+            <svg viewBox="0 0 20 24" fill="currentColor">
+              <circle cx="7" cy="6" r="1" />
+              <circle cx="13" cy="6" r="1" />
+              <circle cx="7" cy="12" r="1" />
+              <circle cx="13" cy="12" r="1" />
+              <circle cx="7" cy="18" r="1" />
+              <circle cx="13" cy="18" r="1" />
+            </svg>
+          </button>
+        </div>
+      }
+      <div class="drop-slot" [class.active]="isSlot(group, null)" aria-hidden="true"></div>
+      @if (!group.rows.length && !isSlot(group, null)) {
+        <p class="empty-group">
+          {{ group.ungrouped ? 'Use Add to add an item.' : 'Use Add / move to fill this group.' }}
+        </p>
+      }
+      <div class="group-footer">
+        <button
+          type="button"
+          class="add-move"
+          [attr.aria-label]="
+            (group.ungrouped ? 'Add ' : 'Add or move ') +
+            kind() +
+            ' to ' +
+            (group.name.value || 'Ungrouped')
+          "
+          [attr.aria-expanded]="group.ungrouped ? null : addingTo() === group.id"
+          (click)="group.ungrouped ? add(group.id) : openMenu(group.id)"
+        >
+          <app-icon name="plus" /><span>{{ group.ungrouped ? 'Add' : 'Add / move' }}</span>
+        </button>
+      </div>
       @if (addingTo() === group.id) {
         <div class="add-menu" (keydown.escape)="addingTo.set(null)">
           <button type="button" (click)="add(group.id)">
@@ -88,117 +178,11 @@
           </div>
         </div>
       }
-      @for (control of group.rows; track control) {
-        <div class="drop-slot" [class.active]="isSlot(group, control)" aria-hidden="true"></div>
-        <div
-          class="editor-row"
-          [class.dragging]="dragging() === control"
-          [class.step-row]="kind() === 'step'"
-        >
-          <span
-            class="drag-handle"
-            draggable="true"
-            (dragstart)="startDrag($event, control)"
-            (dragend)="endDrag()"
-            [title]="'Drag ' + kind()"
-            aria-hidden="true"
-            ><svg viewBox="0 0 20 24" fill="currentColor">
-              <circle cx="7" cy="6" r="1" />
-              <circle cx="13" cy="6" r="1" />
-              <circle cx="7" cy="12" r="1" />
-              <circle cx="13" cy="12" r="1" />
-              <circle cx="7" cy="18" r="1" />
-              <circle cx="13" cy="18" r="1" /></svg
-          ></span>
-          <div class="row-content">
-            @if (kind() === 'step') {
-              <label [for]="rowId(control)">Step {{ number(control) }}</label>
-              <textarea
-                [id]="rowId(control)"
-                appAutoGrow
-                [formControl]="control"
-                rows="2"
-                placeholder="Describe this step"
-                [attr.aria-invalid]="control.touched && control.invalid"
-              ></textarea>
-              @if (photo(control); as photo) {
-                <details class="step-photo">
-                  <summary class="disclosure">Photo<app-icon name="chevron" /></summary>
-                  <img
-                    [src]="photo"
-                    [alt]="'Photo for step ' + number(control)"
-                    loading="lazy"
-                    referrerpolicy="no-referrer"
-                  /><button type="button" [disabled]="photosBusy()" (click)="removePhoto(control)">
-                    Remove photo
-                  </button>
-                </details>
-              }
-            } @else {
-              <textarea
-                appAutoGrow
-                rows="1"
-                [id]="rowId(control)"
-                [formControl]="control"
-                [attr.aria-label]="'Ingredient ' + number(control)"
-                placeholder="Add an ingredient"
-                [attr.aria-invalid]="control.touched && control.invalid"
-              ></textarea>
-            }
-          </div>
-          <details class="row-options" (keydown.escape)="closeOptions(options, control)" #options>
-            <summary [attr.aria-label]="'Options for ' + kind() + ' ' + number(control)">
-              Options
-            </summary>
-            <div class="row-options-menu glass-menu">
-              <button
-                type="button"
-                [disabled]="number(control) === 1"
-                (click)="shift(control, -1); closeOptions(options, control)"
-              >
-                Move up
-              </button>
-              <button
-                type="button"
-                [disabled]="number(control) === items().length"
-                (click)="shift(control, 1); closeOptions(options, control)"
-              >
-                Move down
-              </button>
-              @if (groups().length > 1) {
-                <p>Move to group</p>
-                @for (target of groups(); track target.id) {
-                  @if (!inGroup(control, target.id)) {
-                    <button
-                      type="button"
-                      (click)="move(control, target.id); closeOptions(options, control)"
-                    >
-                      {{ target.name.value || 'Ungrouped' }}
-                    </button>
-                  }
-                }
-              }
-              <button type="button" class="remove-row" (click)="remove(control)">
-                Remove {{ kind() }}
-              </button>
-            </div>
-          </details>
-        </div>
-      }
-      <div class="drop-slot" [class.active]="isSlot(group, null)" aria-hidden="true"></div>
-      @if (!group.rows.length && !isSlot(group, null)) {
-        <p class="empty-group">
-          {{ group.ungrouped ? 'Use Add to add an item.' : 'Use Add / move to fill this group.' }}
-        </p>
-      }
     </section>
   }
-  @if (removed()) {
-    <div class="removal-notice">
-      <span>{{ kind() === 'step' ? 'Step' : 'Ingredient' }} removed.</span>
-      <button type="button" class="undo-remove" (click)="undoRemove()">Undo</button>
-    </div>
-  }
-  <p class="move-hint">Use Options to reorder or move to a group, or drag the dotted handle.</p>
+  <p class="move-hint">
+    Drag the handle to reorder or move between groups. With a keyboard, focus the handle and use the
+    arrow keys.
+  </p>
   <p class="sr-only" role="status">{{ message() }}</p>
 </section>

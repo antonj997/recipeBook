@@ -1,3 +1,4 @@
+import { RecipeActionsOverlayComponent } from './shared/components/recipe-actions-overlay';
 import { effect } from '@angular/core';
 import { CloudCookbookService } from './core/services/cloud-cookbook.service';
 import { RecipeDraftService } from './core/services/recipe-draft.service';
@@ -14,7 +15,14 @@ import { IconComponent } from './shared/components/icon';
 import { FeedbackService } from './core/services/feedback.service';
 
 @Component({
-  imports: [RouterOutlet, RouterLink, IconComponent, LeaveConfirmationComponent, GuestRecipesDialogComponent],
+  imports: [
+    RecipeActionsOverlayComponent,
+    RouterOutlet,
+    RouterLink,
+    IconComponent,
+    LeaveConfirmationComponent,
+    GuestRecipesDialogComponent,
+  ],
   selector: 'app-root',
   host: {
     '[class.touch-input]': 'touchInput()',
@@ -61,7 +69,8 @@ export class App {
         this.cloud.auth.callbackError() ||
         this.cloud.auth.callbackNotice()
       )
-        if (this.router.url.split(/[?#]/)[0] !== '/settings') void this.router.navigate(['/settings']);
+        if (this.router.url.split(/[?#]/)[0] !== '/settings')
+          void this.router.navigate(['/settings']);
     });
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (!(event instanceof NavigationEnd)) return;

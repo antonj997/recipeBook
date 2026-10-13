@@ -1,3 +1,5 @@
+import { recipeBackground } from '../../../core/models/recipe-color';
+import { RecipeContextDirective } from '../../../shared/components/recipe-context';
 import { SelectMenuComponent } from '../../../shared/components/select-menu';
 import { LibraryViewToggleComponent } from '../../../shared/components/library-view-toggle';
 import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
@@ -19,10 +21,7 @@ import { RecipeService } from '../../../core/services/recipe.service';
 import { CloudCookbookService } from '../../../core/services/cloud-cookbook.service';
 import { LibraryViewService } from '../../../core/services/library-view.service';
 import { RecipeRailComponent } from '../../../shared/components/recipe-rail';
-import {
-  FoodPlaceholderComponent,
-  photoCardBackground,
-} from '../../../shared/components/food-placeholder';
+import { FoodPlaceholderComponent } from '../../../shared/components/food-placeholder';
 import { IconComponent } from '../../../shared/components/icon';
 import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
@@ -31,6 +30,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
   selector: 'app-recipe-list',
   imports: [
     SelectMenuComponent,
+    RecipeContextDirective,
     LibraryViewToggleComponent,
     NgTemplateOutlet,
     RecipeRailComponent,
@@ -50,7 +50,11 @@ export class RecipeListComponent {
   readonly cloud = inject(CloudCookbookService);
   private initial = this.library.read();
   formatTime = formatRecipeTime;
-  photoBackground = photoCardBackground;
+  recipeBackground = recipeBackground;
+  addMenuOpen = signal(false);
+  onAddMenuToggle(event: Event): void {
+    this.addMenuOpen.set((event as ToggleEvent).newState === 'open');
+  }
   recipes = signal<Recipe[]>([]);
   query = signal(this.initial.query);
   collections = signal<RecipeCollection[]>([]);

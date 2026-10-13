@@ -87,6 +87,8 @@
   outline-offset: 0;
 }
 .recipe-card {
+  -webkit-touch-callout: none;
+  user-select: none;
   position: relative;
   flex: 0 0 var(--card-width);
   min-width: 0;

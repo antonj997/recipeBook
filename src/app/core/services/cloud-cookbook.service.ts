@@ -87,8 +87,8 @@ export class CloudCookbookService {
       recipes.map((value) => ({ table: 'recipes', id: value.id, value })),
     );
   }
-  async remove(table: CookbookTable, id: string): Promise<void> {
-    await this.write(this.database, [{ table, id, value: null }]);
+  async remove(table: CookbookTable, id: string, database = this.database): Promise<void> {
+    await this.write(database, [{ table, id, value: null }]);
   }
 
   async removeCollection(id: string, database = this.database): Promise<void> {

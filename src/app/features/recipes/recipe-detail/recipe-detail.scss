@@ -117,77 +117,87 @@ li::marker {
   font-size: 1.13rem;
   line-height: 1.5;
 }
-.delete-dialog {
-  width: min(440px, calc(100vw - 32px));
-  padding: 32px;
-  border: 1px solid var(--color-border);
+.recipe-overview {
+  background: var(--recipe-color);
+  border-radius: 16px;
+  overflow: hidden;
+  gap: 0;
+}
+.recipe-summary {
+  padding: 28px;
+}
+.recipe-overview.has-photo .recipe-hero {
+  border-radius: 0;
+}
+.recipe-sections {
+  margin-top: 24px;
+  padding: 0 24px;
   border-radius: 14px;
-  background: var(--color-blue);
-  color: var(--color-ink);
-  box-shadow: 0 24px 80px #14141325;
-}
-.delete-dialog::backdrop {
-  background: #14141355;
-  backdrop-filter: blur(4px);
-}
-.delete-dialog[open] {
-  animation: dialog-in 220ms var(--ease-out);
-}
-.delete-dialog app-food-doodle {
-  margin: 0 auto 16px;
-  width: min(230px, 100%);
-  /* The bin center is x=89 in the 160-wide drawing. */
-  transform: translate(-5.625%, -8%);
-}
-
-.delete-dialog p {
-  color: var(--color-muted);
-}
-.delete-dialog h2 {
-  font-size: 1.6rem;
-}
-.dialog-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 28px;
-}
-.dialog-actions button {
-  flex: 1;
-  background: transparent;
-  color: var(--color-ink);
-}
-.dialog-actions .delete-button {
-  border-color: var(--color-danger);
-  color: var(--color-danger);
-}
-.dialog-actions button:active:not(:disabled) {
   background: var(--color-surface);
 }
-.dialog-actions .delete-button:active:not(:disabled) {
-  background: var(--color-danger);
-  color: var(--color-surface);
-}
-@media (hover: hover) {
-  .dialog-actions button:hover:not(:disabled) {
-    opacity: 0.85;
-  }
-  .dialog-actions .delete-button:hover:not(:disabled) {
-    border-color: var(--color-danger);
-  }
-}
-@keyframes dialog-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 .section-switch {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  gap: 24px;
+  padding: 4px 0 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.section-switch button {
+  position: relative;
+  min-height: 52px;
+  padding: 12px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  border-radius: 0;
+}
+.section-switch button::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--color-green);
+  transform: scaleX(0);
+  transition: transform 180ms var(--ease-out);
+}
+.section-switch button[aria-selected='true'] {
+  color: var(--color-ink);
+}
+.section-switch button[aria-selected='true']::after {
+  transform: scaleX(1);
+}
+.recipe-body {
+  display: block;
+  min-height: var(--section-height, 0px);
+  margin: 0 auto;
+  max-width: 75ch;
+}
+.recipe-body .inactive-panel {
   display: none;
+}
+.ingredients,
+.instructions {
+  border-top: 0;
+  max-width: none;
+  padding-block: 24px;
+}
+@media (max-width: 700px) {
+  .recipe-summary {
+    padding: 22px 20px;
+  }
+  .recipe-sections {
+    padding-inline: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-switch button::after {
+    transition: none;
+  }
 }
 .instructions ol {
   list-style: none;
@@ -240,49 +250,6 @@ li::marker {
   color: var(--color-muted);
   margin: 0;
 }
-@media (max-width: 700px) {
-  .section-switch {
-    position: sticky;
-    top: 0;
-    z-index: 3;
-    display: flex;
-    margin-top: 24px;
-    padding: 4px;
-    gap: 4px;
-    background: var(--color-canvas);
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-  }
-  .section-switch button {
-    flex: 1;
-    min-height: 44px;
-    border: 0;
-    background: transparent;
-  }
-  .section-switch button[aria-pressed='true'] {
-    background: var(--color-ink);
-    color: var(--color-surface);
-  }
-  .recipe-body {
-    min-height: var(--section-height, 0px);
-    margin-top: 0;
-    gap: 0;
-  }
-  .recipe-body .mobile-hidden {
-    display: none;
-  }
-  .ingredients,
-  .instructions {
-    border-top: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .delete-dialog[open] {
-    animation: none;
-  }
-}
-
 .group-heading {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 1rem;
@@ -330,10 +297,10 @@ li::marker {
   }
 }
 @media (hover: hover) {
-  .section-switch button:hover:not([aria-pressed='true']) {
+  .section-switch button:hover:not([aria-selected='true']) {
     transform: translateY(-1px);
   }
-  .section-switch button:hover[aria-pressed='true'] {
+  .section-switch button:hover[aria-selected='true'] {
     transform: translateY(-1px);
   }
 }

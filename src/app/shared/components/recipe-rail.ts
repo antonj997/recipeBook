@@ -1,3 +1,5 @@
+import { recipeBackground } from '../../core/models/recipe-color';
+import { RecipeContextDirective } from './recipe-context';
 import type { RecipeCollection } from '../../core/models/recipe-collection.model';
 import { CardTiltDirective } from './card-tilt';
 import { IconComponent } from './icon';
@@ -18,15 +20,17 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { Recipe } from '../../core/models/recipe.model';
-import {
-  FoodPlaceholderComponent,
-  foodPlaceholderBackground,
-  photoCardBackground,
-} from './food-placeholder';
+import { FoodPlaceholderComponent } from './food-placeholder';
 
 @Component({
   selector: 'app-recipe-rail',
-  imports: [RouterLink, FoodPlaceholderComponent, IconComponent, CardTiltDirective],
+  imports: [
+    RouterLink,
+    FoodPlaceholderComponent,
+    IconComponent,
+    CardTiltDirective,
+    RecipeContextDirective,
+  ],
   templateUrl: './recipe-rail.html',
   styleUrl: './recipe-rail.scss',
   host: {
@@ -38,8 +42,7 @@ import {
 })
 export class RecipeRailComponent implements OnDestroy {
   formatTime = formatRecipeTime;
-  placeholderBackground = foodPlaceholderBackground;
-  photoBackground = photoCardBackground;
+  recipeBackground = recipeBackground;
   compact = input(false);
   initialRecipeId = input('');
   activeRecipeChange = output<string>();

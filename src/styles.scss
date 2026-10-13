@@ -14,6 +14,10 @@
   --color-clay: #d7b7a5;
   --color-butter: #e9dfb7;
   --color-sage: #c8cdb8;
+  --color-rose: #e5c8c2;
+  --color-sky: #c9d6e0;
+  --color-peach: #edd0b9;
+  --color-mint: #cfdbcc;
   --color-danger: #923f35;
   --radius-control: 6px;
   --radius-surface: 14px;
@@ -366,15 +370,15 @@ summary.disclosure::-webkit-details-marker {
 summary.disclosure::marker {
   content: '';
 }
-summary.disclosure > app-icon {
+summary.disclosure app-icon {
   transform: rotate(-90deg);
   transition: transform 160ms ease;
 }
-details[open] > summary.disclosure > app-icon {
+details[open] > summary.disclosure app-icon {
   transform: rotate(90deg);
 }
 @media (prefers-reduced-motion: reduce) {
-  summary.disclosure > app-icon {
+  summary.disclosure app-icon {
     transition: none;
   }
 }

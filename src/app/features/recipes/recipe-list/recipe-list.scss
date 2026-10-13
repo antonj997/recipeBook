@@ -1,3 +1,28 @@
+.index-color {
+  align-self: stretch;
+  flex: 0 0 4px;
+  background: var(--recipe-color);
+  border-radius: 999px;
+}
+.add-chevron {
+  width: 14px;
+  height: 14px;
+  transform: rotate(-90deg);
+  transition: transform 180ms var(--ease-out);
+}
+.add-chevron.open {
+  transform: rotate(90deg);
+}
+@media (max-width: 600px) {
+  .home-tools:has(.search-field:focus-within) .add-chevron {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .add-chevron {
+    transition: none;
+  }
+}
 .page-intro {
   margin-bottom: 40px;
 }
@@ -186,6 +211,8 @@
   font-size: 0.8rem;
 }
 .index-row {
+  -webkit-touch-callout: none;
+  user-select: none;
   display: flex;
   align-items: center;
   gap: 20px;

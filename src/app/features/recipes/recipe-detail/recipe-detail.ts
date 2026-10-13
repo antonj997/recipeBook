@@ -1,3 +1,5 @@
+import { recipeBackground } from '../../../core/models/recipe-color';
+import { RecipeActionsService } from '../../../core/services/recipe-actions.service';
 import { SelectMenuComponent } from '../../../shared/components/select-menu';
 import { scaleIngredient } from '../../../core/models/ingredient-quantity';
 import { SupabaseService } from '../../../core/services/supabase.service';
@@ -23,7 +25,6 @@ import {
   effect,
   ElementRef,
   inject,
-  OnDestroy,
   OnInit,
   signal,
   viewChild,
@@ -33,14 +34,12 @@ import type { Recipe } from '../../../core/models/recipe.model';
 import { RecipeService } from '../../../core/services/recipe.service';
 
 import { FeedbackService } from '../../../core/services/feedback.service';
-import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
 
 @Component({
   selector: 'app-recipe-detail',
   host: {
     '(window:beforeunload)': 'onBeforeUnload($event)',
-    '(window:pagehide)': 'saveCookingSession()',
   },
   imports: [
     SelectMenuComponent,
@@ -50,13 +49,12 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
     RecipeExtraDetailsComponent,
     IconComponent,
     RouterLink,
-    FoodDoodleComponent,
     LoadingStateComponent,
   ],
   templateUrl: './recipe-detail.html',
   styleUrl: './recipe-detail.scss',
 })
-export class RecipeDetailComponent implements OnInit, OnDestroy {
+export class RecipeDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   readonly drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
@@ -109,20 +107,12 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   }
   private router = inject(Router);
   private feedback = inject(FeedbackService);
-  deleteDialog = viewChild<ElementRef<HTMLDialogElement>>('deleteDialog');
-  confirmOpen = signal(false);
+  private actions = inject(RecipeActionsService);
+  readonly recipeBackground = recipeBackground;
   openDeleteDialog(): void {
-    if (this.accountChanged() || this.deleting()) return;
-    this.deleteError.set('');
-    this.deleteSucceeded.set(false);
-    this.confirmOpen.set(true);
-    this.deleteDialog()?.nativeElement.showModal();
-  }
-  closeDeleteDialog(): void {
-    if (!this.deleting()) this.deleteDialog()?.nativeElement.close();
-  }
-  onDialogCancel(event: Event): void {
-    if (this.deleting()) event.preventDefault();
+    const recipe = this.recipe();
+    if (!recipe || this.accountChanged()) return;
+    this.actions.delete(recipe, () => this.router.navigate(['/']));
   }
 
   collectionNames = signal<string[]>([]);
@@ -130,7 +120,6 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   sectionHeight = signal(0);
   recipeBody = viewChild<ElementRef<HTMLElement>>('recipeBody');
   private cookingSessions = inject(CookingSessionService);
-  private destroyed = false;
   constructor() {
     effect(() => {
       if (this.accountChanged()) {
@@ -151,6 +140,20 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     this.saveCookingSession();
   }
 
+  tabKey(event: KeyboardEvent): void {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const section =
+      event.key === 'Home'
+        ? 'ingredients'
+        : event.key === 'End'
+          ? 'instructions'
+          : this.activeSection() === 'ingredients'
+            ? 'instructions'
+            : 'ingredients';
+    this.switchSection(section);
+    document.getElementById('recipe-' + section + '-tab')?.focus({ preventScroll: true });
+  }
   resetInstructions(): void {
     if (this.accountChanged()) return;
     this.completedSteps.set(new Set());
@@ -160,7 +163,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   switchSection(section: CookingSection): void {
     if (section === this.activeSection() || this.accountChanged()) return;
     const body = this.recipeBody()?.nativeElement;
-    if (body && window.matchMedia('(max-width: 700px)').matches) {
+    if (body) {
       // Retain space only when scrolled down, so a shorter panel cannot clamp the page upward.
       this.sectionHeight.set(
         window.scrollY > 0
@@ -174,7 +177,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   saveCookingSession(): void {
     const recipe = this.recipe();
-    if (this.isDraft || !recipe || this.accountChanged() || this.deleteSucceeded()) return;
+    if (this.isDraft || !recipe || this.accountChanged()) return;
     this.cookingSessions.save(recipe.id, {
       section: this.activeSection(),
       servings: this.selectedServings(),
@@ -202,11 +205,6 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
           .map((step) => step.index),
       ),
     );
-  }
-
-  ngOnDestroy(): void {
-    this.saveCookingSession();
-    this.destroyed = true;
   }
 
   private auth = inject(SupabaseService);
@@ -284,10 +282,6 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   });
   loading = signal(true);
   error = signal('');
-  deleting = signal(false);
-  deleteSucceeded = signal(false);
-  deleteError = signal('');
-
   ngOnInit(): void {
     void this.loadRecipe();
   }
@@ -336,37 +330,6 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       this.loading.set(false);
       const recipe = this.recipe();
       if (recipe && !this.accountChanged()) this.restoreCookingSession(recipe);
-    }
-  }
-
-  async deleteRecipe(): Promise<void> {
-    const currentRecipe = this.recipe();
-    if (this.accountChanged() || !currentRecipe || this.deleting()) {
-      return;
-    }
-
-    // The native dialog supplies focus trapping and explicit confirmation.
-    if (!this.deleteDialog()?.nativeElement.open) return;
-    this.deleting.set(true);
-    this.deleteError.set('');
-
-    try {
-      await this.recipeService.deleteRecipe(currentRecipe.id);
-      if (this.accountChanged()) return;
-      this.cookingSessions.clear(currentRecipe.id);
-      this.deleteSucceeded.set(true);
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        await new Promise<void>((resolve) => setTimeout(resolve, 2200));
-      }
-      if (this.accountChanged() || this.destroyed) return;
-      this.deleteDialog()?.nativeElement.close();
-      this.feedback.show('Recipe deleted');
-      await this.router.navigate(['/']);
-    } catch (error) {
-      console.error('Failed to delete recipe:', error);
-      this.deleteError.set('Could not delete the recipe. Please try again.');
-    } finally {
-      this.deleting.set(false);
     }
   }
 }

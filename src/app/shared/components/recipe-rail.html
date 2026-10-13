@@ -84,10 +84,9 @@
           <a
             class="recipe-card"
             appCardTilt
+            [appRecipeContext]="recipe"
             [routerLink]="['/recipes', recipe.id]"
-            [style.--card-color]="
-              recipe.imageDataUrl ? photoBackground(recipe.id) : placeholderBackground(recipe.id)
-            "
+            [style.--card-color]="recipeBackground(recipe)"
           >
             <div class="recipe-card__surface">
               <div class="recipe-card__media">
@@ -100,7 +99,7 @@
                     decoding="async"
                   />
                 } @else {
-                  <app-food-placeholder [seed]="recipe.id" />
+                  <app-food-placeholder [seed]="recipe.id" [color]="recipe.color" />
                 }
               </div>
               <div class="recipe-card__content">

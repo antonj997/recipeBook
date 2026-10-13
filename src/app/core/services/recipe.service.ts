@@ -142,6 +142,22 @@ export class RecipeService {
       delete recipe[key];
     await this.cloud.put('recipes', recipe, database);
   }
+  async deleteWithUndo(id: string): Promise<() => Promise<void>> {
+    const database = this.cloud.database,
+      version = this.accountVersion();
+    const recipe = await database.recipes.get(id);
+    if (!recipe) throw new Error('Recipe not found.');
+    if (version !== this.accountVersion()) throw new Error('Account changed. Try again.');
+    const snapshot = structuredClone(recipe);
+    await this.cloud.remove('recipes', id, database);
+    return async () => {
+      if (version !== this.accountVersion()) throw new Error('Account changed.');
+      const existing = await database.recipes.get(id);
+      if (version !== this.accountVersion()) throw new Error('Account changed.');
+      if (existing) throw new Error('Recipe already exists.');
+      await this.cloud.put('recipes', snapshot, database);
+    };
+  }
   async deleteRecipe(id: string): Promise<void> {
     await this.cloud.remove('recipes', id);
   }

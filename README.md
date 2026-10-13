@@ -11,7 +11,10 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 - Browse a recipe shelf or compact list, with your search, category and place remembered.
 - Group ingredients and instructions, choose default servings, and undo removed editor rows.
 - Scale explicit ingredient quantities for 2, 4, 6, 8 or 10 servings without changing the saved recipe. Written or ambiguous quantities are left unchanged.
-- Use a compact cooking view with remembered step progress and a keep-screen-on toggle where supported. Completed steps always collapse.
+- Cook from ingredient and instruction tabs with remembered step progress and a keep-screen-on toggle where supported. Completed steps always collapse.
+- Choose a recipe color shared by its header, card and list marker.
+- Hold or right-click recipes to change categories, edit or delete; undo accidental deletion.
+- Paste ingredient and instruction lists into the editor to split them into rows.
 - Store photos, cooking time and available nutrition information.
 - Sign in with email and password for a private cookbook across devices.
 - Use saved recipes offline and install the app as a PWA.

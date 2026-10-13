@@ -26,6 +26,7 @@ import { Component, input } from '@angular/core';
         <path d="M15.5 15.5 21 21" />
         <circle cx="10.5" cy="10.5" r="6.7" />
       }
+      @case ('minus') { <path d="M4 12h16" /> }
       @case ('plus') {
         <path d="M12 4v16M4 12h16" />
       }
@@ -82,6 +83,7 @@ export class IconComponent {
     | 'settings'
     | 'search'
     | 'plus'
+    | 'minus'
     | 'close'
     | 'check'
     | 'link'

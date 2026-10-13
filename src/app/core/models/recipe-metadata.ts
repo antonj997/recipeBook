@@ -1,3 +1,4 @@
+import { isRecipeColor, type RecipeColor } from './recipe-color';
 export const nutritionFields = [
   { key: 'calories', label: 'Energy', unit: 'kcal' },
   { key: 'proteinContent', label: 'Protein', unit: 'g' },
@@ -15,6 +16,7 @@ export interface RecipeStepDetail {
   imageDataUrl?: string;
 }
 export interface RecipeMetadata {
+  color?: RecipeColor;
   description?: string;
   totalTime?: number;
   // Imported category names can only match categories the user has already created.
@@ -52,6 +54,10 @@ export function readRecipeMetadata(value: unknown, strict = false): RecipeMetada
   const invalid = () => {
     if (strict) throw new Error('The backup contains invalid recipe details.');
   };
+  if (value['color'] != null) {
+    if (isRecipeColor(value['color'])) result.color = value['color'];
+    else invalid();
+  }
   for (const key of ['description'] as const) {
     const v = value[key];
     if (v == null) continue;

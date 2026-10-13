@@ -24,11 +24,19 @@
           type="button"
           class="primary"
           aria-label="Add recipe"
+          [attr.aria-expanded]="addMenuOpen()"
           popovertarget="add-recipe-options"
         >
-          <app-icon name="plus" /><span class="add-label">Add recipe</span>
+          <app-icon name="plus" /><span class="add-label">Add recipe</span
+          ><app-icon name="chevron" class="add-chevron" [class.open]="addMenuOpen()" />
         </button>
-        <div id="add-recipe-options" class="glass-menu" popover #addOptions>
+        <div
+          id="add-recipe-options"
+          class="glass-menu"
+          popover
+          #addOptions
+          (beforetoggle)="onAddMenuToggle($event)"
+        >
           <a routerLink="/recipes/new/edit" (click)="addOptions.hidePopover()"
             ><app-icon name="book" />Write a recipe</a
           >
@@ -107,14 +115,17 @@
             #listRow
             [attr.data-recipe-id]="recipe.id"
             class="index-row"
+            [appRecipeContext]="recipe"
+            [style.--recipe-color]="recipeBackground(recipe)"
             [routerLink]="['/recipes', recipe.id]"
             (click)="rememberRecipe(recipe.id)"
           >
-            <span class="index-image" [style.background-color]="photoBackground(recipe.id)">
+            <span class="index-color" aria-hidden="true"></span>
+            <span class="index-image" [style.background-color]="recipeBackground(recipe)">
               @if (recipe.imageDataUrl) {
                 <img [src]="recipe.imageDataUrl" alt="" loading="lazy" decoding="async" />
               } @else {
-                <app-food-placeholder [seed]="recipe.id" />
+                <app-food-placeholder [seed]="recipe.id" [color]="recipe.color" />
               }
             </span>
             <span class="index-copy"

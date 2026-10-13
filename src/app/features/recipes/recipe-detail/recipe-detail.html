@@ -6,7 +6,11 @@
     <p role="alert">{{ error() }}</p>
   } @else {
     @if (recipe(); as selectedRecipe) {
-      <div class="recipe-overview" [class.has-photo]="!!selectedRecipe.imageDataUrl">
+      <div
+        class="recipe-overview"
+        [class.has-photo]="!!selectedRecipe.imageDataUrl"
+        [style.--recipe-color]="recipeBackground(selectedRecipe)"
+      >
         @if (selectedRecipe.imageDataUrl; as photo) {
           <img
             class="recipe-hero"
@@ -21,133 +25,150 @@
         </header>
       </div>
       <app-screen-awake />
-      <div class="section-switch" role="group" aria-label="Recipe section">
-        <button
-          type="button"
-          [attr.aria-pressed]="activeSection() === 'ingredients'"
-          aria-controls="ingredients-panel"
-          (click)="switchSection('ingredients')"
+      <div class="recipe-sections">
+        <div
+          class="section-switch"
+          role="tablist"
+          aria-label="Recipe section"
+          (keydown)="tabKey($event)"
         >
-          Ingredients
-        </button>
-        <button
-          type="button"
-          [attr.aria-pressed]="activeSection() === 'instructions'"
-          aria-controls="instructions-panel"
-          (click)="switchSection('instructions')"
-        >
-          Instructions
-        </button>
-      </div>
-      <div #recipeBody class="recipe-body" [style.--section-height]="sectionHeight() + 'px'">
-        <section
-          id="ingredients-panel"
-          [class.mobile-hidden]="activeSection() !== 'ingredients'"
-          class="ingredients"
-          aria-labelledby="ingredients-heading"
-        >
-          <div class="ingredients-heading">
-            <h2 id="ingredients-heading">Ingredients</h2>
-            <app-select-menu
-              menuId="recipe-servings-menu"
-              label="Servings"
-              [value]="selectedServings().toString()"
-              [options]="servingMenuOptions()"
-              (valueChange)="changeServings($event)"
-            />
-          </div>
-          @for (group of ingredientGroups(); track $index) {
-            @if (group.section) {
-              <h3 class="group-heading">{{ group.section }}</h3>
-            }
-            <ul>
-              @for (ingredient of group.ingredients; track $index) {
-                <li>{{ ingredient }}</li>
-              }
-            </ul>
-          }
-        </section>
-        <section
-          id="instructions-panel"
-          [class.mobile-hidden]="activeSection() !== 'instructions'"
-          class="instructions"
-          aria-labelledby="instructions-heading"
-        >
-          <div class="instructions-heading">
-            <h2 id="instructions-heading">Instructions</h2>
-            @if (selectedRecipe.instructions.length) {
-              <button
-                type="button"
-                class="reset-instructions"
-                aria-label="Reset instructions"
-                [disabled]="!completedSteps().size"
-                (click)="resetInstructions()"
-              >
-                Reset
-              </button>
-            }
-          </div>
-          @if (!isDraft && selectedRecipe.instructions.length) {
-            <div class="step-progress">
-              <p role="status">
-                {{ completedSteps().size }} of {{ selectedRecipe.instructions.length }} completed
-              </p>
+          <button
+            type="button"
+            [attr.aria-selected]="activeSection() === 'ingredients'"
+            [attr.tabindex]="activeSection() === 'ingredients' ? 0 : -1"
+            role="tab"
+            id="recipe-ingredients-tab"
+            aria-controls="ingredients-panel"
+            (click)="switchSection('ingredients')"
+          >
+            Ingredients
+          </button>
+          <button
+            type="button"
+            [attr.aria-selected]="activeSection() === 'instructions'"
+            [attr.tabindex]="activeSection() === 'instructions' ? 0 : -1"
+            role="tab"
+            id="recipe-instructions-tab"
+            aria-controls="instructions-panel"
+            (click)="switchSection('instructions')"
+          >
+            Instructions
+          </button>
+        </div>
+        <div #recipeBody class="recipe-body" [style.--section-height]="sectionHeight() + 'px'">
+          <section
+            id="ingredients-panel"
+            [class.inactive-panel]="activeSection() !== 'ingredients'"
+            class="ingredients"
+            role="tabpanel"
+            tabindex="0"
+            aria-labelledby="recipe-ingredients-tab"
+          >
+            <div class="ingredients-heading">
+              <h2 id="ingredients-heading">Ingredients</h2>
+              <app-select-menu
+                menuId="recipe-servings-menu"
+                label="Servings"
+                [value]="selectedServings().toString()"
+                [options]="servingMenuOptions()"
+                (valueChange)="changeServings($event)"
+              />
             </div>
-          }
-          <ol>
-            @for (step of selectedRecipe.instructions; track $index) {
-              <li class="cooking-step" [class.completed]="completedSteps().has($index)">
-                @if (selectedRecipe.stepDetails?.[$index]?.section; as section) {
-                  @if (
-                    $index === 0 || section !== selectedRecipe.stepDetails?.[$index - 1]?.section
-                  ) {
-                    <h3 class="group-heading">{{ section }}</h3>
-                  }
+            @for (group of ingredientGroups(); track $index) {
+              @if (group.section) {
+                <h3 class="group-heading">{{ group.section }}</h3>
+              }
+              <ul>
+                @for (ingredient of group.ingredients; track $index) {
+                  <li>{{ ingredient }}</li>
                 }
-                <label class="check-control">
-                  <input
-                    type="checkbox"
-                    [checked]="completedSteps().has($index)"
-                    (change)="toggleStep($index)"
-                    [attr.aria-label]="'Step ' + ($index + 1) + ': ' + step"
-                  />
-                  <app-checkbox-mark [number]="$index + 1" />
-                  <span class="step-copy">{{ step }}</span>
-                </label>
-                @if (!completedSteps().has($index) && !failedStepPhotos().has($index)) {
-                  @if (
-                    selectedRecipe.stepDetails?.[$index]?.imageDataUrl ||
-                      loadedStepPhotos()[$index];
-                    as photo
-                  ) {
-                    <img
-                      class="step-photo"
-                      [src]="photo"
-                      [alt]="
-                        'Step ' +
-                        ($index + 1) +
-                        ': ' +
-                        (selectedRecipe.stepDetails?.[$index]?.title || step)
-                      "
-                      loading="lazy"
-                      referrerpolicy="no-referrer"
-                      (error)="hideStepPhoto($index)"
-                    />
-                  } @else if (canLoadStepPhoto($index)) {
-                    <button
-                      type="button"
-                      class="step-photo-load"
-                      [disabled]="loadingStepPhotos().has($index)"
-                      (click)="loadStepPhoto($index)"
-                    >
-                      {{ loadingStepPhotos().has($index) ? 'Loading photo…' : 'Load photo' }}
-                    </button>
-                  }
-                }
-              </li>
+              </ul>
             }
-          </ol>
-        </section>
+          </section>
+          <section
+            id="instructions-panel"
+            [class.inactive-panel]="activeSection() !== 'instructions'"
+            class="instructions"
+            role="tabpanel"
+            tabindex="0"
+            aria-labelledby="recipe-instructions-tab"
+          >
+            <div class="instructions-heading">
+              <h2 id="instructions-heading">Instructions</h2>
+              @if (selectedRecipe.instructions.length) {
+                <button
+                  type="button"
+                  class="reset-instructions"
+                  aria-label="Reset instructions"
+                  [disabled]="!completedSteps().size"
+                  (click)="resetInstructions()"
+                >
+                  Reset
+                </button>
+              }
+            </div>
+            @if (!isDraft && selectedRecipe.instructions.length) {
+              <div class="step-progress">
+                <p role="status">
+                  {{ completedSteps().size }} of {{ selectedRecipe.instructions.length }} completed
+                </p>
+              </div>
+            }
+            <ol>
+              @for (step of selectedRecipe.instructions; track $index) {
+                <li class="cooking-step" [class.completed]="completedSteps().has($index)">
+                  @if (selectedRecipe.stepDetails?.[$index]?.section; as section) {
+                    @if (
+                      $index === 0 || section !== selectedRecipe.stepDetails?.[$index - 1]?.section
+                    ) {
+                      <h3 class="group-heading">{{ section }}</h3>
+                    }
+                  }
+                  <label class="check-control">
+                    <input
+                      type="checkbox"
+                      [checked]="completedSteps().has($index)"
+                      (change)="toggleStep($index)"
+                      [attr.aria-label]="'Step ' + ($index + 1) + ': ' + step"
+                    />
+                    <app-checkbox-mark [number]="$index + 1" />
+                    <span class="step-copy">{{ step }}</span>
+                  </label>
+                  @if (!completedSteps().has($index) && !failedStepPhotos().has($index)) {
+                    @if (
+                      selectedRecipe.stepDetails?.[$index]?.imageDataUrl ||
+                        loadedStepPhotos()[$index];
+                      as photo
+                    ) {
+                      <img
+                        class="step-photo"
+                        [src]="photo"
+                        [alt]="
+                          'Step ' +
+                          ($index + 1) +
+                          ': ' +
+                          (selectedRecipe.stepDetails?.[$index]?.title || step)
+                        "
+                        loading="lazy"
+                        referrerpolicy="no-referrer"
+                        (error)="hideStepPhoto($index)"
+                      />
+                    } @else if (canLoadStepPhoto($index)) {
+                      <button
+                        type="button"
+                        class="step-photo-load"
+                        [disabled]="loadingStepPhotos().has($index)"
+                        (click)="loadStepPhoto($index)"
+                      >
+                        {{ loadingStepPhotos().has($index) ? 'Loading photo…' : 'Load photo' }}
+                      </button>
+                    }
+                  }
+                </li>
+              }
+            </ol>
+          </section>
+        </div>
       </div>
       @if (stepPhotoNotice()) {
         <p role="status">{{ stepPhotoNotice() }}</p>
@@ -158,13 +179,8 @@
           <a class="button edit-button" [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
             >Edit Recipe</a
           >
-          <button
-            type="button"
-            class="delete-button"
-            [disabled]="deleting()"
-            (click)="openDeleteDialog()"
-          >
-            {{ deleting() ? 'Deleting...' : 'Delete Recipe' }}
+          <button type="button" class="delete-button" (click)="openDeleteDialog()">
+            Delete Recipe
           </button>
         </div>
       }
@@ -186,46 +202,6 @@
     }
   }
 </article>
-<dialog
-  #deleteDialog
-  class="delete-dialog"
-  aria-labelledby="delete-heading"
-  aria-describedby="delete-description"
-  (cancel)="onDialogCancel($event)"
-  (close)="confirmOpen.set(false)"
->
-  @if (confirmOpen()) {
-    <app-food-doodle kind="discard" [playDiscard]="deleteSucceeded()" />
-  }
-  <h2 id="delete-heading">
-    {{ deleteSucceeded() ? 'Recipe deleted' : 'Delete recipe?' }}
-  </h2>
-  <p id="delete-description" aria-live="polite">
-    {{
-      deleteSucceeded()
-        ? 'Returning to your recipes…'
-        : '“' + recipe()?.title + '” will be removed from your cookbook.'
-    }}
-  </p>
-  @if (deleteError()) {
-    <p role="alert">{{ deleteError() }}</p>
-  }
-  <div class="dialog-actions">
-    <button type="button" autofocus [disabled]="deleting()" (click)="closeDeleteDialog()">
-      Keep</button
-    ><button
-      type="button"
-      class="delete-button"
-      [attr.aria-busy]="deleting()"
-      [class.is-busy]="deleting()"
-      [disabled]="deleting()"
-      (click)="deleteRecipe()"
-    >
-      Delete
-    </button>
-  </div>
-</dialog>
-
 @if (isDraft && recipe()) {
   <div class="draft-actions" aria-label="Review recipe">
     @if (saveDraftError()) {

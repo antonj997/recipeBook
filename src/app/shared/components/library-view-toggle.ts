@@ -4,73 +4,26 @@ import { IconComponent } from './icon';
 @Component({
   selector: 'app-library-view-toggle',
   imports: [IconComponent],
-  template: `
-    <div
-      class="view-toggle"
-      role="group"
-      aria-label="Library view"
-      [class.list-active]="view() === 'list'"
-    >
-      <span class="active-view" aria-hidden="true"></span>
-      <button
-        type="button"
-        aria-label="Shelf view"
-        title="Shelf view"
-        [attr.aria-pressed]="view() === 'shelf'"
-        (click)="view.set('shelf')"
-      >
-        <app-icon name="shelf" />
-      </button>
-      <button
-        type="button"
-        aria-label="List view"
-        title="List view"
-        [attr.aria-pressed]="view() === 'list'"
-        (click)="view.set('list')"
-      >
-        <app-icon name="list" />
-      </button>
-    </div>
-  `,
+  template: `<button
+    type="button"
+    [attr.aria-label]="view() === 'shelf' ? 'Show list' : 'Show cards'"
+    [title]="view() === 'shelf' ? 'Show list' : 'Show cards'"
+    (click)="view.set(view() === 'shelf' ? 'list' : 'shelf')"
+  >
+    <app-icon [name]="view() === 'shelf' ? 'list' : 'shelf'" />
+  </button>`,
   styles: `
     :host {
       display: inline-flex;
       flex-shrink: 0;
     }
-    .view-toggle {
-      position: relative;
-      display: flex;
-      gap: 0;
-    }
-    .active-view {
-      position: absolute;
-      bottom: 3px;
-      left: 13px;
-      width: 18px;
-      height: 2px;
-      background: var(--color-ink);
-      border-radius: 999px;
-      transition: transform 180ms var(--ease-out);
-      pointer-events: none;
-    }
-    .list-active .active-view {
-      transform: translateX(44px);
-    }
     button {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
       width: 44px;
       height: 44px;
-      min-width: 44px;
       padding: 10px;
       border: 0;
       background: transparent;
       color: var(--color-muted);
-    }
-    button[aria-pressed='true'] {
-      color: var(--color-ink);
     }
     app-icon {
       transition: transform 180ms var(--ease-out);
@@ -86,7 +39,6 @@ import { IconComponent } from './icon';
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      .active-view,
       app-icon {
         transition: none;
       }

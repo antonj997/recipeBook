@@ -1,3 +1,5 @@
+import { RecipeColorPickerComponent } from '../../../shared/components/recipe-color-picker';
+import type { RecipeColor } from '../../../core/models/recipe-color';
 import { SelectMenuComponent } from '../../../shared/components/select-menu';
 import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
 import { LeaveConfirmationService } from '../../../core/services/leave-confirmation.service';
@@ -36,6 +38,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
   host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
   imports: [
     SelectMenuComponent,
+    RecipeColorPickerComponent,
     FoodDoodleComponent,
     IconComponent,
     ReactiveFormsModule,
@@ -83,6 +86,7 @@ export class RecipeFormComponent implements OnInit {
       steps: this.stepDetails.getRawValue(),
       photo: this.imageDataUrl(),
       remotePhoto: this.importImageUrl,
+      color: this.color(),
     });
   }
   hasUnsavedChanges(): boolean {
@@ -94,6 +98,7 @@ export class RecipeFormComponent implements OnInit {
       data.servings !== 4 ||
       data.ingredients.some((value) => value.trim()) ||
       data.instructions.some((value) => value.trim()) ||
+      this.color() ||
       this.imageDataUrl() ||
       this.importImageUrl ||
       this.importSourceUrl ||
@@ -128,6 +133,7 @@ export class RecipeFormComponent implements OnInit {
 
   importSourceUrl = '';
 
+  color = signal<RecipeColor | undefined>(undefined);
   imageDataUrl = signal('');
   processingImage = signal(false);
   imageError = signal('');
@@ -147,6 +153,7 @@ export class RecipeFormComponent implements OnInit {
   }
   private loadMetadata(recipe: RecipeMetadata): void {
     const metadata = readRecipeMetadata(recipe);
+    this.color.set(metadata.color);
     populateMetadataForm(this.metadataForm, metadata);
     this.ingredientSections.clear();
     this.ingredients.controls.forEach((_, i) =>
@@ -337,6 +344,7 @@ export class RecipeFormComponent implements OnInit {
 
     const recipeData = {
       ...metadataFromForm(this.metadataForm),
+      color: this.color(),
       collectionIds: this.collectionIds.value,
       ingredientSections: this.ingredientSections.getRawValue().map((s) => s.trim()),
       stepDetails: this.stepDetails.getRawValue().map((detail) => ({

@@ -41,12 +41,14 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
   selected = signal<Set<FormControl<string>>>(new Set());
   dragHeight = signal(52);
   private host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-  removed = signal<{
-    control: FormControl<string>;
-    groupId: number;
-    index: number;
-    detail?: StepFields;
-  } | null>(null);
+  removed = signal<
+    {
+      control: FormControl<string>;
+      groupId: number;
+      index: number;
+      detail?: StepFields;
+    }[]
+  >([]);
   private rowIds = new WeakMap<FormControl<string>, number>();
   private nextRowId = 1;
   rowId(control: FormControl<string>): string {
@@ -90,7 +92,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     this.sync();
   }
   ngOnDestroy() {
-    this.dragImage?.remove();
+    this.endDrag();
   }
   createGroup() {
     const id = this.nextId++;
@@ -126,7 +128,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     this.sync();
     this.message.set('Group removed. Its items are now ungrouped.');
   }
-  add(id: number) {
+  add(id: number, after?: FormControl<string>) {
     const control = new FormControl('', {
       nonNullable: true,
     });
@@ -140,31 +142,44 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
         }),
       );
     this.groups.update((groups) =>
-      groups.map((g) => (g.id === id ? { ...g, rows: [...g.rows, control] } : g)),
+      groups.map((g) => {
+        if (g.id !== id) return g;
+        const rows = [...g.rows];
+        rows.splice(after ? rows.indexOf(after) + 1 : rows.length, 0, control);
+        return { ...g, rows };
+      }),
     );
     this.addingTo.set(null);
     this.sync();
     this.message.set(this.kind() + ' added.');
+    this.items().markAsDirty();
+    this.focusControl(control);
   }
   remove(control: FormControl<string>) {
     const group = this.groups().find((item) => item.rows.includes(control));
     if (!group) return;
-    this.removed.set({
-      control,
-      groupId: group.id,
-      index: group.rows.indexOf(control),
-      detail: this.details.get(control),
-    });
+    const globalIndex = this.items().controls.indexOf(control);
+    this.removed.update((history) => [
+      ...history,
+      {
+        control,
+        groupId: group.id,
+        index: group.rows.indexOf(control),
+        detail: this.details.get(control),
+      },
+    ]);
     this.groups.update((groups) =>
       groups.map((g) => ({ ...g, rows: g.rows.filter((row) => row !== control) })),
     );
     this.details.delete(control);
     this.sync();
     this.message.set(this.kind() + ' removed. Undo is available.');
-    queueMicrotask(() => this.host.querySelector<HTMLButtonElement>('.undo-remove')?.focus());
+    const neighbour = this.items().controls[Math.min(globalIndex, this.items().length - 1)];
+    if (neighbour) this.focusControl(neighbour);
+    this.items().markAsDirty();
   }
   undoRemove() {
-    const removed = this.removed();
+    const removed = this.removed().at(-1);
     if (!removed) return;
     if (removed.detail) this.details.set(removed.control, removed.detail);
     this.groups.update((groups) =>
@@ -175,25 +190,84 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
         return { ...group, rows };
       }),
     );
-    this.removed.set(null);
+    this.removed.update((history) => history.slice(0, -1));
     this.sync();
     this.message.set(this.kind() + ' restored.');
-    queueMicrotask(() => document.getElementById(this.rowId(removed.control))?.focus());
+    this.focusControl(removed.control);
   }
-  closeOptions(options: HTMLDetailsElement, control: FormControl<string>) {
-    options.removeAttribute('open');
-    queueMicrotask(() =>
+  private focusControl(control: FormControl<string>): void {
+    requestAnimationFrame(() => document.getElementById(this.rowId(control))?.focus());
+  }
+  ingredientEnter(event: KeyboardEvent, control: FormControl<string>, groupId: number): void {
+    if (
+      event.key !== 'Enter' ||
+      event.isComposing ||
+      event.shiftKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey
+    )
+      return;
+    event.preventDefault();
+    this.add(groupId, control);
+  }
+  pasteRows(event: ClipboardEvent, control: FormControl<string>, groupId: number): void {
+    const raw = event.clipboardData?.getData('text/plain') ?? '';
+    if (!/[\r\n\u2028\u2029]/.test(raw)) return;
+    const lines = raw
+      .split(/[\r\n\u2028\u2029]+/)
+      .map((line) =>
+        line
+          .trim()
+          .replace(/^(?:[•●◦▪▫‣⁃]\s*|[-*+]\s+|(?:\d+|[A-Za-z])[.)]\s+)/, '')
+          .replace(/^\[[ xX]\]\s*/, '')
+          .trim(),
+      )
+      .filter(Boolean);
+    if (!lines.length) return;
+    event.preventDefault();
+    const field = event.target as HTMLTextAreaElement;
+    lines[0] = control.value.slice(0, field.selectionStart) + lines[0];
+    lines[lines.length - 1] += control.value.slice(field.selectionEnd);
+    control.setValue(lines[0]);
+    control.markAsDirty();
+    const extra = lines.slice(1).map((text) => new FormControl(text, { nonNullable: true }));
+    if (this.stepDetails())
+      for (const item of extra)
+        this.details.set(
+          item,
+          new FormGroup({
+            section: new FormControl('', { nonNullable: true }),
+            imageUrl: new FormControl('', { nonNullable: true }),
+            imageDataUrl: new FormControl('', { nonNullable: true }),
+          }),
+        );
+    this.groups.update((groups) =>
+      groups.map((group) => {
+        if (group.id !== groupId) return group;
+        const rows = [...group.rows];
+        rows.splice(rows.indexOf(control) + 1, 0, ...extra);
+        return { ...group, rows };
+      }),
+    );
+    this.sync();
+    this.items().markAsDirty();
+    this.message.set(
+      lines.length + ' ' + (this.kind() === 'step' ? 'steps' : 'ingredients') + ' pasted.',
+    );
+    this.focusControl(extra.at(-1) ?? control);
+  }
+  handleKey(event: KeyboardEvent, control: FormControl<string>): void {
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    event.preventDefault();
+    this.shift(control, event.key === 'ArrowUp' ? -1 : 1);
+    requestAnimationFrame(() =>
       document
         .getElementById(this.rowId(control))
         ?.closest('.editor-row')
-        ?.querySelector<HTMLElement>('summary')
+        ?.querySelector<HTMLButtonElement>('.drag-handle')
         ?.focus(),
     );
-  }
-  inGroup(control: FormControl<string>, id: number): boolean {
-    return !!this.groups()
-      .find((group) => group.id === id)
-      ?.rows.includes(control);
   }
   pruneEmpty() {
     this.groups.update((groups) =>
@@ -255,6 +329,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
       }),
     );
     this.addingTo.set(null);
+    this.items().markAsDirty();
     this.sync();
     this.message.set(this.kind() + ' moved to position ' + this.number(control) + '.');
   }
@@ -285,7 +360,14 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
       }
     }
   }
+  private touchPoint?: { id: number; x: number; y: number; target: HTMLElement };
+  private scrollFrame = 0;
   endDrag() {
+    cancelAnimationFrame(this.scrollFrame);
+    this.scrollFrame = 0;
+    if (this.touchPoint?.target.hasPointerCapture(this.touchPoint.id))
+      this.touchPoint.target.releasePointerCapture(this.touchPoint.id);
+    this.touchPoint = undefined;
     this.dragging.set(null);
     this.destination.set(null);
     this.dragImage?.remove();
@@ -301,13 +383,15 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     }
     event.preventDefault();
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-    const host = event.currentTarget as HTMLElement;
+    this.destinationAt(event.clientY, event.currentTarget as HTMLElement);
+  }
+  private destinationAt(clientY: number, host: HTMLElement): void {
     const elements = Array.from(host.querySelectorAll<HTMLElement>('[data-group-id]'));
     let nearest: HTMLElement | undefined,
       distance = Infinity;
     for (const el of elements) {
       const r = el.getBoundingClientRect();
-      const d = Math.max(r.top - event.clientY, 0, event.clientY - r.bottom);
+      const d = Math.max(r.top - clientY, 0, clientY - r.bottom);
       if (d < distance) {
         distance = d;
         nearest = el;
@@ -321,7 +405,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     for (let i = 0; i < rows.length; i++) {
       if (group.rows[i] === this.dragging()) continue;
       const rect = rows[i].getBoundingClientRect();
-      if (event.clientY < rect.top + rect.height / 2) {
+      if (clientY < rect.top + rect.height / 2) {
         before = group.rows[i];
         break;
       }
@@ -329,6 +413,59 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     const current = this.destination();
     if (current?.groupId !== group.id || current?.before !== before)
       this.destination.set({ groupId: group.id, before });
+  }
+  touchStart(event: PointerEvent, control: FormControl<string>): void {
+    if (event.pointerType === 'mouse' || !event.isPrimary) return;
+    event.preventDefault();
+    const target = event.currentTarget as HTMLElement,
+      row = target.closest<HTMLElement>('.editor-row');
+    if (!row) return;
+    this.dragging.set(control);
+    this.addingTo.set(null);
+    this.dragHeight.set(row.offsetHeight);
+    this.touchPoint = { id: event.pointerId, x: event.clientX, y: event.clientY, target };
+    target.setPointerCapture(event.pointerId);
+    this.dragImage = row.cloneNode(true) as HTMLElement;
+    this.dragImage.style.cssText =
+      'position:fixed;z-index:100;pointer-events:none;opacity:.8;background:var(--color-surface);padding:4px;border-radius:6px;width:' +
+      row.offsetWidth +
+      'px;left:' +
+      row.getBoundingClientRect().left +
+      'px;top:0;';
+    document.body.appendChild(this.dragImage);
+    this.touchMove(event);
+  }
+  touchMove(event: PointerEvent): void {
+    if (!this.touchPoint || event.pointerId !== this.touchPoint.id) return;
+    event.preventDefault();
+    this.touchPoint.x = event.clientX;
+    this.touchPoint.y = event.clientY;
+    if (this.dragImage)
+      this.dragImage.style.transform = 'translateY(' + (event.clientY - 24) + 'px)';
+    this.destinationAt(event.clientY, this.host);
+    if (!this.scrollFrame) this.scrollFrame = requestAnimationFrame(() => this.scrollTouch());
+  }
+  private scrollTouch(): void {
+    this.scrollFrame = 0;
+    const point = this.touchPoint;
+    if (!point) return;
+    const delta = point.y < 70 ? -8 : point.y > innerHeight - 90 ? 8 : 0;
+    if (delta) {
+      window.scrollBy(0, delta);
+      this.destinationAt(point.y, this.host);
+      this.scrollFrame = requestAnimationFrame(() => this.scrollTouch());
+    }
+  }
+  touchEnd(event: PointerEvent): void {
+    if (!this.touchPoint || event.pointerId !== this.touchPoint.id) return;
+    event.preventDefault();
+    const control = this.dragging(),
+      to = this.destination();
+    if (control && to) this.move(control, to.groupId, to.before);
+    this.endDrag();
+  }
+  touchCancel(): void {
+    if (this.touchPoint) this.endDrag();
   }
   dragLeave(event: DragEvent) {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();

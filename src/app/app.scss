@@ -77,7 +77,16 @@ main:focus {
   box-shadow: 0 8px 24px #14141320;
   animation: toast-in 300ms var(--ease-out);
 }
+.toast > span {
+  min-width: 0;
+}
+.toast .undo-action {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .toast button {
+  flex-shrink: 0;
   border: 0;
   color: inherit;
   padding: 10px;
