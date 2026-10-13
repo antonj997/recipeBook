@@ -7,6 +7,8 @@ export interface RecipeMenu {
   x: number;
   y: number;
   trigger: HTMLElement;
+  fromDetail?: boolean;
+  afterDelete?: () => Promise<unknown>;
 }
 export interface RecipeDeleteRequest {
   recipe: Recipe;
@@ -30,6 +32,21 @@ export class RecipeActionsService {
   }
   open(recipe: Recipe, x: number, y: number, trigger: HTMLElement): void {
     this.menu.set({ recipe, x, y, trigger });
+  }
+  openDetails(recipe: Recipe, trigger: HTMLElement, afterDelete: () => Promise<unknown>): void {
+    if (this.menu()?.trigger === trigger) {
+      this.menu.set(null);
+      return;
+    }
+    const rect = trigger.getBoundingClientRect();
+    this.menu.set({
+      recipe,
+      trigger,
+      x: rect.right - 260,
+      y: rect.bottom + 8,
+      fromDetail: true,
+      afterDelete,
+    });
   }
   delete(recipe: Recipe, afterDelete?: () => Promise<unknown>): void {
     this.menu.set(null);

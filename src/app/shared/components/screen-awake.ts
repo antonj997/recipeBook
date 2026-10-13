@@ -14,7 +14,19 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
           [class.is-on]="enabled()"
           (click)="toggle()"
         >
-          <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+          <span class="switch-track" aria-hidden="true">
+            <svg
+              class="switch-thumb"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m4 12 5 5L20 6" pathLength="1" />
+            </svg>
+          </span>
           <span>Keep screen on</span>
         </button>
         @if (notice()) {
@@ -42,31 +54,39 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
       color: var(--color-ink);
     }
     .switch-track {
-      width: 46px;
-      height: 28px;
-      padding: 3px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 32px;
+      height: 32px;
       border: 1px solid var(--color-control-border);
-      border-radius: 20px;
+      border-radius: 8px;
       background: var(--color-surface);
-      transition: background 220ms var(--ease-out);
+      color: var(--color-surface);
+      transition:
+        background 220ms var(--ease-out),
+        border-color 220ms var(--ease-out);
     }
     .switch-thumb {
-      display: block;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: var(--color-ink);
-      transition:
-        transform 250ms var(--ease-out),
-        background 220ms;
+      width: 22px;
+      height: 22px;
+      transform: scale(0.85);
+      transition: transform 250ms var(--ease-out);
+    }
+    .switch-thumb path {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      transition: stroke-dashoffset 250ms var(--ease-out);
     }
     .is-on .switch-track {
       background: var(--color-green);
       border-color: var(--color-green);
     }
     .is-on .switch-thumb {
-      transform: translateX(18px);
-      background: var(--color-surface);
+      transform: scale(1);
+    }
+    .is-on .switch-thumb path {
+      stroke-dashoffset: 0;
     }
     button:disabled {
       opacity: 0.65;
@@ -84,7 +104,8 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
     }
     @media (prefers-reduced-motion: reduce) {
       .switch-track,
-      .switch-thumb {
+      .switch-thumb,
+      .switch-thumb path {
         transition: none;
       }
     }

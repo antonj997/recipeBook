@@ -19,6 +19,10 @@ import { FoodDoodleComponent } from './food-doodle';
 
 @Component({
   selector: 'app-recipe-actions',
+  host: {
+    '(window:resize)': 'actions.menu.set(null)',
+    '(window:scroll)': 'actions.menu.set(null)',
+  },
   imports: [CheckboxMarkComponent, FoodDoodleComponent],
   template: `
     <span id="recipe-actions-hint" class="sr-only"
@@ -26,6 +30,7 @@ import { FoodDoodleComponent } from './food-doodle';
     >
     <div
       #menu
+      id="recipe-actions-menu"
       popover
       class="recipe-context-menu glass-menu"
       [style.left.px]="menuLeft()"
@@ -37,9 +42,11 @@ import { FoodDoodleComponent } from './food-doodle';
     >
       @if (actions.menu(); as selected) {
         <p>{{ selected.recipe.title }}</p>
-        <button type="button" role="menuitem" (click)="changeCategories()">
-          Change categories
-        </button>
+        @if (!selected.fromDetail) {
+          <button type="button" role="menuitem" (click)="changeCategories()">
+            Change categories
+          </button>
+        }
         <button type="button" role="menuitem" (click)="edit()">Edit recipe</button>
         <button type="button" role="menuitem" class="remove-recipe" (click)="requestDelete()">
           Delete recipe
@@ -342,10 +349,10 @@ export class RecipeActionsOverlayComponent {
     void this.router.navigate(['/recipes', recipe.id, 'edit']);
   }
   requestDelete(): void {
-    const recipe = this.actions.menu()?.recipe;
-    if (recipe) {
+    const selected = this.actions.menu();
+    if (selected) {
       this.transferringFocus = true;
-      this.actions.delete(recipe);
+      this.actions.delete(selected.recipe, selected.afterDelete);
     }
   }
   async changeCategories(): Promise<void> {

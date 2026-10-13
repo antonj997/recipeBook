@@ -3,6 +3,10 @@
 }
 .recipe-navigation.page {
   padding-bottom: 0;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
 }
 .recipe-intro.page,
 .recipe-footer.page,
@@ -12,8 +16,30 @@
 .recipe-intro.page {
   padding-bottom: 0;
 }
+.recipe-footer.page {
+  max-width: none;
+  padding-inline: max(var(--page-gutter), calc((100% - 75ch) / 2));
+  background: var(--color-surface);
+}
 .recipe-detail {
   overflow-anchor: none;
+  background: var(--page-background, var(--color-canvas));
+}
+.recipe-options {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 0 4px;
+  gap: 8px;
+  background: transparent;
+}
+.recipe-options app-icon {
+  width: 16px;
+  height: 16px;
+  transform: rotate(-90deg);
+  transition: transform 180ms var(--ease-out);
+}
+.recipe-options app-icon.is-open {
+  transform: rotate(90deg);
 }
 .recipe-overview {
   display: grid;
@@ -38,12 +64,6 @@
   max-height: 480px;
   object-fit: cover;
   border-radius: var(--radius-surface);
-}
-.recipe-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 28px;
 }
 .recipe-summary .error {
   margin-top: 16px;
@@ -140,34 +160,70 @@ li::marker {
   position: sticky;
   top: 0;
   z-index: 3;
-  display: flex;
-  gap: 8px;
-  padding-inline: max(var(--page-gutter), calc((100% - 75ch) / 2));
-  border-bottom: 1px solid var(--color-control-border);
-  background: var(--page-background, var(--color-canvas));
+  padding: 8px max(var(--page-gutter), calc((100% - 75ch) / 2));
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
-.section-switch button {
+.section-switch::after {
+  content: '';
+  position: absolute;
+  inset: 100% 0 auto;
+  height: 12px;
+  background: linear-gradient(var(--color-surface), transparent);
+  pointer-events: none;
+}
+.section-tabs {
   position: relative;
-  flex: 0 1 200px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 400px);
+  padding: 4px;
+  border-radius: 16px;
+  background: color-mix(
+    in srgb,
+    var(--page-background, var(--color-canvas)) 30%,
+    var(--color-surface)
+  );
+  isolation: isolate;
+}
+.section-tabs::before {
+  content: '';
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  width: calc((100% - 8px) / 2);
+  border-radius: 12px;
+  background: var(--color-ink);
+  transition:
+    transform 340ms var(--ease-out),
+    border-radius 180ms var(--ease-out);
+  pointer-events: none;
+}
+.section-tabs.instructions-selected::before {
+  transform: translateX(100%);
+}
+.section-tabs:active::before {
+  border-radius: 16px;
+}
+.section-tabs button {
+  position: relative;
   min-width: 0;
-  min-height: 52px;
-  margin-bottom: -1px;
-  padding: 14px 20px;
-  border: 1px solid transparent;
-  border-bottom-color: var(--color-control-border);
-  border-radius: 12px 12px 0 0;
+  min-height: 44px;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
   background: transparent;
   color: var(--color-ink);
   transform: none;
-  transition: border-color 180ms var(--ease-out);
+  transition: color 180ms var(--ease-out);
 }
-.section-switch button[aria-selected='true'] {
-  border-color: var(--color-control-border);
-  border-bottom-color: var(--color-surface);
-  background: var(--color-surface);
+.section-tabs button[aria-selected='true'] {
+  color: var(--color-surface);
 }
-.section-switch button:focus-visible {
-  z-index: 1;
+.section-tabs button:focus-visible {
+  outline: 2px solid var(--color-ink);
+}
+.section-tabs button[aria-selected='true']:focus-visible {
+  outline-color: var(--color-surface);
   outline-offset: -3px;
 }
 .recipe-body .inactive-panel {
@@ -183,13 +239,11 @@ li::marker {
   .recipe-summary {
     padding: 22px 0;
   }
-  .section-switch button {
-    flex: 1;
-    padding-inline: 12px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .section-switch button {
+  .section-tabs::before,
+  .section-tabs button,
+  .recipe-options app-icon {
     transition: none;
   }
 }
@@ -291,8 +345,9 @@ li::marker {
   }
 }
 @media (hover: hover) {
-  .section-switch button:hover:not([aria-selected='true']) {
-    border-color: var(--color-control-border);
+  .section-tabs button:hover:not([aria-selected='true']) {
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
 }
 

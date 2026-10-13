@@ -1,6 +1,21 @@
 <article class="recipe-detail" [class.draft-preview]="isDraft">
   <div class="recipe-navigation page">
     <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
+    @if (!isDraft && recipe() && !loading() && !error()) {
+      <button
+        #optionsButton
+        type="button"
+        class="recipe-options"
+        aria-label="Recipe options"
+        aria-haspopup="menu"
+        aria-controls="recipe-actions-menu"
+        [attr.aria-expanded]="optionsOpen()"
+        (click)="openOptions(optionsButton)"
+        (keydown.arrowdown)="$event.preventDefault(); openOptions(optionsButton)"
+      >
+        Options <app-icon name="chevron" [class.is-open]="optionsOpen()" />
+      </button>
+    }
   </div>
   @if (loading()) {
     <div class="recipe-message page"><app-loading-state label="Loading recipe…" /></div>
@@ -31,34 +46,37 @@
         <app-screen-awake />
       </div>
       <div class="recipe-sections">
-        <div
-          class="section-switch"
-          role="tablist"
-          aria-label="Recipe section"
-          (keydown)="tabKey($event)"
-        >
-          <button
-            type="button"
-            [attr.aria-selected]="activeSection() === 'ingredients'"
-            [attr.tabindex]="activeSection() === 'ingredients' ? 0 : -1"
-            role="tab"
-            id="recipe-ingredients-tab"
-            aria-controls="ingredients-panel"
-            (click)="switchSection('ingredients')"
+        <div class="section-switch">
+          <div
+            class="section-tabs"
+            [class.instructions-selected]="activeSection() === 'instructions'"
+            role="tablist"
+            aria-label="Recipe section"
+            (keydown)="tabKey($event)"
           >
-            Ingredients
-          </button>
-          <button
-            type="button"
-            [attr.aria-selected]="activeSection() === 'instructions'"
-            [attr.tabindex]="activeSection() === 'instructions' ? 0 : -1"
-            role="tab"
-            id="recipe-instructions-tab"
-            aria-controls="instructions-panel"
-            (click)="switchSection('instructions')"
-          >
-            Instructions
-          </button>
+            <button
+              type="button"
+              [attr.aria-selected]="activeSection() === 'ingredients'"
+              [attr.tabindex]="activeSection() === 'ingredients' ? 0 : -1"
+              role="tab"
+              id="recipe-ingredients-tab"
+              aria-controls="ingredients-panel"
+              (click)="switchSection('ingredients')"
+            >
+              Ingredients
+            </button>
+            <button
+              type="button"
+              [attr.aria-selected]="activeSection() === 'instructions'"
+              [attr.tabindex]="activeSection() === 'instructions' ? 0 : -1"
+              role="tab"
+              id="recipe-instructions-tab"
+              aria-controls="instructions-panel"
+              (click)="switchSection('instructions')"
+            >
+              Instructions
+            </button>
+          </div>
         </div>
         <div #recipeBody class="recipe-body" [style.--section-height]="sectionHeight() + 'px'">
           <section
@@ -180,16 +198,6 @@
           <p role="status">{{ stepPhotoNotice() }}</p>
         }
         <app-recipe-extra-details [recipe]="selectedRecipe" />
-        @if (!isDraft) {
-          <div class="recipe-actions">
-            <a class="button edit-button" [routerLink]="['/recipes', selectedRecipe.id, 'edit']"
-              >Edit Recipe</a
-            >
-            <button type="button" class="delete-button" (click)="openDeleteDialog()">
-              Delete Recipe
-            </button>
-          </div>
-        }
         @if (isDraft && drafts.photoNotice()) {
           <p role="status">{{ drafts.photoNotice() }}</p>
         }

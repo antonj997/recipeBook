@@ -12,6 +12,14 @@
   padding: 22px var(--page-gutter);
   border-bottom: 1px solid var(--color-border);
 }
+:host(.recipe-page) {
+  background: var(--color-surface);
+}
+:host(.recipe-page) .app-header {
+  max-width: none;
+  padding-inline: max(var(--page-gutter), calc((100% - 1360px) / 2 + var(--page-gutter)));
+  background: var(--color-surface);
+}
 .brand {
   position: relative;
   font-family: Arial, Helvetica, sans-serif;

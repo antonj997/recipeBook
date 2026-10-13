@@ -28,6 +28,7 @@ import { FeedbackService } from './core/services/feedback.service';
   host: {
     '[class.touch-input]': 'touchInput()',
     '[style.--page-background]': 'appearance.background()',
+    '[class.recipe-page]': '!!appearance.background()',
     '(document:pointerdown)': 'onPointerDown($event)',
     '(document:keydown)': 'onNavigationKey($event)',
   },

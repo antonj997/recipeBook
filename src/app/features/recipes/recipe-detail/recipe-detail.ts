@@ -110,10 +110,13 @@ export class RecipeDetailComponent implements OnInit {
   private feedback = inject(FeedbackService);
   private actions = inject(RecipeActionsService);
   private appearance = inject(PageAppearanceService);
-  openDeleteDialog(): void {
+  optionsOpen = computed(
+    () => !!this.actions.menu()?.fromDetail && this.actions.menu()?.recipe.id === this.recipe()?.id,
+  );
+  openOptions(trigger: HTMLButtonElement): void {
     const recipe = this.recipe();
-    if (!recipe || this.accountChanged()) return;
-    this.actions.delete(recipe, () => this.router.navigate(['/']));
+    if (!recipe || this.isDraft || this.accountChanged()) return;
+    this.actions.openDetails(recipe, trigger, () => this.router.navigate(['/']));
   }
 
   collectionNames = signal<string[]>([]);
