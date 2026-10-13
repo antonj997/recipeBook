@@ -1,4 +1,8 @@
-import { defaultRecipeColor, isRecipeColor } from '../../core/models/recipe-color';
+import {
+  defaultRecipeColor,
+  isRecipeColor,
+  recipeColorBackground,
+} from '../../core/models/recipe-color';
 import { Component, computed, input } from '@angular/core';
 import { FoodDoodleComponent } from './food-doodle';
 
@@ -27,12 +31,12 @@ function hash(seed: string): number {
 
 // Photo cards also keep their color when filtering, sorting or returning.
 export function photoCardBackground(seed: string): string {
-  return 'var(--color-' + defaultRecipeColor(seed, true) + ')';
+  return recipeColorBackground(defaultRecipeColor(seed, true));
 }
 
 // Cards and their missing-photo artwork share one stable color choice.
 export function foodPlaceholderBackground(seed: string): string {
-  return 'var(--color-' + defaultRecipeColor(seed) + ')';
+  return recipeColorBackground(defaultRecipeColor(seed));
 }
 
 @Component({
@@ -48,9 +52,10 @@ export class FoodPlaceholderComponent {
   seed = input.required<string>();
   color = input<string>();
   kind = computed(() => kinds[hash('food:' + this.seed()) % kinds.length]);
-  background = computed(() =>
-    isRecipeColor(this.color())
-      ? 'var(--color-' + this.color() + ')'
-      : foodPlaceholderBackground(this.seed()),
-  );
+  background = computed(() => {
+    const color = this.color();
+    return isRecipeColor(color)
+      ? recipeColorBackground(color)
+      : foodPlaceholderBackground(this.seed());
+  });
 }

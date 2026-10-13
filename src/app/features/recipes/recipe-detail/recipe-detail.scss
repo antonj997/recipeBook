@@ -34,6 +34,9 @@
   display: flow-root;
   background: var(--color-surface);
 }
+.recipe-navigation .back-link {
+  color: var(--color-ink);
+}
 .recipe-options {
   flex: 0 0 auto;
   border: 0;

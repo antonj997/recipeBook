@@ -1,5 +1,9 @@
-import { Component, model } from '@angular/core';
-import { recipeColors, type RecipeColor } from '../../core/models/recipe-color';
+import { Component, computed, model } from '@angular/core';
+import {
+  recipeColors,
+  recipeColorBackground,
+  type RecipeColor,
+} from '../../core/models/recipe-color';
 import { IconComponent } from './icon';
 
 @Component({
@@ -22,11 +26,11 @@ import { IconComponent } from './icon';
           class="color-choice"
           [attr.aria-label]="'Recipe color: ' + option.label"
           [title]="option.label"
-          [attr.aria-pressed]="color() === option.id"
+          [attr.aria-pressed]="selectedColor() === option.id"
           (click)="color.set(option.id)"
         >
-          <span [style.background]="'var(--color-' + option.id + ')'">
-            @if (color() === option.id) {
+          <span [style.background]="background(option.id)">
+            @if (selectedColor() === option.id) {
               <app-icon name="check" />
             }
           </span>
@@ -65,6 +69,7 @@ import { IconComponent } from './icon';
       width: 34px;
       height: 34px;
       border-radius: 8px;
+      border: 1px solid var(--color-muted);
     }
     .color-choice[aria-pressed='true'] span {
       outline: 1px solid var(--color-ink);
@@ -91,4 +96,6 @@ import { IconComponent } from './icon';
 export class RecipeColorPickerComponent {
   color = model<RecipeColor | undefined>();
   colors = recipeColors;
+  readonly background = recipeColorBackground;
+  readonly selectedColor = computed(() => (this.color() === 'sky' ? 'blue' : this.color()));
 }
