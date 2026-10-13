@@ -41,8 +41,8 @@ import { FoodDoodleComponent } from './food-doodle';
       (keydown)="menuKey($event)"
     >
       @if (actions.menu(); as selected) {
-        <p>{{ selected.recipe.title }}</p>
         @if (!selected.fromDetail) {
+          <p>{{ selected.recipe.title }}</p>
           <button type="button" role="menuitem" (click)="changeCategories()">
             Change categories
           </button>
