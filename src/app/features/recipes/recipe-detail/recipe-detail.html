@@ -9,8 +9,9 @@
         aria-label="Recipe options"
         aria-haspopup="menu"
         aria-controls="recipe-actions-menu"
+        popovertarget="recipe-actions-menu"
         [attr.aria-expanded]="optionsOpen()"
-        (click)="openOptions(optionsButton)"
+        (click)="$event.preventDefault(); openOptions(optionsButton)"
         (keydown.arrowdown)="$event.preventDefault(); openOptions(optionsButton)"
       >
         Options <app-icon name="chevron" [class.is-open]="optionsOpen()" />
