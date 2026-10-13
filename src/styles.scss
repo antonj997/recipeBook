@@ -34,13 +34,12 @@
   --radius-surface: 14px;
   --page-gutter: clamp(20px, 4vw, 48px);
   --app-top-inset: env(safe-area-inset-top, 0px);
+  --app-header-height: calc(89px + var(--app-top-inset));
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* iOS can report no top inset in standalone mode. Keep an opaque edge large enough
-   for WebKit to sample instead of allowing sticky recipe colors to tint the status bar. */
-@media (max-width: 700px) {
+@media (max-width: 600px) {
   :root {
-    --app-top-inset: max(12px, env(safe-area-inset-top, 0px));
+    --app-header-height: calc(73px + var(--app-top-inset));
   }
 }
 *,

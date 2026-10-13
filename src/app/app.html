@@ -1,8 +1,7 @@
-<div class="status-bar-surface" aria-hidden="true"></div>
 <a class="skip-link" href="#main-content" (click)="$event.preventDefault(); mainContent.focus()"
   >Skip to content</a
 >
-<header class="app-header">
+<header #appHeader class="app-header">
   <a class="brand" routerLink="/" aria-label="Recipebook home">
     <span class="brand-word" aria-hidden="true">Recipebook</span>
   </a>

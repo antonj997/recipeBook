@@ -1,6 +1,5 @@
 import { PageAppearanceService } from './core/services/page-appearance.service';
 import { RecipeActionsOverlayComponent } from './shared/components/recipe-actions-overlay';
-import { effect } from '@angular/core';
 import { CloudCookbookService } from './core/services/cloud-cookbook.service';
 import { RecipeDraftService } from './core/services/recipe-draft.service';
 import { LeaveConfirmationService } from './core/services/leave-confirmation.service';
@@ -8,7 +7,16 @@ import { AppUpdateService } from './core/services/app-update.service';
 import { LeaveConfirmationComponent } from './shared/components/leave-confirmation';
 import { GuestRecipesDialogComponent } from './shared/components/guest-recipes-dialog';
 import { GuestRecipesService } from './core/services/guest-recipes.service';
-import { Component, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -28,6 +36,7 @@ import { FeedbackService } from './core/services/feedback.service';
   host: {
     '[class.touch-input]': 'touchInput()',
     '[style.--page-background]': 'appearance.background()',
+    '[style.--app-header-height]': 'headerHeight()',
     '[class.recipe-page]': '!!appearance.background()',
     '(document:pointerdown)': 'onPointerDown($event)',
     '(document:keydown)': 'onNavigationKey($event)',
@@ -37,6 +46,9 @@ import { FeedbackService } from './core/services/feedback.service';
 })
 export class App {
   protected readonly appearance = inject(PageAppearanceService);
+  protected readonly headerHeight = signal<string | null>(null);
+  private readonly appHeader = viewChild<ElementRef<HTMLElement>>('appHeader');
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly hideSettings = signal(false);
   private router = inject(Router);
   protected readonly onSettings = signal(false);
@@ -52,6 +64,18 @@ export class App {
   readonly accountChanging = signal(false);
 
   constructor() {
+    afterNextRender(() => {
+      const header = this.appHeader()?.nativeElement;
+      if (!header) return;
+      // Keep sticky tabs below the real header, including safe-area changes and enlarged text.
+      const updateHeight = () => {
+        this.headerHeight.set(Math.ceil(header.getBoundingClientRect().height) + 'px');
+      };
+      updateHeight();
+      const observer = new ResizeObserver(updateHeight);
+      observer.observe(header);
+      this.destroyRef.onDestroy(() => observer.disconnect());
+    });
     let version = this.cloud.auth.accountVersion();
     effect(() => {
       const next = this.cloud.auth.accountVersion();
