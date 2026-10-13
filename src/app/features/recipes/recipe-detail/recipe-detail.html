@@ -89,8 +89,7 @@
               tabindex="0"
               aria-labelledby="recipe-ingredients-tab"
             >
-              <div class="ingredients-heading">
-                <h2 id="ingredients-heading">Ingredients</h2>
+              <div class="ingredients-tools">
                 <app-select-menu
                   menuId="recipe-servings-menu"
                   [dragSelect]="true"
@@ -119,9 +118,14 @@
               tabindex="0"
               aria-labelledby="recipe-instructions-tab"
             >
-              <div class="instructions-heading">
-                <h2 id="instructions-heading">Instructions</h2>
-                @if (selectedRecipe.instructions.length) {
+              @if (selectedRecipe.instructions.length) {
+                <div class="instruction-tools">
+                  @if (!isDraft) {
+                    <p role="status">
+                      {{ completedSteps().size }} of
+                      {{ selectedRecipe.instructions.length }} completed
+                    </p>
+                  }
                   <button
                     type="button"
                     class="reset-instructions"
@@ -131,14 +135,6 @@
                   >
                     Reset
                   </button>
-                }
-              </div>
-              @if (!isDraft && selectedRecipe.instructions.length) {
-                <div class="step-progress">
-                  <p role="status">
-                    {{ completedSteps().size }} of
-                    {{ selectedRecipe.instructions.length }} completed
-                  </p>
                 </div>
               }
               <ol>

@@ -1,7 +1,22 @@
 :host {
   display: block;
   min-height: 100dvh;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) 0
+    env(safe-area-inset-left, 0px);
   background: var(--page-background, var(--color-canvas));
+}
+/* Keep scrolled content below the device status bar, even after the header leaves view. */
+:host::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--color-canvas);
+  pointer-events: none;
+  z-index: 40;
+}
+:host(.recipe-page)::before {
+  background: var(--color-surface);
 }
 .app-header {
   display: flex;

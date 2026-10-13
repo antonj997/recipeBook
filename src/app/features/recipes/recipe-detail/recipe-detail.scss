@@ -171,11 +171,19 @@ li::marker {
 }
 .section-switch {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 3;
   padding: 8px var(--page-gutter) 0;
   border-bottom: 1px solid var(--color-border);
   background: var(--page-background, var(--color-canvas));
+}
+.section-switch::after {
+  content: '';
+  position: absolute;
+  inset: 100% 0 auto;
+  height: 24px;
+  background: linear-gradient(to bottom, var(--color-surface), transparent);
+  pointer-events: none;
 }
 .section-tabs {
   position: relative;
@@ -317,18 +325,22 @@ li::marker {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.step-progress {
+.instruction-tools {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px 16px;
-  margin-bottom: 12px;
+  min-height: 44px;
+  margin-bottom: 20px;
   font-size: 0.9rem;
 }
-.step-progress p {
+.instruction-tools p {
   color: var(--color-muted);
   margin: 0;
+}
+.instruction-tools .reset-instructions {
+  margin-left: auto;
 }
 .group-heading {
   font-family: Arial, Helvetica, sans-serif;
@@ -383,17 +395,11 @@ li::marker {
   }
 }
 
-.ingredients-heading,
-.instructions-heading {
+.ingredients-tools {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-end;
+  min-height: 44px;
   margin-bottom: 20px;
-}
-.ingredients-heading h2,
-.instructions-heading h2 {
-  margin: 0;
 }
 .sr-only {
   position: absolute;

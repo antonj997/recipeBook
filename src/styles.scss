@@ -40,6 +40,12 @@
 *::after {
   box-sizing: border-box;
 }
+html {
+  background: var(--color-surface);
+}
+body:has(app-root.recipe-page) {
+  background: var(--color-surface);
+}
 body {
   margin: 0;
   background: var(--color-canvas);
