@@ -46,6 +46,7 @@ export class RecipeRailComponent implements OnDestroy {
   compact = input(false);
   addMenuId = input('');
   addMenuOpen = input(false);
+  addMenuActivate = output<void>();
   initialRecipeId = input('');
   activeRecipeChange = output<string>();
   private currentRecipeId = '';

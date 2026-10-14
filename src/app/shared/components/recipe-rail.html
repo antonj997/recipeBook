@@ -127,6 +127,7 @@
             [attr.popovertarget]="addMenuId()"
             [attr.aria-controls]="addMenuId()"
             [attr.aria-expanded]="addMenuOpen()"
+            (click)="addMenuActivate.emit()"
           >
             <app-icon name="plus" />
             <span>Add recipe</span>

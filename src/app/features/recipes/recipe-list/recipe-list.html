@@ -24,11 +24,16 @@
           type="button"
           class="primary"
           aria-label="Add recipe"
-          [attr.aria-expanded]="addMenuOpen()"
+          [attr.aria-expanded]="addMenuOwner() === 'toolbar'"
           popovertarget="add-recipe-options"
+          (click)="prepareAddMenu('toolbar')"
         >
           <app-icon name="plus" /><span class="add-label">Add recipe</span
-          ><app-icon name="chevron" class="add-chevron" [class.open]="addMenuOpen()" />
+          ><app-icon
+            name="chevron"
+            class="add-chevron"
+            [class.open]="addMenuOwner() === 'toolbar'"
+          />
         </button>
         <div
           id="add-recipe-options"
@@ -81,7 +86,8 @@
       <app-recipe-rail
         [compact]="true"
         addMenuId="add-recipe-options"
-        [addMenuOpen]="addMenuOpen()"
+        [addMenuOpen]="addMenuOwner() === 'shelf'"
+        (addMenuActivate)="prepareAddMenu('shelf')"
         [title]="categoryTitle()"
         railId="all-recipes-rail"
         [recipes]="filteredRecipes()"
@@ -156,7 +162,8 @@
             class="add-recipe-placeholder index-add-row"
             popovertarget="add-recipe-options"
             aria-controls="add-recipe-options"
-            [attr.aria-expanded]="addMenuOpen()"
+            [attr.aria-expanded]="addMenuOwner() === 'list'"
+            (click)="prepareAddMenu('list')"
           >
             <app-icon name="plus" /><span>Add recipe</span>
           </button>

@@ -26,6 +26,8 @@ import { IconComponent } from '../../../shared/components/icon';
 import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
 
+type AddMenuOwner = 'toolbar' | 'shelf' | 'list';
+
 @Component({
   selector: 'app-recipe-list',
   imports: [
@@ -51,9 +53,15 @@ export class RecipeListComponent {
   private initial = this.library.read();
   formatTime = formatRecipeTime;
   recipeBackground = recipeBackground;
-  addMenuOpen = signal(false);
+  addMenuOwner = signal<AddMenuOwner | null>(null);
+  private pendingAddMenuOwner: AddMenuOwner = 'toolbar';
+  prepareAddMenu(owner: AddMenuOwner): void {
+    this.pendingAddMenuOwner = owner;
+  }
   onAddMenuToggle(event: Event): void {
-    this.addMenuOpen.set((event as ToggleEvent).newState === 'open');
+    this.addMenuOwner.set(
+      (event as ToggleEvent).newState === 'open' ? this.pendingAddMenuOwner : null,
+    );
   }
   recipes = signal<Recipe[]>([]);
   query = signal(this.initial.query);
