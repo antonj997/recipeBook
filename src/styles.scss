@@ -33,6 +33,8 @@
   --radius-control: 6px;
   --radius-surface: 14px;
   --page-gutter: clamp(20px, 4vw, 48px);
+  --page-gutter-left: max(var(--page-gutter), env(safe-area-inset-left, 0px));
+  --page-gutter-right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
   --app-top-inset: env(safe-area-inset-top, 0px);
   --app-header-height: calc(89px + var(--app-top-inset));
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -132,7 +134,7 @@ small {
   width: 100%;
   max-width: 1360px;
   margin-inline: auto;
-  padding: 60px var(--page-gutter) 88px;
+  padding: 60px var(--page-gutter-right) 88px var(--page-gutter-left);
 }
 .page--narrow {
   max-width: 800px;

@@ -122,6 +122,29 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   collectionNames = signal<string[]>([]);
   activeSection = signal<CookingSection>('ingredients');
+  wideReading = signal(false);
+  private readingMedia?: MediaQueryList;
+  private layoutFocusFrame?: number;
+  // Both panels fit from 40rem; keep the selected portrait tab and cooking state intact.
+  private syncReadingLayout = (): void => {
+    const wide = this.readingMedia?.matches ?? false;
+    if (wide === this.wideReading()) return;
+    const focused = document.activeElement;
+    const inactive = this.activeSection() === 'ingredients' ? 'instructions' : 'ingredients';
+    const focusTarget = wide
+      ? focused?.closest('.section-switch') && this.activeSection() + '-panel'
+      : focused?.closest('#' + inactive + '-panel') && 'recipe-' + this.activeSection() + '-tab';
+    this.tabMotion?.cancel();
+    if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
+    this.sectionHeight.set(0);
+    this.wideReading.set(wide);
+    if (focusTarget) {
+      this.layoutFocusFrame = requestAnimationFrame(() => {
+        this.layoutFocusFrame = undefined;
+        document.getElementById(focusTarget)?.focus({ preventScroll: true });
+      });
+    }
+  };
   sectionHeight = signal(0);
   recipeBody = viewChild<ElementRef<HTMLElement>>('recipeBody');
   tabIndicator = viewChild<ElementRef<HTMLElement>>('tabIndicator');
@@ -219,6 +242,8 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.tabMotion?.cancel();
+    this.readingMedia?.removeEventListener('change', this.syncReadingLayout);
+    if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
   }
 
   saveCookingSession(): void {
@@ -329,6 +354,9 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   loading = signal(true);
   error = signal('');
   ngOnInit(): void {
+    this.readingMedia = window.matchMedia('(min-width: 40rem)');
+    this.syncReadingLayout();
+    this.readingMedia.addEventListener('change', this.syncReadingLayout);
     void this.loadRecipe();
   }
 

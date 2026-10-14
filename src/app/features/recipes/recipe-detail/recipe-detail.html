@@ -1,4 +1,4 @@
-<article class="recipe-detail" [class.draft-preview]="isDraft">
+<article class="recipe-detail" [class.draft-preview]="isDraft" [class.wide-reading]="wideReading()">
   <div class="recipe-navigation page">
     <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
     @if (!isDraft && recipe() && !loading() && !error()) {
@@ -84,12 +84,15 @@
           <div #recipeBody class="recipe-body" [style.--section-height]="sectionHeight() + 'px'">
             <section
               id="ingredients-panel"
-              [class.inactive-panel]="activeSection() !== 'ingredients'"
+              [class.inactive-panel]="!wideReading() && activeSection() !== 'ingredients'"
               class="ingredients"
-              role="tabpanel"
-              tabindex="0"
-              aria-labelledby="recipe-ingredients-tab"
+              [attr.role]="wideReading() ? 'region' : 'tabpanel'"
+              [attr.tabindex]="wideReading() ? -1 : 0"
+              [attr.aria-labelledby]="
+                wideReading() ? 'ingredients-heading' : 'recipe-ingredients-tab'
+              "
             >
+              <h2 id="ingredients-heading" class="wide-section-heading">Ingredients</h2>
               <div class="ingredients-tools">
                 <app-select-menu
                   menuId="recipe-servings-menu"
@@ -113,12 +116,15 @@
             </section>
             <section
               id="instructions-panel"
-              [class.inactive-panel]="activeSection() !== 'instructions'"
+              [class.inactive-panel]="!wideReading() && activeSection() !== 'instructions'"
               class="instructions"
-              role="tabpanel"
-              tabindex="0"
-              aria-labelledby="recipe-instructions-tab"
+              [attr.role]="wideReading() ? 'region' : 'tabpanel'"
+              [attr.tabindex]="wideReading() ? -1 : 0"
+              [attr.aria-labelledby]="
+                wideReading() ? 'instructions-heading' : 'recipe-instructions-tab'
+              "
             >
+              <h2 id="instructions-heading" class="wide-section-heading">Instructions</h2>
               @if (selectedRecipe.instructions.length) {
                 <div class="instruction-tools">
                   @if (!isDraft) {

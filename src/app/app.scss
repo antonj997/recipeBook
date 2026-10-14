@@ -1,7 +1,6 @@
 :host {
   display: block;
   min-height: 100dvh;
-  padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
   background: var(--page-background, var(--color-canvas));
 }
 .app-header {
@@ -13,8 +12,9 @@
   z-index: 10;
   width: 100%;
   margin: auto;
-  padding: calc(22px + var(--app-top-inset))
-    max(var(--page-gutter), calc((100% - 1360px) / 2 + var(--page-gutter))) 22px;
+  padding-block: calc(22px + var(--app-top-inset)) 22px;
+  padding-left: max(var(--page-gutter-left), calc((100% - 1360px) / 2 + var(--page-gutter)));
+  padding-right: max(var(--page-gutter-right), calc((100% - 1360px) / 2 + var(--page-gutter)));
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   transition:
@@ -36,9 +36,13 @@
 :host(.recipe-page) {
   background: var(--color-surface);
 }
-@media (min-width: 701px) {
+@media (min-width: 88rem) {
   :host(.recipe-page) {
     background: var(--page-background, var(--color-canvas));
+  }
+  :host(.recipe-page) .app-header {
+    padding-left: max(var(--page-gutter-left), calc((100% - 75rem) / 2 + var(--page-gutter)));
+    padding-right: max(var(--page-gutter-right), calc((100% - 75rem) / 2 + var(--page-gutter)));
   }
 }
 .brand {

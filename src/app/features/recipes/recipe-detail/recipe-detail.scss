@@ -1,6 +1,12 @@
 :host {
   display: block;
 }
+.recipe-navigation.page,
+.recipe-intro.page {
+  max-width: none;
+  padding-left: var(--page-gutter-left);
+  padding-right: var(--page-gutter-right);
+}
 .recipe-navigation.page {
   padding-bottom: 0;
   display: flex;
@@ -19,7 +25,8 @@
 .recipe-footer.page {
   display: flow-root;
   max-width: none;
-  padding-inline: var(--page-gutter);
+  padding-left: var(--page-gutter-left);
+  padding-right: var(--page-gutter-right);
   background: var(--color-surface);
 }
 .recipe-detail {
@@ -83,7 +90,8 @@
 .recipe-body {
   display: flow-root;
   min-height: var(--section-height, 0px);
-  padding-inline: var(--page-gutter);
+  padding-left: var(--page-gutter-left);
+  padding-right: var(--page-gutter-right);
   background: var(--color-surface);
 }
 .ingredients {
@@ -173,7 +181,7 @@ li::marker {
   position: sticky;
   top: var(--app-header-height);
   z-index: 3;
-  padding: 8px var(--page-gutter) 0;
+  padding: 8px var(--page-gutter-right) 0 var(--page-gutter-left);
   border-bottom: 1px solid var(--color-border);
   background: var(--page-background, var(--color-canvas));
 }
@@ -269,19 +277,53 @@ li::marker {
     transition: none;
   }
 }
-@media (min-width: 701px) {
+.wide-section-heading {
+  display: none;
+}
+.wide-reading .section-switch {
+  display: none;
+}
+.wide-reading .recipe-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: clamp(24px, 4vw, 48px);
+  min-height: 0;
+}
+.wide-reading :where(.ingredients, .instructions) {
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding-block: 32px;
+}
+.wide-reading .instructions {
+  padding-left: clamp(24px, 4vw, 48px);
+  border-left: 1px solid var(--color-border);
+}
+.wide-reading .wide-section-heading {
+  display: block;
+  font-size: 1.25rem;
+  margin-bottom: 20px;
+}
+@media (min-width: 40rem) and (max-height: 32rem) {
+  .recipe-navigation.page {
+    padding-top: 20px;
+  }
+}
+/* Keep tablet-sized reading surfaces edge to edge; frame them only on large screens. */
+@media (min-width: 88rem) {
   .recipe-detail {
     padding-bottom: 40px;
     background: var(--page-background, var(--color-canvas));
   }
+  .recipe-navigation.page,
+  .recipe-intro.page,
   .recipe-reading {
-    width: min(960px, calc(100% - 2 * var(--page-gutter)));
+    max-width: 75rem;
     margin-inline: auto;
+  }
+  .recipe-reading {
     border-radius: 16px;
     box-shadow: 0 12px 32px #14141314;
-  }
-  .section-switch {
-    border-radius: 16px 16px 0 0;
   }
   .recipe-footer.page {
     border-radius: 0 0 16px 16px;
