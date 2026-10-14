@@ -120,6 +120,18 @@
             </div>
           </a>
         }
+        @if (addMenuId()) {
+          <button
+            type="button"
+            class="add-recipe-placeholder rail-add-card"
+            [attr.popovertarget]="addMenuId()"
+            [attr.aria-controls]="addMenuId()"
+            [attr.aria-expanded]="addMenuOpen()"
+          >
+            <app-icon name="plus" />
+            <span>Add recipe</span>
+          </button>
+        }
       </div>
       <div
         class="edge-glass edge-glass--start"

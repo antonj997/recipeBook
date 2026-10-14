@@ -80,6 +80,8 @@
     @if (view() === 'shelf') {
       <app-recipe-rail
         [compact]="true"
+        addMenuId="add-recipe-options"
+        [addMenuOpen]="addMenuOpen()"
         [title]="categoryTitle()"
         railId="all-recipes-rail"
         [recipes]="filteredRecipes()"
@@ -147,6 +149,17 @@
               <button type="button" (click)="showAll()">Show all recipes</button>
             }
           </div>
+        }
+        @if (filteredRecipes().length) {
+          <button
+            type="button"
+            class="add-recipe-placeholder index-add-row"
+            popovertarget="add-recipe-options"
+            aria-controls="add-recipe-options"
+            [attr.aria-expanded]="addMenuOpen()"
+          >
+            <app-icon name="plus" /><span>Add recipe</span>
+          </button>
         }
       </section>
     }

@@ -177,6 +177,21 @@ small {
     color 180ms,
     transform 180ms var(--ease-out);
 }
+.add-recipe-placeholder {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 2px dotted var(--color-control-border);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 16px;
+}
+.add-recipe-placeholder app-icon {
+  width: 28px;
+  height: 28px;
+}
 .primary,
 .edit-button {
   background: var(--color-action);

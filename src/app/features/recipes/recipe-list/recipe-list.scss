@@ -48,9 +48,6 @@
 .add-control {
   flex-shrink: 0;
 }
-.add-control > button {
-  anchor-name: --add-button;
-}
 #add-recipe-options {
   position: fixed;
   inset: 0;
@@ -74,15 +71,24 @@
 #add-recipe-options:popover-open {
   animation: menu-in 180ms var(--ease-out);
 }
-@supports (position-anchor: --add-button) {
+@supports (position-anchor: auto) {
   #add-recipe-options {
-    position-anchor: --add-button;
+    position-anchor: auto;
     inset: auto;
     top: anchor(bottom);
     right: anchor(right);
     margin: 8px 0 0;
-    position-try-fallbacks: flip-inline;
+    position-try-fallbacks:
+      flip-block,
+      flip-inline,
+      flip-block flip-inline,
+      --add-menu-center;
   }
+}
+/* A tall carousel tile can leave no room above or below on a short screen. */
+@position-try --add-menu-center {
+  inset: 0;
+  margin: auto;
 }
 @keyframes menu-in {
   from {
@@ -349,4 +355,11 @@
   .index-row {
     transition: none;
   }
+}
+
+.index-add-row {
+  width: 100%;
+  min-height: 96px;
+  margin-top: 16px;
+  border-radius: 12px;
 }

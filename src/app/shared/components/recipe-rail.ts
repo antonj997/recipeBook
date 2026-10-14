@@ -44,6 +44,8 @@ export class RecipeRailComponent implements OnDestroy {
   formatTime = formatRecipeTime;
   recipeBackground = recipeBackground;
   compact = input(false);
+  addMenuId = input('');
+  addMenuOpen = input(false);
   initialRecipeId = input('');
   activeRecipeChange = output<string>();
   private currentRecipeId = '';
@@ -107,6 +109,7 @@ export class RecipeRailComponent implements OnDestroy {
   private targetIndex: number | null = null;
   private settleTimer?: ReturnType<typeof setTimeout>;
   private cardPositions: number[] = [];
+  private addCardPosition: number | null = null;
   private needsMeasurement = true;
   private suppressClickUntil = 0;
   private scrub?: {
@@ -155,7 +158,10 @@ export class RecipeRailComponent implements OnDestroy {
         this.restoreFrame = requestAnimationFrame(() => {
           this.restoreFrame = 0;
           const rail = this.rail()?.nativeElement;
-          if (!rail) return;
+          if (!rail) {
+            this.updateArrowState();
+            return;
+          }
           const index = Math.max(
             0,
             recipes.findIndex((recipe) => recipe.id === desired),
@@ -172,21 +178,26 @@ export class RecipeRailComponent implements OnDestroy {
     if (!this.needsMeasurement) return this.cardPositions;
     const rail = this.rail()?.nativeElement;
     if (!rail) return [];
-    const mobile = window.matchMedia('(max-width: 600px)').matches;
     const padding = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
     const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    // CSS defines the leading space for both centered and leading-edge snapping.
+    const position = (card: HTMLElement) => Math.max(0, Math.min(max, card.offsetLeft - padding));
     this.cardPositions = Array.from(rail.querySelectorAll<HTMLElement>('.recipe-card')).map(
-      (card) => {
-        const align = mobile ? (rail.clientWidth - card.offsetWidth) / 2 : padding;
-        return Math.max(0, Math.min(max, card.offsetLeft - align));
-      },
+      position,
     );
+    const addCard = rail.querySelector<HTMLElement>('.rail-add-card');
+    this.addCardPosition = addCard ? position(addCard) : null;
     this.needsMeasurement = false;
     return this.cardPositions;
   }
   updateArrowState(): void {
     const rail = this.rail()?.nativeElement;
-    if (!rail) return;
+    if (!rail) {
+      this.canScrollPrevious.set(false);
+      this.canScrollNext.set(false);
+      this.addCardPosition = null;
+      return;
+    }
     const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
     this.canScrollPrevious.set(rail.scrollLeft > 2);
     this.canScrollNext.set(rail.scrollLeft < max - 2);
@@ -213,7 +224,12 @@ export class RecipeRailComponent implements OnDestroy {
       (distance > 0 ? Math.max(0, Math.min(1, (rail.scrollLeft - positions[low]) / distance)) : 0);
     this.progress.set(progress);
     const nearest = Math.round(progress);
-    this.activeIndex.set(nearest);
+    const lastRecipe = positions.at(-1) ?? 0;
+    this.activeIndex.set(
+      this.addCardPosition !== null && rail.scrollLeft > (lastRecipe + this.addCardPosition) / 2
+        ? positions.length
+        : nearest,
+    );
     const id = this.recipes()[nearest]?.id ?? '';
     if (id && id !== this.currentRecipeId) {
       this.currentRecipeId = id;
@@ -428,7 +444,8 @@ export class RecipeRailComponent implements OnDestroy {
   }
   scrollByCard(direction: -1 | 1): void {
     const rail = this.rail()?.nativeElement;
-    const positions = this.positions();
+    const positions = [...this.positions()];
+    if (this.addCardPosition !== null) positions.push(this.addCardPosition);
     if (!rail || !positions.length) return;
     const current = this.targetIndex ?? this.activeIndex();
     let next = Math.max(0, Math.min(positions.length - 1, current + direction));
@@ -444,10 +461,11 @@ export class RecipeRailComponent implements OnDestroy {
   scrollToCard(index: number): void {
     const rail = this.rail()?.nativeElement;
     const positions = this.positions();
-    if (!rail || positions[index] == null) return;
+    const left = index === positions.length ? this.addCardPosition : positions[index];
+    if (!rail || left == null) return;
     this.targetIndex = index;
     rail.scrollTo({
-      left: positions[index],
+      left,
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
         ? 'instant'
         : 'smooth',
