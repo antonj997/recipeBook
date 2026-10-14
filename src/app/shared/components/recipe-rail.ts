@@ -146,7 +146,22 @@ export class RecipeRailComponent implements OnDestroy {
   }
 
   constructor() {
-    afterNextRender(() => this.updateArrowState());
+    afterNextRender(() => {
+      const rail = this.rail()?.nativeElement;
+      if (rail) {
+        // Restore before the router captures the destination, rather than in a later frame.
+        cancelAnimationFrame(this.restoreFrame);
+        this.restoreFrame = 0;
+        this.needsMeasurement = true;
+        const index = Math.max(
+          0,
+          this.recipes().findIndex((recipe) => recipe.id === this.initialRecipeId()),
+        );
+        this.targetIndex = null;
+        rail.scrollTo({ left: this.positions()[index] ?? 0, behavior: 'instant' });
+      }
+      this.updateArrowState();
+    });
     effect(() => {
       const recipes = this.recipes();
       const restore = this.initialRecipeId();
