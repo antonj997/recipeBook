@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Service, inject } from '@angular/core';
 import type { ActivatedRouteSnapshot, ViewTransitionInfo } from '@angular/router';
-import { PAGE_CURL_DURATION, curlDisplacementMap, pageCurl } from './page-curl';
+import { PAGE_CURL_DURATION, pageCurl } from './page-curl';
 
 /** Native page snapshots with a corner curl; no recipe content is copied or stored. */
 @Service()
@@ -25,14 +25,6 @@ export class PageTurnService {
       return;
     }
 
-    const filter = this.document.getElementById('book-page-curl');
-    const image = this.document.getElementById('book-curl-image');
-    const displacement = this.document.getElementById('book-curl-displacement');
-    if (!filter || !image || !displacement) {
-      transition.skipTransition();
-      return;
-    }
-
     const returning =
       next === '/' ||
       previous === '/settings' ||
@@ -41,12 +33,6 @@ export class PageTurnService {
     const top = this.document.querySelector('.app-header')?.getBoundingClientRect().bottom ?? 0;
     const width = Math.max(1, root.clientWidth);
     const height = Math.max(1, window.innerHeight - top);
-    const reference = (id: string) => new URL('#' + id, this.document.URL).href;
-    // Absolute same-document references also work with the router's <base> element.
-    const initial = pageCurl(width, height, 0);
-    image.setAttribute('href', curlDisplacementMap(initial.nx, initial.ny));
-    filter.setAttribute('width', String(width));
-    filter.setAttribute('height', String(window.innerHeight));
     const properties = [
       '--book-turn-top',
       '--book-turn-clip',
@@ -54,7 +40,6 @@ export class PageTurnService {
       '--book-turn-fold',
       '--book-turn-fold-width',
       '--book-turn-fold-length',
-      '--book-turn-warp',
     ];
     let frame = 0;
     this.active = transition;
@@ -62,7 +47,6 @@ export class PageTurnService {
       window.cancelAnimationFrame(frame);
       window.removeEventListener('resize', cancel);
       this.document.removeEventListener('visibilitychange', hidden);
-      displacement.setAttribute('scale', '0');
       root.removeAttribute('data-book-turn');
       for (const property of properties) root.style.removeProperty(property);
     };
@@ -74,7 +58,6 @@ export class PageTurnService {
     this.document.addEventListener('visibilitychange', hidden);
     root.setAttribute('data-book-turn', returning ? 'back' : 'forward');
     root.style.setProperty('--book-turn-top', top + 'px');
-    root.style.setProperty('--book-turn-warp', 'url("' + reference('book-page-curl') + '")');
 
     const polygon = (points: number[][]) =>
       'polygon(' +
@@ -100,12 +83,6 @@ export class PageTurnService {
           -curl.length / 2 +
           'px)',
       );
-      const size = Math.max(0.01, curl.radius * 16);
-      image.setAttribute('x', String(curl.nx * curl.distance - size / 2));
-      image.setAttribute('y', String(top + curl.ny * curl.distance - size / 2));
-      image.setAttribute('width', String(size));
-      image.setAttribute('height', String(size));
-      displacement.setAttribute('scale', String(curl.radius * 2));
     };
     draw(returning ? 1 : 0);
     const clear = () => {
@@ -116,8 +93,6 @@ export class PageTurnService {
     };
     void transition.ready.then(() => {
       if (this.active !== transition) return;
-      // Navigation has now changed the document URL; keep SVG references local.
-      root.style.setProperty('--book-turn-warp', 'url("' + reference('book-page-curl') + '")');
       const started = window.performance.now();
       const tick = (now: number) => {
         if (this.active !== transition) return;

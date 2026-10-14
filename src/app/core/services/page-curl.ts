@@ -37,25 +37,3 @@ export function pageCurl(width: number, height: number, progress: number) {
     length: diagonal * 2,
   };
 }
-
-/** A small vector displacement texture, reused for the entire turn. */
-export function curlDisplacementMap(nx: number, ny: number): string {
-  const peak = 'rgb(' + (128 + 80 * nx) + ',' + (128 + 80 * ny) + ',128)';
-  const svg =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="-8 -8 16 16">' +
-    '<defs><linearGradient id="bend" gradientUnits="userSpaceOnUse" x1="' +
-    -2.4 * nx +
-    '" y1="' +
-    -2.4 * ny +
-    '" x2="' +
-    0.3 * nx +
-    '" y2="' +
-    0.3 * ny +
-    '">' +
-    '<stop offset="0" stop-color="#808080"/><stop offset=".18" stop-color="#808080"/>' +
-    '<stop offset=".5" stop-color="' +
-    peak +
-    '"/><stop offset="1" stop-color="#808080"/>' +
-    '</linearGradient></defs><rect x="-8" y="-8" width="16" height="16" fill="url(#bend)"/></svg>';
-  return 'data:image/svg+xml,' + encodeURIComponent(svg);
-}

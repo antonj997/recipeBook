@@ -663,7 +663,7 @@ body {
   }
 }
 
-/* The lower-right curl bends the native page image along the moving crease. */
+/* Keep native page content visible while the lower-right corner lifts away. */
 html[data-book-turn]::view-transition {
   overflow: clip;
   animation: book-curl-hold 550ms linear both;
@@ -697,7 +697,6 @@ html[data-book-turn='forward']::view-transition-old(root),
 html[data-book-turn='back']::view-transition-new(root) {
   z-index: 2;
   clip-path: var(--book-turn-clip);
-  filter: var(--book-turn-warp);
 }
 html[data-book-turn='forward']::view-transition-new(root),
 html[data-book-turn='back']::view-transition-old(root) {
@@ -743,6 +742,5 @@ html[data-book-turn]::view-transition-new(book-fold) {
   html[data-book-turn]::view-transition-old(root),
   html[data-book-turn]::view-transition-new(root) {
     clip-path: none;
-    filter: none;
   }
 }

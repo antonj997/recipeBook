@@ -1,44 +1,6 @@
 <a class="skip-link" href="#main-content" (click)="$event.preventDefault(); mainContent.focus()"
   >Skip to content</a
 >
-<svg class="book-curl-defs" aria-hidden="true" focusable="false">
-  <defs>
-    <filter
-      id="book-page-curl"
-      x="0"
-      y="0"
-      width="1"
-      height="1"
-      filterUnits="userSpaceOnUse"
-      primitiveUnits="userSpaceOnUse"
-      color-interpolation-filters="sRGB"
-    >
-      <feFlood flood-color="#808080" result="curl-neutral" />
-      <feImage
-        id="book-curl-image"
-        x="0"
-        y="0"
-        width="1"
-        height="1"
-        preserveAspectRatio="none"
-        result="curl-map"
-      />
-      <feComposite in="curl-map" in2="curl-neutral" operator="over" result="padded-map" />
-      <feComponentTransfer in="padded-map" result="neutral-map">
-        <feFuncR type="linear" slope="1" intercept="-0.0019607843" />
-        <feFuncG type="linear" slope="1" intercept="-0.0019607843" />
-      </feComponentTransfer>
-      <feDisplacementMap
-        id="book-curl-displacement"
-        in="SourceGraphic"
-        in2="neutral-map"
-        scale="0"
-        xChannelSelector="R"
-        yChannelSelector="G"
-      />
-    </filter>
-  </defs>
-</svg>
 <svg
   class="book-page-fold"
   viewBox="0 0 120 100"
