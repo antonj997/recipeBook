@@ -29,6 +29,8 @@ export function pageCurl(width: number, height: number, progress: number) {
     radius,
     foldWidth,
     clip: outline,
+    // The incoming sheet is visible only where the outgoing sheet has lifted.
+    reveal: [[width, 0], [width, height], [0, height], ...outline.slice(1).reverse()],
     centerX: width - nx * pull,
     centerY: height - ny * pull,
     angle: (Math.atan2(ny, nx) * 180) / Math.PI,

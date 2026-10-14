@@ -50,6 +50,7 @@ export class PageTurnService {
     const properties = [
       '--book-turn-top',
       '--book-turn-clip',
+      '--book-turn-reveal',
       '--book-turn-fold',
       '--book-turn-fold-width',
       '--book-turn-fold-length',
@@ -75,14 +76,14 @@ export class PageTurnService {
     root.style.setProperty('--book-turn-top', top + 'px');
     root.style.setProperty('--book-turn-warp', 'url("' + reference('book-page-curl') + '")');
 
+    const polygon = (points: number[][]) =>
+      'polygon(' +
+      points.map(([x, y]) => x.toFixed(2) + 'px ' + (y + top).toFixed(2) + 'px').join(',') +
+      ')';
     const draw = (progress: number) => {
       const curl = pageCurl(width, height, progress);
-      root.style.setProperty(
-        '--book-turn-clip',
-        'polygon(' +
-          curl.clip.map(([x, y]) => x.toFixed(2) + 'px ' + (y + top).toFixed(2) + 'px').join(',') +
-          ')',
-      );
+      root.style.setProperty('--book-turn-clip', polygon(curl.clip));
+      root.style.setProperty('--book-turn-reveal', polygon(curl.reveal));
       root.style.setProperty('--book-turn-fold-width', curl.foldWidth + 'px');
       root.style.setProperty('--book-turn-fold-length', curl.length + 'px');
       root.style.setProperty(

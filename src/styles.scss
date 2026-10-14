@@ -703,6 +703,10 @@ html[data-book-turn='forward']::view-transition-new(root),
 html[data-book-turn='back']::view-transition-old(root) {
   z-index: 1;
 }
+/* Both sides share the crease; the new page cannot paint over the old sheet. */
+html[data-book-turn='forward']::view-transition-new(root) {
+  clip-path: var(--book-turn-reveal);
+}
 html[data-book-turn]::view-transition-group(book-fold) {
   z-index: 2;
   top: 0;
