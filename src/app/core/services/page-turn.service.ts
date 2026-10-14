@@ -12,6 +12,8 @@ export class PageTurnService {
   private readonly document = inject(DOCUMENT);
   private readonly preferences = inject(PageTransitionPreferencesService);
   private morphRecipeId: string | null = null;
+  private returningToLibrary = false;
+  private expandOrigin?: HTMLElement;
   private readonly parts = new Map<
     HTMLElement,
     {
@@ -25,9 +27,12 @@ export class PageTurnService {
     const previousName = element.style.getPropertyValue('view-transition-name');
     this.parts.set(element, { recipeId, part, previousName });
     this.captureCorners(element, 'to');
+    if (part === 'surface' && recipeId === this.morphRecipeId && this.returningToLibrary)
+      this.expandOrigin = element;
     this.namePart(element);
     return () => {
       this.parts.delete(element);
+      if (this.expandOrigin === element) this.expandOrigin = undefined;
       if (previousName) element.style.setProperty('view-transition-name', previousName);
       else element.style.removeProperty('view-transition-name');
     };
@@ -97,6 +102,40 @@ export class PageTurnService {
       }
     }
     return { left, top, right: left + element.offsetWidth, bottom: top + element.offsetHeight };
+  }
+
+  /** Measure where the recipe color opens while shared layers stay independent. */
+  private measureExpandOrigin(element: HTMLElement): void {
+    const window = this.document.defaultView;
+    if (!window) return;
+    const root = this.document.documentElement;
+    const bounds = element.getBoundingClientRect();
+    const colorSource =
+      element.querySelector<HTMLElement>('.index-image') ??
+      element.closest<HTMLElement>('.recipe-intro') ??
+      element;
+    const color = window.getComputedStyle(colorSource).backgroundColor;
+    if (color) root.style.setProperty('--book-expand-color', color);
+    const clamp = (value: number, limit: number) => Math.max(0, Math.min(limit, value));
+    const left = clamp(bounds.left, root.clientWidth);
+    const right = clamp(bounds.right, root.clientWidth);
+    const top = clamp(bounds.top, window.innerHeight);
+    const bottom = clamp(bounds.bottom, window.innerHeight);
+    root.style.setProperty(
+      '--book-expand-origin',
+      (left + right) / 2 + 'px ' + (top + bottom) / 2 + 'px',
+    );
+    root.style.setProperty(
+      '--book-expand-inset',
+      top +
+        'px ' +
+        (root.clientWidth - right) +
+        'px ' +
+        (window.innerHeight - bottom) +
+        'px ' +
+        left +
+        'px',
+    );
   }
 
   private namePart(element: HTMLElement): void {
@@ -231,6 +270,11 @@ export class PageTurnService {
       recipeRoute?.routeConfig?.path === 'recipes/:id' ? recipeRoute.paramMap.get('id') : null;
     this.morphRecipeId =
       id && [...this.parts.values()].some((part) => part.recipeId === id) ? id : null;
+    this.returningToLibrary = next === '/';
+    this.expandOrigin = [...this.parts].find(
+      ([, part]) => part.recipeId === this.morphRecipeId && part.part === 'surface',
+    )?.[0];
+    if (this.expandOrigin) this.measureExpandOrigin(this.expandOrigin);
     for (const element of this.parts.keys()) {
       this.captureCorners(element, 'from');
       this.namePart(element);
@@ -249,6 +293,11 @@ export class PageTurnService {
       window.removeEventListener('resize', cancel);
       this.document.removeEventListener('visibilitychange', hidden);
       this.morphRecipeId = null;
+      this.returningToLibrary = false;
+      this.expandOrigin = undefined;
+      root.style.removeProperty('--book-expand-color');
+      root.style.removeProperty('--book-expand-origin');
+      root.style.removeProperty('--book-expand-inset');
       for (const element of this.parts.keys()) this.namePart(element);
       for (const part of ['surface', 'image'])
         for (const end of ['from', 'to'])
@@ -262,7 +311,16 @@ export class PageTurnService {
       this.release = undefined;
       this.active = undefined;
     };
-    void transition.ready.catch(clear);
+    void transition.ready.then(() => {
+      // The carousel/list restores its position before capture. Read the landing bounds afterwards.
+      if (this.active !== transition || !this.returningToLibrary || !this.morphRecipeId) return;
+      if (!this.expandOrigin || !this.parts.has(this.expandOrigin)) {
+        // A filter or deletion can remove the destination. Finish normally before painting a false target.
+        this.cancel();
+        return;
+      }
+      this.measureExpandOrigin(this.expandOrigin);
+    }, clear);
     void transition.finished.then(clear, clear);
   }
 

@@ -850,6 +850,104 @@ html[data-page-transition='expand']::view-transition-new(book-header) {
 html[data-page-transition='expand'][data-expand-back]::view-transition-new(root) {
   animation-name: book-expand-back;
 }
+/* A flat color snapshot keeps the opening consistent when the recipe's colored intro is short. */
+.book-recipe-color {
+  display: none;
+}
+html[data-page-transition='expand'][data-recipe-morph]:not([data-expand-back]) .book-recipe-color {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--book-expand-color, var(--color-canvas));
+  view-transition-name: book-recipe-color;
+}
+html[data-page-transition='expand']::view-transition-group(book-recipe-color) {
+  z-index: 1;
+  animation: none;
+}
+html[data-page-transition='expand']::view-transition-old(book-recipe-color) {
+  display: none;
+}
+html[data-page-transition='expand']::view-transition-new(book-recipe-color) {
+  animation:
+    book-recipe-open 430ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    book-color-reveal 430ms linear both;
+  mix-blend-mode: normal;
+}
+@keyframes book-color-reveal {
+  0%,
+  20% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+  }
+}
+/* Shared layers stay steady while the selected recipe color reveals the next page. */
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-old(root),
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-new(root) {
+  opacity: 1;
+  transform-origin: var(--book-expand-origin, center);
+}
+html[data-page-transition='expand'][data-recipe-morph]:not([data-expand-back])::view-transition-old(
+    root
+  ) {
+  z-index: 1;
+  animation: book-library-push 430ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+html[data-page-transition='expand'][data-recipe-morph]:not([data-expand-back])::view-transition-new(
+    root
+  ) {
+  z-index: 2;
+  animation: book-recipe-open 430ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+html[data-page-transition='expand'][data-recipe-morph][data-expand-back]::view-transition-old(
+    root
+  ) {
+  z-index: 2;
+  animation: book-recipe-close 430ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+html[data-page-transition='expand'][data-recipe-morph][data-expand-back]::view-transition-new(
+    root
+  ) {
+  z-index: 1;
+  animation: book-library-settle 430ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes book-library-push {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.2);
+  }
+}
+@keyframes book-library-settle {
+  from {
+    transform: scale(1.2);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes book-recipe-open {
+  from {
+    clip-path: inset(var(--book-expand-inset, 0px) round var(--book-surface-corners-from, 0px));
+  }
+  to {
+    clip-path: inset(0px round 0px);
+  }
+}
+@keyframes book-recipe-close {
+  from {
+    clip-path: inset(0px round 0px);
+  }
+  to {
+    clip-path: inset(var(--book-expand-inset, 0px) round var(--book-surface-corners-to, 0px));
+  }
+}
 @keyframes book-expand-out {
   to {
     opacity: 0;
