@@ -255,11 +255,20 @@ export class RecipeRailComponent implements OnDestroy {
     }, 180);
   }
   onResize(): void {
+    const selected = this.targetIndex ?? this.activeIndex();
     this.finishScrub(undefined, false);
     this.restoreSnap();
     this.needsMeasurement = true;
     this.targetIndex = null;
-    this.queueUpdate();
+    cancelAnimationFrame(this.restoreFrame);
+    this.restoreFrame = requestAnimationFrame(() => {
+      this.restoreFrame = 0;
+      const rail = this.rail()?.nativeElement;
+      const positions = this.positions();
+      const left = selected === positions.length ? this.addCardPosition : positions[selected];
+      if (rail && left != null) rail.scrollTo({ left, behavior: 'instant' });
+      this.updateArrowState();
+    });
   }
   interruptScroll(): void {
     this.restoreSnap();

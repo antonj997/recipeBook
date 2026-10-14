@@ -10,6 +10,7 @@ import {
   computed,
   ElementRef,
   inject,
+  OnDestroy,
   effect,
   signal,
   viewChildren,
@@ -30,6 +31,7 @@ type AddMenuOwner = 'toolbar' | 'shelf' | 'list';
 
 @Component({
   selector: 'app-recipe-list',
+  host: { '(window:resize)': 'onViewportResize()' },
   imports: [
     SelectMenuComponent,
     RecipeContextDirective,
@@ -45,7 +47,7 @@ type AddMenuOwner = 'toolbar' | 'shelf' | 'list';
   templateUrl: './recipe-list.html',
   styleUrl: './recipe-list.scss',
 })
-export class RecipeListComponent {
+export class RecipeListComponent implements OnDestroy {
   private recipeService = inject(RecipeService);
   private router = inject(Router);
   private library = inject(LibraryViewService);
@@ -90,6 +92,44 @@ export class RecipeListComponent {
   loading = signal(true);
   error = signal('');
   private loadVersion = 0;
+  private viewportWidth = window.innerWidth;
+  private portraitScrollFrame = 0;
+  private portraitScrollTimer?: ReturnType<typeof setTimeout>;
+  onViewportResize(): void {
+    const previousWidth = this.viewportWidth;
+    this.viewportWidth = window.innerWidth;
+    // Width changes identify rotation; keyboard and browser-bar height changes stay untouched.
+    if (this.viewportWidth >= previousWidth || this.viewportWidth > 600 || this.view() !== 'shelf')
+      return;
+    this.cancelPortraitScrollReset();
+    this.portraitScrollFrame = requestAnimationFrame(() => {
+      this.portraitScrollFrame = 0;
+      this.restorePortraitScroll();
+    });
+    // Mobile browsers can restore the old offset after the initial layout pass.
+    this.portraitScrollTimer = setTimeout(() => {
+      this.portraitScrollTimer = undefined;
+      this.restorePortraitScroll();
+    }, 300);
+  }
+  private restorePortraitScroll(): void {
+    if (
+      this.view() === 'shelf' &&
+      this.recipes().length &&
+      window.innerWidth <= 600 &&
+      window.innerHeight >= window.innerWidth
+    )
+      window.scrollTo({ top: 0, left: window.scrollX, behavior: 'instant' });
+  }
+  private cancelPortraitScrollReset(): void {
+    cancelAnimationFrame(this.portraitScrollFrame);
+    this.portraitScrollFrame = 0;
+    clearTimeout(this.portraitScrollTimer);
+    this.portraitScrollTimer = undefined;
+  }
+  ngOnDestroy(): void {
+    this.cancelPortraitScrollReset();
+  }
   private listRows = viewChildren<ElementRef<HTMLAnchorElement>>('listRow');
   // Restore a row only when returning to the library, never when switching views.
   private pendingListRestoreId = signal(this.initial.view === 'list' ? this.initial.recipeId : '');
