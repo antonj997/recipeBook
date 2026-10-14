@@ -1,3 +1,4 @@
+import { PageTurnService } from './core/services/page-turn.service';
 import { PageAppearanceService } from './core/services/page-appearance.service';
 import { RecipeActionsOverlayComponent } from './shared/components/recipe-actions-overlay';
 import { CloudCookbookService } from './core/services/cloud-cookbook.service';
@@ -53,6 +54,7 @@ export class App {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly hideSettings = signal(false);
   private router = inject(Router);
+  private readonly pageTurn = inject(PageTurnService);
   protected readonly onSettings = signal(false);
   protected readonly settingsTarget = signal('/settings');
   private lastPage = '/';
@@ -123,6 +125,7 @@ export class App {
       const next = this.cloud.auth.accountVersion();
       if (next === version) return;
       version = next;
+      this.pageTurn.cancel();
       this.accountChanging.set(true);
       this.drafts.clear();
       this.confirmation.answer(true);

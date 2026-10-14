@@ -9,7 +9,13 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { CloudCookbookService } from './core/services/cloud-cookbook.service';
-import { provideRouter, withHashLocation, withInMemoryScrolling } from '@angular/router';
+import {
+  provideRouter,
+  withHashLocation,
+  withInMemoryScrolling,
+  withViewTransitions,
+} from '@angular/router';
+import { PageTurnService } from './core/services/page-turn.service';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -24,6 +30,10 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       routes,
       ...(runtimeConfig.pages ? [withHashLocation()] : []),
+      withViewTransitions({
+        skipInitialTransition: true,
+        onViewTransitionCreated: (info) => inject(PageTurnService).start(info),
+      }),
       withInMemoryScrolling({
         anchorScrolling: 'enabled',
         scrollPositionRestoration: 'enabled',

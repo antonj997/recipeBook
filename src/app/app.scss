@@ -4,6 +4,7 @@
   background: var(--page-background, var(--color-canvas));
 }
 .app-header {
+  view-transition-name: book-header;
   display: flex;
   align-items: center;
   justify-content: space-between;

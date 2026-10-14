@@ -662,3 +662,102 @@ body {
     transform: none;
   }
 }
+
+/* Turn the viewport-sized paper, while the app header keeps its own steady layer. */
+html[data-book-turn]::view-transition-group(root),
+html[data-book-turn]::view-transition-group(book-header) {
+  animation: none;
+}
+html[data-book-turn]::view-transition-group(book-header) {
+  z-index: 3;
+}
+html[data-book-turn]::view-transition-old(book-header) {
+  display: none;
+}
+html[data-book-turn]::view-transition-new(book-header) {
+  animation: none;
+}
+html[data-book-turn]::view-transition-image-pair(root) {
+  isolation: isolate;
+}
+html[data-book-turn]::view-transition-old(root),
+html[data-book-turn]::view-transition-new(root) {
+  transform-origin: left center;
+  backface-visibility: hidden;
+  mix-blend-mode: normal;
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.22, 0.68, 0.22, 1);
+  animation-fill-mode: both;
+}
+html[data-book-turn='forward']::view-transition-old(root) {
+  z-index: 2;
+  animation-name: book-page-close;
+}
+html[data-book-turn='forward']::view-transition-new(root) {
+  z-index: 1;
+  animation-name: book-page-settle;
+}
+html[data-book-turn='back']::view-transition-old(root) {
+  z-index: 1;
+  animation-name: book-page-recede;
+}
+html[data-book-turn='back']::view-transition-new(root) {
+  z-index: 2;
+  animation-name: book-page-open;
+}
+@keyframes book-page-close {
+  from {
+    opacity: 1;
+    transform: perspective(1600px) rotateY(0deg);
+    box-shadow: 0 0 0 #14141300;
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: perspective(1600px) rotateY(65deg);
+    box-shadow: 18px 0 36px #14141324;
+  }
+}
+@keyframes book-page-settle {
+  from {
+    opacity: 0.85;
+    transform: perspective(1600px) rotateY(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1600px) rotateY(0deg);
+  }
+}
+@keyframes book-page-open {
+  from {
+    opacity: 0;
+    transform: perspective(1600px) rotateY(65deg);
+    box-shadow: 18px 0 36px #14141324;
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1600px) rotateY(0deg);
+    box-shadow: 0 0 0 #14141300;
+  }
+}
+@keyframes book-page-recede {
+  from {
+    opacity: 1;
+    transform: perspective(1600px) rotateY(0deg);
+  }
+  to {
+    opacity: 0.85;
+    transform: perspective(1600px) rotateY(-4deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-book-turn]::view-transition-old(root),
+  html[data-book-turn]::view-transition-new(root) {
+    animation: none;
+  }
+}
