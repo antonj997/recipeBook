@@ -663,23 +663,10 @@ body {
   }
 }
 
-/* One shared clock keeps the page mask and curved paper underside together. */
-@property --book-fold-progress {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 1;
-}
-@property --book-fold-lift {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 0;
-}
+/* The lower-right curl bends the native page image along the moving crease. */
 html[data-book-turn]::view-transition {
-  --book-fold-width: clamp(64px, 12vw, 160px);
-  animation: book-fold-turn 550ms cubic-bezier(0.45, 0, 0.55, 1) both;
-}
-html[data-book-turn='back']::view-transition {
-  animation-direction: reverse;
+  overflow: clip;
+  animation: book-curl-hold 550ms linear both;
 }
 html[data-book-turn]::view-transition-group(root),
 html[data-book-turn]::view-transition-group(book-header) {
@@ -709,22 +696,8 @@ html[data-book-turn]::view-transition-new(root) {
 html[data-book-turn='forward']::view-transition-old(root),
 html[data-book-turn='back']::view-transition-new(root) {
   z-index: 2;
-  clip-path: polygon(
-    0 0,
-    calc(100% * var(--book-fold-progress)) 0,
-    calc(100% * var(--book-fold-progress) + var(--book-fold-width) * var(--book-fold-lift) * 0.045)
-      10%,
-    calc(100% * var(--book-fold-progress) + var(--book-fold-width) * var(--book-fold-lift) * 0.076)
-      25%,
-    calc(100% * var(--book-fold-progress) + var(--book-fold-width) * var(--book-fold-lift) * 0.1)
-      50%,
-    calc(100% * var(--book-fold-progress) + var(--book-fold-width) * var(--book-fold-lift) * 0.076)
-      75%,
-    calc(100% * var(--book-fold-progress) + var(--book-fold-width) * var(--book-fold-lift) * 0.045)
-      90%,
-    calc(100% * var(--book-fold-progress)) 100%,
-    0 100%
-  );
+  clip-path: var(--book-turn-clip);
+  filter: var(--book-turn-warp);
 }
 html[data-book-turn='forward']::view-transition-new(root),
 html[data-book-turn='back']::view-transition-old(root) {
@@ -732,16 +705,13 @@ html[data-book-turn='back']::view-transition-old(root) {
 }
 html[data-book-turn]::view-transition-group(book-fold) {
   z-index: 2;
-  top: var(--book-turn-top, 0px);
+  top: 0;
   left: 0;
-  width: var(--book-fold-width);
-  height: calc(100dvh - var(--book-turn-top, 0px));
+  width: var(--book-turn-fold-width, 0px);
+  height: var(--book-turn-fold-length, 0px);
   animation: none;
-  transform-origin: left center;
-  transform: translateX(
-      calc(100vw * var(--book-fold-progress) - var(--book-fold-width) * var(--book-fold-lift) * 0.8)
-    )
-    scaleX(var(--book-fold-lift));
+  transform-origin: left top;
+  transform: var(--book-turn-fold);
 }
 html[data-book-turn]::view-transition-old(book-fold) {
   display: none;
@@ -752,20 +722,11 @@ html[data-book-turn]::view-transition-new(book-fold) {
   animation: none;
   opacity: 1;
 }
-@keyframes book-fold-turn {
-  from {
-    --book-fold-progress: 1;
-    --book-fold-lift: 0;
-  }
-  22% {
-    --book-fold-lift: 1;
-  }
-  78% {
-    --book-fold-lift: 1;
-  }
+/* Keep the native snapshots alive while the bounded frame loop draws the curl. */
+@keyframes book-curl-hold {
+  from,
   to {
-    --book-fold-progress: 0;
-    --book-fold-lift: 0;
+    opacity: 1;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -778,5 +739,6 @@ html[data-book-turn]::view-transition-new(book-fold) {
   html[data-book-turn]::view-transition-old(root),
   html[data-book-turn]::view-transition-new(root) {
     clip-path: none;
+    filter: none;
   }
 }

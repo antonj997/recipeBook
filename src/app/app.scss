@@ -206,3 +206,10 @@ main:focus {
   pointer-events: none;
   view-transition-name: book-fold;
 }
+
+.book-curl-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
