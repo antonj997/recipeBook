@@ -83,16 +83,23 @@
         @for (recipe of recipes(); track recipe.id; let i = $index) {
           <a
             class="recipe-card"
+            (click)="activeRecipeChange.emit(recipe.id)"
             appCardTilt
             [appRecipeContext]="recipe"
             [routerLink]="['/recipes', recipe.id]"
             [style.--card-color]="recipeBackground(recipe)"
           >
-            <div class="recipe-card__surface">
+            <div
+              class="recipe-card__surface"
+              [appRecipeTransition]="recipe.id"
+              transitionPart="surface"
+            >
               <div class="recipe-card__media">
                 @if (recipe.imageDataUrl) {
                   <img
                     class="recipe-image"
+                    [appRecipeTransition]="recipe.id"
+                    transitionPart="image"
                     [src]="recipe.imageDataUrl"
                     alt=""
                     loading="lazy"
@@ -103,7 +110,9 @@
                 }
               </div>
               <div class="recipe-card__content">
-                <h3 [title]="recipe.title">{{ recipe.title }}</h3>
+                <h3 [title]="recipe.title" [appRecipeTransition]="recipe.id" transitionPart="title">
+                  {{ recipe.title }}
+                </h3>
                 @if (categoryLabels(recipe).length) {
                   <div class="card-categories">
                     @for (category of categoryLabels(recipe); track category) {

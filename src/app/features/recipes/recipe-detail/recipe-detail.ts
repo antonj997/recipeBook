@@ -1,3 +1,5 @@
+import type { RecipePageData } from '../../../core/services/recipe-page-resolvers';
+import { RecipeTransitionPartDirective } from '../../../shared/components/recipe-transition-part';
 import { PageAppearanceService } from '../../../core/services/page-appearance.service';
 import { recipeBackground } from '../../../core/models/recipe-color';
 import { RecipeActionsService } from '../../../core/services/recipe-actions.service';
@@ -44,6 +46,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
     '(window:beforeunload)': 'onBeforeUnload($event)',
   },
   imports: [
+    RecipeTransitionPartDirective,
     SelectMenuComponent,
     ScreenAwakeComponent,
     CheckboxMarkComponent,
@@ -360,7 +363,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     void this.loadRecipe();
   }
 
-  private async loadRecipe(): Promise<void> {
+  private async loadRecipe(useResolved = true): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id');
 
     if (this.isDraft) {
@@ -383,8 +386,18 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const data = this.route.snapshot.data['recipePage'] as RecipePageData | undefined;
+    const ready =
+      useResolved && data?.accountVersion === this.recipeService.accountVersion()
+        ? data
+        : undefined;
+    if (ready?.error) {
+      this.error.set(ready.error);
+      this.loading.set(false);
+      return;
+    }
     try {
-      const result = await this.recipeService.getRecipe(id);
+      const result = ready ? ready.recipe : await this.recipeService.getRecipe(id);
       if (result) {
         result.instructions = result.instructions.map((step, index) =>
           instructionText(step, result.stepDetails?.[index]),
@@ -392,8 +405,9 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       }
       if (this.accountChanged()) return;
       this.recipe.set(result);
+      this.error.set(result ? '' : 'This recipe is no longer available.');
       this.selectedServings.set(this.baseServings());
-      const collections = await this.recipeService.getCollections();
+      const collections = ready ? ready.collections : await this.recipeService.getCollections();
       this.collectionNames.set(
         collections.filter((c) => result?.collectionIds?.includes(c.id)).map((c) => c.name),
       );
@@ -404,6 +418,9 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       this.loading.set(false);
       const recipe = this.recipe();
       if (recipe && !this.accountChanged()) this.restoreCookingSession(recipe);
+      // Keep the capture ready, then refresh if sync changed local data while the route chunk loaded.
+      if (ready && ready.revision !== this.recipeService.revision() && !this.accountChanged())
+        void this.loadRecipe(false);
     }
   }
 }

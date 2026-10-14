@@ -149,6 +149,23 @@
 
   <section class="settings-section" id="app-settings" aria-labelledby="app-heading">
     <h2 id="app-heading">App</h2>
+    <div class="transition-choice">
+      <div>
+        <h3>Page animation</h3>
+        <p id="page-animation-help">
+          Expand follows the image and title into a recipe. Your device’s reduced-motion setting is
+          respected.
+        </p>
+      </div>
+      <app-select-menu
+        menuId="page-animation-menu"
+        label="Page animation"
+        describedBy="page-animation-help"
+        [value]="transitions.mode()"
+        [options]="transitions.options"
+        (valueChange)="transitions.choose($event)"
+      />
+    </div>
     @if (app.available()) {
       <div class="app-update">
         <p>A new version is ready.</p>

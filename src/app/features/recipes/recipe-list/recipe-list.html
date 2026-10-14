@@ -123,6 +123,8 @@
             #listRow
             [attr.data-recipe-id]="recipe.id"
             class="index-row"
+            [appRecipeTransition]="recipe.id"
+            transitionPart="surface"
             [appRecipeContext]="recipe"
             [style.--recipe-color]="recipeBackground(recipe)"
             [routerLink]="['/recipes', recipe.id]"
@@ -131,13 +133,22 @@
             <span class="index-color" aria-hidden="true"></span>
             <span class="index-image" [style.background-color]="recipeBackground(recipe)">
               @if (recipe.imageDataUrl) {
-                <img [src]="recipe.imageDataUrl" alt="" loading="lazy" decoding="async" />
+                <img
+                  [src]="recipe.imageDataUrl"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  [appRecipeTransition]="recipe.id"
+                  transitionPart="image"
+                />
               } @else {
                 <app-food-placeholder [seed]="recipe.id" [color]="recipe.color" />
               }
             </span>
             <span class="index-copy"
-              ><span class="index-title">{{ recipe.title }}</span>
+              ><span class="index-title" [appRecipeTransition]="recipe.id" transitionPart="title">{{
+                recipe.title
+              }}</span>
               @if (recipe.totalTime != null) {
                 <span class="index-time"
                   ><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</span

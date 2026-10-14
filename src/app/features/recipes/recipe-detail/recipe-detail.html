@@ -27,17 +27,26 @@
   } @else {
     @if (recipe(); as selectedRecipe) {
       <div class="recipe-intro page">
-        <div class="recipe-overview" [class.has-photo]="!!selectedRecipe.imageDataUrl">
+        <div
+          class="recipe-overview"
+          [class.has-photo]="!!selectedRecipe.imageDataUrl"
+          [appRecipeTransition]="selectedRecipe.id"
+          transitionPart="surface"
+        >
           @if (selectedRecipe.imageDataUrl; as photo) {
             <img
               class="recipe-hero"
+              [appRecipeTransition]="selectedRecipe.id"
+              transitionPart="image"
               [src]="photo"
               referrerpolicy="no-referrer"
               [alt]="selectedRecipe.title"
             />
           }
           <header class="recipe-summary">
-            <h1>{{ selectedRecipe.title || 'New recipe' }}</h1>
+            <h1 [appRecipeTransition]="selectedRecipe.id" transitionPart="title">
+              {{ selectedRecipe.title || 'New recipe' }}
+            </h1>
             <app-recipe-summary-details
               [recipe]="selectedRecipe"
               [categories]="collectionNames()"

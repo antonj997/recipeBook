@@ -1,3 +1,4 @@
+import { RecipeTransitionPartDirective } from './recipe-transition-part';
 import { recipeBackground } from '../../core/models/recipe-color';
 import { RecipeContextDirective } from './recipe-context';
 import type { RecipeCollection } from '../../core/models/recipe-collection.model';
@@ -25,6 +26,7 @@ import { FoodPlaceholderComponent } from './food-placeholder';
 @Component({
   selector: 'app-recipe-rail',
   imports: [
+    RecipeTransitionPartDirective,
     RouterLink,
     FoodPlaceholderComponent,
     IconComponent,

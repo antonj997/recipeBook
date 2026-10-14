@@ -15,7 +15,9 @@ import {
   signal,
   viewChildren,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import type { LibraryPageData } from '../../../core/services/recipe-page-resolvers';
+import { RecipeTransitionPartDirective } from '../../../shared/components/recipe-transition-part';
 import type { Recipe } from '../../../core/models/recipe.model';
 import { formatRecipeTime } from '../../../core/models/recipe-metadata';
 import { RecipeService } from '../../../core/services/recipe.service';
@@ -33,6 +35,7 @@ type AddMenuOwner = 'toolbar' | 'shelf' | 'list';
   selector: 'app-recipe-list',
   host: { '(window:resize)': 'onViewportResize()' },
   imports: [
+    RecipeTransitionPartDirective,
     SelectMenuComponent,
     RecipeContextDirective,
     LibraryViewToggleComponent,
@@ -53,6 +56,12 @@ export class RecipeListComponent implements OnDestroy {
   private library = inject(LibraryViewService);
   readonly cloud = inject(CloudCookbookService);
   private initial = this.library.read();
+  private readonly resolvedData = inject(ActivatedRoute).snapshot.data['libraryPage'] as
+    LibraryPageData | undefined;
+  private readonly pageData =
+    this.resolvedData?.accountVersion === this.recipeService.accountVersion()
+      ? this.resolvedData
+      : undefined;
   formatTime = formatRecipeTime;
   recipeBackground = recipeBackground;
   addMenuOwner = signal<AddMenuOwner | null>(null);
@@ -65,9 +74,9 @@ export class RecipeListComponent implements OnDestroy {
       (event as ToggleEvent).newState === 'open' ? this.pendingAddMenuOwner : null,
     );
   }
-  recipes = signal<Recipe[]>([]);
+  recipes = signal<Recipe[]>(this.pageData?.recipes ?? []);
   query = signal(this.initial.query);
-  collections = signal<RecipeCollection[]>([]);
+  collections = signal<RecipeCollection[]>(this.pageData?.collections ?? []);
   categoryOptions = computed(() => [
     { value: '', label: 'All recipes' },
     ...this.collections().map((collection) => ({ value: collection.id, label: collection.name })),
@@ -89,8 +98,8 @@ export class RecipeListComponent implements OnDestroy {
       return words.every((word) => text.includes(word));
     });
   });
-  loading = signal(true);
-  error = signal('');
+  loading = signal(!this.pageData);
+  error = signal(this.pageData?.error ?? '');
   private loadVersion = 0;
   private viewportWidth = window.innerWidth;
   private portraitScrollFrame = 0;
@@ -146,6 +155,14 @@ export class RecipeListComponent implements OnDestroy {
       if (bounds.top < 80 || bounds.bottom > window.innerHeight)
         row.scrollIntoView({ block: 'center', behavior: 'instant' });
     });
+    if (
+      this.pageData &&
+      !this.pageData.collections.some((c) => c.id === this.selectedCollectionId())
+    ) {
+      this.selectedCollectionId.set('');
+      this.library.write({ categoryId: '' });
+    }
+    let firstLoad = true;
     let accountVersion = this.recipeService.accountVersion();
     effect(() => {
       const current = this.recipeService.accountVersion();
@@ -161,7 +178,11 @@ export class RecipeListComponent implements OnDestroy {
         this.restoreRecipeId.set(saved.recipeId);
         this.loading.set(true);
       }
-      this.recipeService.revision();
+      const revision = this.recipeService.revision();
+      if (firstLoad) {
+        firstLoad = false;
+        if (this.pageData && revision === this.pageData.revision) return;
+      }
       void this.loadRecipes();
     });
   }

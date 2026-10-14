@@ -1,4 +1,5 @@
 import type { Routes } from '@angular/router';
+import { resolveLibraryPage, resolveRecipePage } from './core/services/recipe-page-resolvers';
 import { confirmBeforeLeaving } from './core/services/leave-confirmation.service';
 
 const detail = () =>
@@ -13,6 +14,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/recipes/recipe-list/recipe-list').then((m) => m.RecipeListComponent),
     title: 'My Recipes',
+    resolve: { libraryPage: resolveLibraryPage },
     pathMatch: 'full',
   },
   {
@@ -46,11 +48,13 @@ export const routes: Routes = [
     path: 'recipes/:id',
     loadComponent: detail,
     title: 'Recipe Details',
+    resolve: { recipePage: resolveRecipePage },
     canDeactivate: [confirmBeforeLeaving],
   },
   {
     path: 'categories',
-    loadComponent: () => import('./features/categories/categories').then(m => m.CategoriesComponent),
+    loadComponent: () =>
+      import('./features/categories/categories').then((m) => m.CategoriesComponent),
     title: 'Categories',
     canDeactivate: [confirmBeforeLeaving],
   },
