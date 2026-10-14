@@ -169,10 +169,12 @@ export class App {
   }
 
   protected onPointerDown(event: PointerEvent): void {
+    this.pageTurn.cancel();
     this.touchInput.set(event.pointerType === 'touch' || event.pointerType === 'pen');
   }
 
   protected onNavigationKey(event: KeyboardEvent): void {
+    this.pageTurn.cancel();
     if (event.key === 'Tab' || event.key?.startsWith('Arrow')) {
       this.touchInput.set(false);
     }

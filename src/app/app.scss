@@ -196,3 +196,13 @@ main:focus {
 .toast-region.editing {
   bottom: calc(104px + env(safe-area-inset-bottom));
 }
+
+.book-page-fold {
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: clamp(64px, 12vw, 160px);
+  height: 100dvh;
+  z-index: -1;
+  pointer-events: none;
+  view-transition-name: book-fold;
+}

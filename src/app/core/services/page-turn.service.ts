@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { Service, inject } from '@angular/core';
 import type { ActivatedRouteSnapshot, ViewTransitionInfo } from '@angular/router';
 
-/** Short native page turns; navigation and storage remain independent of motion. */
+/** Native paper folds; navigation and storage remain independent of motion. */
 @Service()
 export class PageTurnService {
   private readonly document = inject(DOCUMENT);
@@ -27,20 +27,28 @@ export class PageTurnService {
       previous === '/settings' ||
       (previous === next + '/edit' && next !== '/recipes/new');
     this.active = transition;
+    const header = this.document.querySelector('.app-header');
+    this.document.documentElement.style.setProperty(
+      '--book-turn-top',
+      (header?.getBoundingClientRect().bottom ?? 0) + 'px',
+    );
     this.document.documentElement.setAttribute('data-book-turn', returning ? 'back' : 'forward');
     const clear = () => {
       // An interrupted turn must not clear the next navigation's direction.
       if (this.active !== transition) return;
       this.active = undefined;
       this.document.documentElement.removeAttribute('data-book-turn');
+      this.document.documentElement.style.removeProperty('--book-turn-top');
     };
     void transition.finished.then(clear, clear);
   }
 
   cancel(): void {
-    this.active?.skipTransition();
+    if (!this.active) return;
+    this.active.skipTransition();
     this.active = undefined;
     this.document.documentElement.removeAttribute('data-book-turn');
+    this.document.documentElement.style.removeProperty('--book-turn-top');
   }
 
   private path(snapshot: ActivatedRouteSnapshot): string {
