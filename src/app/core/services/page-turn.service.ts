@@ -24,12 +24,79 @@ export class PageTurnService {
   registerPart(element: HTMLElement, recipeId: string, part: RecipeTransitionPart): () => void {
     const previousName = element.style.getPropertyValue('view-transition-name');
     this.parts.set(element, { recipeId, part, previousName });
+    this.captureCorners(element, 'to');
     this.namePart(element);
     return () => {
       this.parts.delete(element);
       if (previousName) element.style.setProperty('view-transition-name', previousName);
       else element.style.removeProperty('view-transition-name');
     };
+  }
+
+  /** Native snapshots lose ancestor clipping, so preserve only the corners touching a clipped edge. */
+  private captureCorners(element: HTMLElement, end: 'from' | 'to'): void {
+    const participant = this.parts.get(element);
+    const window = this.document.defaultView;
+    if (
+      !window ||
+      !participant ||
+      participant.recipeId !== this.morphRecipeId ||
+      participant.part === 'title'
+    )
+      return;
+    const properties = [
+      'borderTopLeftRadius',
+      'borderTopRightRadius',
+      'borderBottomRightRadius',
+      'borderBottomLeftRadius',
+    ] as const;
+    const style = window.getComputedStyle(element);
+    const corners = properties.map((property) => style[property]);
+    const bounds = this.layoutBounds(element);
+    const touches = (a: number, b: number) => Math.abs(a - b) < 1;
+    let parent = participant.part === 'image' ? element.parentElement : null;
+    const boundary = this.document.getElementById('main-content');
+    while (parent && parent !== boundary) {
+      const style = window.getComputedStyle(parent);
+      if (
+        ['hidden', 'clip'].includes(style.overflowX) ||
+        ['hidden', 'clip'].includes(style.overflowY)
+      ) {
+        const edge = this.layoutBounds(parent);
+        const matches = [
+          touches(bounds.top, edge.top) && touches(bounds.left, edge.left),
+          touches(bounds.top, edge.top) && touches(bounds.right, edge.right),
+          touches(bounds.bottom, edge.bottom) && touches(bounds.right, edge.right),
+          touches(bounds.bottom, edge.bottom) && touches(bounds.left, edge.left),
+        ];
+        properties.forEach((property, index) => {
+          if (matches[index] && parseFloat(style[property]) > parseFloat(corners[index]))
+            corners[index] = style[property];
+        });
+      }
+      parent = parent.parentElement;
+    }
+    const root = this.document.documentElement.style;
+    root.setProperty('--book-' + participant.part + '-corners-' + end, corners.join(' '));
+    if (end === 'from')
+      root.setProperty('--book-' + participant.part + '-corners-to', corners.join(' '));
+  }
+
+  /** Compare layout edges before perspective tilt; projected bounding boxes distort corner alignment. */
+  private layoutBounds(element: HTMLElement) {
+    let left = 0;
+    let top = 0;
+    let offset: HTMLElement | null = element;
+    while (offset) {
+      left += offset.offsetLeft;
+      top += offset.offsetTop;
+      offset = offset.offsetParent as HTMLElement | null;
+      if (offset) {
+        left += offset.clientLeft;
+        top += offset.clientTop;
+      }
+    }
+    return { left, top, right: left + element.offsetWidth, bottom: top + element.offsetHeight };
   }
 
   private namePart(element: HTMLElement): void {
@@ -164,7 +231,10 @@ export class PageTurnService {
       recipeRoute?.routeConfig?.path === 'recipes/:id' ? recipeRoute.paramMap.get('id') : null;
     this.morphRecipeId =
       id && [...this.parts.values()].some((part) => part.recipeId === id) ? id : null;
-    for (const element of this.parts.keys()) this.namePart(element);
+    for (const element of this.parts.keys()) {
+      this.captureCorners(element, 'from');
+      this.namePart(element);
+    }
     root.setAttribute('data-page-transition', 'expand');
     if (this.morphRecipeId) root.setAttribute('data-recipe-morph', '');
     if (next === '/' || previous === '/settings') root.setAttribute('data-expand-back', '');
@@ -180,6 +250,9 @@ export class PageTurnService {
       this.document.removeEventListener('visibilitychange', hidden);
       this.morphRecipeId = null;
       for (const element of this.parts.keys()) this.namePart(element);
+      for (const part of ['surface', 'image'])
+        for (const end of ['from', 'to'])
+          root.style.removeProperty('--book-' + part + '-corners-' + end);
       for (const attribute of ['data-page-transition', 'data-recipe-morph', 'data-expand-back'])
         root.removeAttribute(attribute);
     };

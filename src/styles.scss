@@ -772,13 +772,39 @@ html[data-page-transition='expand']::view-transition-group(book-recipe-title) {
 }
 html[data-page-transition='expand']::view-transition-group(book-recipe-surface) {
   z-index: 2;
-  overflow: clip;
-  border-radius: 14px;
 }
 html[data-page-transition='expand']::view-transition-group(book-recipe-image) {
   z-index: 3;
+}
+html[data-page-transition='expand']::view-transition-image-pair(book-recipe-surface),
+html[data-page-transition='expand']::view-transition-image-pair(book-recipe-image) {
+  height: 100%;
   overflow: clip;
-  border-radius: 14px;
+  animation-duration: inherit;
+  animation-timing-function: inherit;
+  animation-fill-mode: both;
+}
+html[data-page-transition='expand']::view-transition-image-pair(book-recipe-surface) {
+  animation-name: book-surface-corners;
+}
+html[data-page-transition='expand']::view-transition-image-pair(book-recipe-image) {
+  animation-name: book-image-corners;
+}
+@keyframes book-surface-corners {
+  from {
+    border-radius: var(--book-surface-corners-from, 0px);
+  }
+  to {
+    border-radius: var(--book-surface-corners-to, 0px);
+  }
+}
+@keyframes book-image-corners {
+  from {
+    border-radius: var(--book-image-corners-from, 0px);
+  }
+  to {
+    border-radius: var(--book-image-corners-to, 0px);
+  }
 }
 html[data-page-transition='expand']::view-transition-group(book-recipe-title) {
   z-index: 4;
@@ -854,6 +880,7 @@ html[data-page-transition='expand'][data-expand-back]::view-transition-new(root)
 }
 @media (prefers-reduced-motion: reduce) {
   html[data-page-transition='expand']::view-transition-group(*),
+  html[data-page-transition='expand']::view-transition-image-pair(*),
   html[data-page-transition='expand']::view-transition-old(*),
   html[data-page-transition='expand']::view-transition-new(*) {
     animation: none;
