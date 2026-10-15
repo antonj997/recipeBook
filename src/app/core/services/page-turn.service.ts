@@ -4,7 +4,7 @@ import type { ActivatedRouteSnapshot, ViewTransitionInfo } from '@angular/router
 import { PAGE_CURL_DURATION, pageCurl } from './page-curl';
 import { PageTransitionPreferencesService } from './page-transition-preferences.service';
 
-export type RecipeTransitionPart = 'surface' | 'image' | 'title';
+export type RecipeTransitionPart = 'surface' | 'image' | 'title' | 'time' | 'categories';
 
 /** Native curl or shared-recipe expansion; no recipe DOM is copied or stored. */
 @Service()
@@ -46,7 +46,7 @@ export class PageTurnService {
       !window ||
       !participant ||
       participant.recipeId !== this.morphRecipeId ||
-      participant.part === 'title'
+      !['surface', 'image'].includes(participant.part)
     )
       return;
     const properties = [
@@ -67,7 +67,19 @@ export class PageTurnService {
         ['hidden', 'clip'].includes(style.overflowX) ||
         ['hidden', 'clip'].includes(style.overflowY)
       ) {
-        const edge = this.layoutBounds(parent);
+        const outer = this.layoutBounds(parent);
+        const borders = [
+          style.borderTopWidth,
+          style.borderRightWidth,
+          style.borderBottomWidth,
+          style.borderLeftWidth,
+        ].map((width) => parseFloat(width) || 0);
+        const edge = {
+          top: outer.top + borders[0],
+          right: outer.right - borders[1],
+          bottom: outer.bottom - borders[2],
+          left: outer.left + borders[3],
+        };
         const matches = [
           touches(bounds.top, edge.top) && touches(bounds.left, edge.left),
           touches(bounds.top, edge.top) && touches(bounds.right, edge.right),
@@ -75,8 +87,9 @@ export class PageTurnService {
           touches(bounds.bottom, edge.bottom) && touches(bounds.left, edge.left),
         ];
         properties.forEach((property, index) => {
-          if (matches[index] && parseFloat(style[property]) > parseFloat(corners[index]))
-            corners[index] = style[property];
+          const inset = Math.max(borders[index], borders[(index + 3) % 4]);
+          const radius = Math.max(0, parseFloat(style[property]) - inset);
+          if (matches[index] && radius > parseFloat(corners[index])) corners[index] = radius + 'px';
         });
       }
       parent = parent.parentElement;
@@ -115,6 +128,25 @@ export class PageTurnService {
       element.closest<HTMLElement>('.recipe-intro') ??
       element;
     const color = window.getComputedStyle(colorSource).backgroundColor;
+    // List rows fill from their visible color strip before the page starts expanding.
+    const strip = !this.returningToLibrary
+      ? element.querySelector<HTMLElement>('.index-color')
+      : null;
+    if (strip) {
+      const edge = strip.getBoundingClientRect();
+      root.setAttribute('data-expand-list', '');
+      root.style.setProperty(
+        '--book-list-strip-inset',
+        Math.max(0, edge.top) +
+          'px ' +
+          Math.max(0, root.clientWidth - edge.right) +
+          'px ' +
+          Math.max(0, window.innerHeight - edge.bottom) +
+          'px ' +
+          Math.max(0, edge.left) +
+          'px',
+      );
+    }
     if (color) root.style.setProperty('--book-expand-color', color);
     const clamp = (value: number, limit: number) => Math.max(0, Math.min(limit, value));
     const left = clamp(bounds.left, root.clientWidth);
@@ -298,11 +330,17 @@ export class PageTurnService {
       root.style.removeProperty('--book-expand-color');
       root.style.removeProperty('--book-expand-origin');
       root.style.removeProperty('--book-expand-inset');
+      root.style.removeProperty('--book-list-strip-inset');
       for (const element of this.parts.keys()) this.namePart(element);
       for (const part of ['surface', 'image'])
         for (const end of ['from', 'to'])
           root.style.removeProperty('--book-' + part + '-corners-' + end);
-      for (const attribute of ['data-page-transition', 'data-recipe-morph', 'data-expand-back'])
+      for (const attribute of [
+        'data-page-transition',
+        'data-recipe-morph',
+        'data-expand-back',
+        'data-expand-list',
+      ])
         root.removeAttribute(attribute);
     };
     const clear = () => {

@@ -26,7 +26,9 @@ import { Component, input } from '@angular/core';
         <path d="M15.5 15.5 21 21" />
         <circle cx="10.5" cy="10.5" r="6.7" />
       }
-      @case ('minus') { <path d="M4 12h16" /> }
+      @case ('minus') {
+        <path d="M4 12h16" />
+      }
       @case ('plus') {
         <path d="M12 4v16M4 12h16" />
       }
@@ -48,14 +50,25 @@ import { Component, input } from '@angular/core';
       @case ('chevron') {
         <path d="m14 5-7 7 7 7" />
       }
-      @case ('arrow-down') { <path d="M12 4v15m-7-7 7 7 7-7" /> }
-      @case ('shelf') { <rect x="3" y="4" width="7" height="16" rx="1" /><rect x="14" y="4" width="7" height="16" rx="1" /><path d="M3 13h7m4 0h7" /> }
-      @case ('list') { <path d="M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1" /> }
+      @case ('arrow-down') {
+        <path d="M12 4v15m-7-7 7 7 7-7" />
+      }
+      @case ('shelf') {
+        <rect x="3" y="4" width="7" height="16" rx="1" />
+        <rect x="14" y="4" width="7" height="16" rx="1" />
+        <path d="M3 13h7m4 0h7" />
+      }
+      @case ('list') {
+        <path d="M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1" />
+      }
       @case ('external') {
         <path d="M14 3h7v7m0-7L11 13M10 4H4v16h16v-6" />
       }
       @case ('arrow') {
         <path d="m7 5 7 7-7 7" />
+      }
+      @case ('pencil') {
+        <path d="m4 16-1 5 5-1L21 7a2.8 2.8 0 0 0-4-4ZM15 5l4 4M4 16l4 4" />
       }
       @case ('trash') {
         <path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7" />
@@ -89,6 +102,7 @@ export class IconComponent {
     | 'link'
     | 'book'
     | 'arrow'
+    | 'pencil'
     | 'trash'
     | 'chevron'
     | 'external'

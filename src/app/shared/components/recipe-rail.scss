@@ -103,6 +103,8 @@
   border-radius: 16px;
 }
 .recipe-card__surface {
+  --recipe-outline: color-mix(in srgb, var(--card-color) 52%, var(--color-ink));
+  border: 1px solid var(--recipe-outline);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -299,6 +301,8 @@
 
 .card-categories {
   display: flex;
+  width: fit-content;
+  max-width: 100%;
   gap: 6px;
   margin-bottom: 10px;
   font-size: 0.75rem;
@@ -359,12 +363,12 @@
   }
   :host(.compact) .collection-heading {
     flex: 0 0 auto;
-    margin-bottom: 12px;
+    margin-bottom: clamp(16px, 2.5svh, 24px);
   }
   :host(.compact) .rail-window {
     flex: 1;
     min-height: 264px;
-    max-height: 340px;
+    max-height: clamp(340px, 56svh, 520px);
   }
   :host(.compact) .recipe-rail {
     height: 100%;
@@ -383,7 +387,7 @@
   :host(.compact) .recipe-card__content {
     flex: 1 0 auto;
     min-height: 112px;
-    padding: 14px 18px;
+    padding: clamp(18px, 2.6svh, 26px) 18px;
   }
   :host(.compact) .recipe-card h3 {
     font-size: 1.3rem;
@@ -394,7 +398,7 @@
   }
   :host(.compact) .carousel-progress {
     flex-shrink: 0;
-    margin-top: 0;
+    margin-top: clamp(8px, 1.8svh, 18px);
   }
   :host(.compact) .carousel-position {
     flex-shrink: 0;

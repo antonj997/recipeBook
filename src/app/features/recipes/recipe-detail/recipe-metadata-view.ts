@@ -1,3 +1,4 @@
+import { RecipeTransitionPartDirective } from '../../../shared/components/recipe-transition-part';
 import { IconComponent } from '../../../shared/components/icon';
 import { Component, computed, input } from '@angular/core';
 import type { Recipe } from '../../../core/models/recipe.model';
@@ -10,18 +11,31 @@ import {
 
 @Component({
   selector: 'app-recipe-summary-details',
-  imports: [IconComponent],
+  imports: [IconComponent, RecipeTransitionPartDirective],
   template: `
     @if (description()) {
       <p class="recipe-description">{{ description() }}</p>
     }
     @if (categories().length || recipe().totalTime != null) {
       <div class="recipe-metadata">
-        @for (category of categories(); track category) {
-          <span class="recipe-category" [title]="category">{{ category }}</span>
+        @if (categories().length) {
+          <div
+            class="recipe-categories"
+            [appRecipeTransition]="recipe().id"
+            transitionPart="categories"
+          >
+            @for (category of categories(); track category) {
+              <span class="recipe-category" [title]="category">{{ category }}</span>
+            }
+          </div>
         }
         @if (recipe().totalTime != null) {
-          <p class="recipe-time" aria-label="Total time">
+          <p
+            class="recipe-time"
+            aria-label="Total time"
+            [appRecipeTransition]="recipe().id"
+            transitionPart="time"
+          >
             <app-icon name="clock" />{{ formatTime(recipe().totalTime!) }}
           </p>
         }
@@ -43,6 +57,12 @@ import {
       flex-wrap: wrap;
       gap: 10px 12px;
       margin-top: 16px;
+    }
+    .recipe-categories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: 100%;
     }
     .recipe-time {
       margin: 0;

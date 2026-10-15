@@ -1,3 +1,4 @@
+import { IconComponent } from './icon';
 import {
   Component,
   DestroyRef,
@@ -23,7 +24,7 @@ import { FoodDoodleComponent } from './food-doodle';
     '(window:resize)': 'actions.menu.set(null)',
     '(window:scroll)': 'actions.menu.set(null)',
   },
-  imports: [CheckboxMarkComponent, FoodDoodleComponent],
+  imports: [CheckboxMarkComponent, FoodDoodleComponent, IconComponent],
   template: `
     <span id="recipe-actions-hint" class="sr-only"
       >Hold a recipe or right-click for actions. With a keyboard, press Shift F10.</span
@@ -47,9 +48,11 @@ import { FoodDoodleComponent } from './food-doodle';
             Change categories
           </button>
         }
-        <button type="button" role="menuitem" (click)="edit()">Edit recipe</button>
+        <button type="button" role="menuitem" (click)="edit()">
+          <app-icon name="pencil" />Edit recipe
+        </button>
         <button type="button" role="menuitem" class="remove-recipe" (click)="requestDelete()">
-          Delete recipe
+          <app-icon name="trash" />Delete recipe
         </button>
       }
     </div>

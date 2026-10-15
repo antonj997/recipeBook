@@ -114,14 +114,18 @@
                   {{ recipe.title }}
                 </h3>
                 @if (categoryLabels(recipe).length) {
-                  <div class="card-categories">
+                  <div
+                    class="card-categories"
+                    [appRecipeTransition]="recipe.id"
+                    transitionPart="categories"
+                  >
                     @for (category of categoryLabels(recipe); track category) {
                       <span class="recipe-category" [title]="category">{{ category }}</span>
                     }
                   </div>
                 }
                 @if (recipe.totalTime != null) {
-                  <p class="recipe-time">
+                  <p class="recipe-time" [appRecipeTransition]="recipe.id" transitionPart="time">
                     <app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}
                   </p>
                 }

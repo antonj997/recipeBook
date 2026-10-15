@@ -39,6 +39,9 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
       background: transparent;
       min-height: 44px;
     }
+    button:active:not(:disabled) {
+      transform: none;
+    }
     button:hover:not(:disabled) {
       background: transparent;
       color: var(--color-ink);
@@ -68,7 +71,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
     }
     .is-on .switch-track {
       background: var(--color-green);
-      border-color: var(--color-green);
+      border-color: var(--color-control-border);
     }
     .is-on .switch-thumb {
       transform: translateX(20px);
@@ -85,7 +88,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
     }
     @media (hover: hover) {
       button:hover .switch-track {
-        border-color: var(--color-ink);
+        border-color: color-mix(in srgb, var(--color-control-border) 75%, var(--color-ink));
       }
     }
     @media (prefers-reduced-motion: reduce) {

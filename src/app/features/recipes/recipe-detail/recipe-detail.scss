@@ -34,6 +34,17 @@
   background: var(--color-surface);
 }
 .recipe-navigation.page,
+.recipe-intro.page,
+.section-switch {
+  --recipe-outline: color-mix(
+    in srgb,
+    var(--page-background, var(--color-canvas)) 52%,
+    var(--color-ink)
+  );
+  --color-border: var(--recipe-outline);
+  --color-control-border: var(--recipe-outline);
+}
+.recipe-navigation.page,
 .recipe-intro.page {
   background: var(--page-background, var(--color-canvas));
 }
@@ -63,7 +74,7 @@
 .recipe-overview {
   display: grid;
   align-items: center;
-  gap: 32px;
+  gap: 0;
 }
 .recipe-overview.has-photo {
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
@@ -82,10 +93,6 @@
   aspect-ratio: 4 / 3;
   max-height: 480px;
   object-fit: cover;
-  border-radius: var(--radius-surface);
-}
-.recipe-summary .error {
-  margin-top: 16px;
 }
 .recipe-body {
   display: flow-root;
@@ -133,9 +140,6 @@ li::marker {
   .recipe-overview.has-photo {
     grid-template-columns: minmax(0, 1fr);
   }
-  .recipe-overview {
-    gap: 24px;
-  }
   .recipe-overview.has-photo .recipe-summary,
   .recipe-overview.has-photo .recipe-hero {
     grid-column: auto;
@@ -163,19 +167,12 @@ li::marker {
   font-size: 1.13rem;
   line-height: 1.5;
 }
-.recipe-overview {
-  border-radius: 16px;
-  overflow: hidden;
-  gap: 0;
-}
 .recipe-summary {
   padding: 28px;
 }
 .recipe-overview.has-photo .recipe-hero {
-  border-radius: 0;
-}
-.recipe-sections {
-  margin-top: 0;
+  border: 1px solid var(--recipe-outline);
+  border-radius: 14px 14px 3px 3px;
 }
 .section-switch {
   position: sticky;
@@ -184,6 +181,15 @@ li::marker {
   padding: 8px var(--page-gutter-right) 0 var(--page-gutter-left);
   border-bottom: 1px solid var(--color-border);
   background: var(--page-background, var(--color-canvas));
+}
+.section-switch::before {
+  content: '';
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 1px;
+  z-index: 2;
+  background: var(--recipe-outline);
+  pointer-events: none;
 }
 .section-switch::after {
   content: '';
@@ -251,7 +257,6 @@ li::marker {
   transform: none;
 }
 .section-tabs button[aria-selected='true'] {
-  color: var(--color-ink);
   font-weight: 600;
 }
 .section-tabs button:focus-visible {
