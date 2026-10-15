@@ -154,8 +154,30 @@
   text-wrap: pretty;
   overflow-wrap: anywhere;
 }
-.recipe-card p {
-  margin: auto 0 0;
+.recipe-card .card-description {
+  margin: 0 0 12px;
+  max-height: 4.35em;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--color-ink) 85%, var(--card-color));
+  font-size: 0.85rem;
+  line-height: 1.45;
+  mask-image: linear-gradient(to bottom, #000 2.9em, transparent 4.35em);
+}
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+.card-footer .recipe-time {
+  margin: 0;
+}
+.card-calories {
+  margin-left: auto;
+  font-size: 0.75rem;
+  text-align: right;
+  white-space: nowrap;
 }
 .recipe-card:focus-visible {
   outline-offset: 0;
@@ -188,7 +210,6 @@
 }
 @media (hover: hover) {
   .rail-arrow:hover:not(:disabled) {
-    border-color: transparent;
     transform: none;
     background: transparent;
     color: var(--color-ink);
@@ -204,7 +225,6 @@
 }
 @media (max-width: 600px) {
   .collection-heading {
-    margin-bottom: 20px;
     gap: 8px;
   }
   .collection-heading__actions {
@@ -220,9 +240,6 @@
   .recipe-card h3 {
     font-size: 1.45rem;
   }
-  .recipe-card__content {
-    padding-top: 18px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .edge-glass {
@@ -231,7 +248,6 @@
   }
   .recipe-card__surface {
     transform: none;
-    filter: none;
   }
 }
 
@@ -290,12 +306,6 @@
   .carousel-progress:not(.is-scrubbing) .progress-dot:hover span {
     width: 26px;
     opacity: 1;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .progress-dot,
-  .progress-dot span {
-    transition: none;
   }
 }
 
@@ -385,16 +395,25 @@
     max-height: min(200px, 32svh);
   }
   :host(.compact) .recipe-card__content {
-    flex: 1 0 auto;
-    min-height: 112px;
+    flex: 1 1 auto;
+    min-height: 0;
     padding: clamp(18px, 2.6svh, 26px) 18px;
   }
   :host(.compact) .recipe-card h3 {
+    flex-shrink: 0;
     font-size: 1.3rem;
     margin-bottom: 8px;
   }
   :host(.compact) .card-categories {
+    flex-shrink: 0;
     margin-bottom: 8px;
+  }
+  :host(.compact) .card-description {
+    min-height: 0;
+    flex-shrink: 1;
+  }
+  :host(.compact) .card-footer {
+    flex-shrink: 0;
   }
   :host(.compact) .carousel-progress {
     flex-shrink: 0;
@@ -414,6 +433,16 @@
   }
   :host(.compact) .rail-window {
     min-height: 252px;
+  }
+  :host(.compact) .recipe-card__media {
+    min-height: 80px;
+    max-height: 80px;
+  }
+  :host(.compact) .recipe-card__content {
+    padding-block: 12px;
+  }
+  :host(.compact) .card-description {
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 0.75em), transparent);
   }
 }
 

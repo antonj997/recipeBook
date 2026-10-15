@@ -1,16 +1,19 @@
+import { LibraryViewService } from './library-view.service';
 import { DOCUMENT } from '@angular/common';
 import { Service, inject } from '@angular/core';
 import type { ActivatedRouteSnapshot, ViewTransitionInfo } from '@angular/router';
 import { PAGE_CURL_DURATION, pageCurl } from './page-curl';
 import { PageTransitionPreferencesService } from './page-transition-preferences.service';
 
-export type RecipeTransitionPart = 'surface' | 'image' | 'title' | 'time' | 'categories';
+export type RecipeTransitionPart =
+  'surface' | 'image' | 'title' | 'time' | 'categories' | 'controls';
 
 /** Native curl or shared-recipe expansion; no recipe DOM is copied or stored. */
 @Service()
 export class PageTurnService {
   private readonly document = inject(DOCUMENT);
   private readonly preferences = inject(PageTransitionPreferencesService);
+  private readonly library = inject(LibraryViewService);
   private morphRecipeId: string | null = null;
   private returningToLibrary = false;
   private expandOrigin?: HTMLElement;
@@ -231,6 +234,8 @@ export class PageTurnService {
       window.removeEventListener('resize', cancel);
       this.document.removeEventListener('visibilitychange', hidden);
       root.removeAttribute('data-book-turn');
+      for (const [element, part] of this.parts)
+        if (part.part === 'controls') this.namePart(element);
       for (const property of properties) root.style.removeProperty(property);
     };
     const cancel = () => this.cancel();
@@ -239,6 +244,10 @@ export class PageTurnService {
     };
     window.addEventListener('resize', cancel, { passive: true });
     this.document.addEventListener('visibilitychange', hidden);
+    if (next === '/' && previous.startsWith('/recipes/'))
+      for (const [element, part] of this.parts)
+        if (part.part === 'controls')
+          element.style.setProperty('view-transition-name', 'book-recipe-controls');
     root.setAttribute('data-book-turn', returning ? 'back' : 'forward');
     root.style.setProperty('--book-turn-top', top + 'px');
 
@@ -303,6 +312,8 @@ export class PageTurnService {
     this.morphRecipeId =
       id && [...this.parts.values()].some((part) => part.recipeId === id) ? id : null;
     this.returningToLibrary = next === '/';
+    if (this.morphRecipeId && this.returningToLibrary && this.library.read().view === 'list')
+      root.setAttribute('data-expand-to-list', '');
     this.expandOrigin = [...this.parts].find(
       ([, part]) => part.recipeId === this.morphRecipeId && part.part === 'surface',
     )?.[0];
@@ -340,6 +351,7 @@ export class PageTurnService {
         'data-recipe-morph',
         'data-expand-back',
         'data-expand-list',
+        'data-expand-to-list',
       ])
         root.removeAttribute(attribute);
     };

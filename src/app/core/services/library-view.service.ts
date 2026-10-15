@@ -6,8 +6,15 @@ interface LibraryView {
   categoryId: string;
   view: 'shelf' | 'list';
   recipeId: string;
+  scrollY: number;
 }
-const emptyView: LibraryView = { query: '', categoryId: '', view: 'shelf', recipeId: '' };
+const emptyView: LibraryView = {
+  query: '',
+  categoryId: '',
+  view: 'shelf',
+  recipeId: '',
+  scrollY: 0,
+};
 
 // Navigation preferences stay on this device, separate from saved recipes.
 @Service()
@@ -27,15 +34,27 @@ export class LibraryViewService {
         const value = data as Record<string, unknown>;
         for (const field of ['query', 'categoryId', 'recipeId'] as const)
           if (typeof value[field] === 'string') view[field] = value[field].slice(0, 200);
+        if (
+          typeof value['scrollY'] === 'number' &&
+          Number.isFinite(value['scrollY']) &&
+          value['scrollY'] >= 0
+        )
+          view.scrollY = Math.min(value['scrollY'], 1_000_000);
         if (value['view'] === 'list') view.view = 'list';
       }
-    } catch { /* Browsing also works when local storage is unavailable. */ }
+    } catch {
+      /* Browsing also works when local storage is unavailable. */
+    }
     this.views.set(this.key, view);
     return { ...view };
   }
   write(changes: Partial<LibraryView>): void {
     const view = { ...this.read(), ...changes };
     this.views.set(this.key, view);
-    try { localStorage.setItem(this.key, JSON.stringify(view)); } catch { /* Keep this session's place. */ }
+    try {
+      localStorage.setItem(this.key, JSON.stringify(view));
+    } catch {
+      /* Keep this session's place. */
+    }
   }
 }

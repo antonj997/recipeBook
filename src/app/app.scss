@@ -3,6 +3,12 @@
   min-height: 100dvh;
   background: var(--page-background, var(--color-canvas));
 }
+:host(.restoring-library) {
+  overflow-anchor: none;
+}
+:host(.restoring-library) :is(.app-header, .brand-word) {
+  transition: none;
+}
 .app-header {
   view-transition-name: book-header;
   display: flex;

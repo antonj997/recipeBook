@@ -1,3 +1,4 @@
+import { LibraryViewService } from './core/services/library-view.service';
 import { PageTurnService } from './core/services/page-turn.service';
 import { PageAppearanceService } from './core/services/page-appearance.service';
 import { RecipeActionsOverlayComponent } from './shared/components/recipe-actions-overlay';
@@ -40,6 +41,7 @@ import { FeedbackService } from './core/services/feedback.service';
     '[style.--app-header-height]': 'headerHeight()',
     '[class.recipe-page]': '!!appearance.background()',
     '[class.compact-header]': 'compactHeader()',
+    '[class.restoring-library]': 'restoringLibrary()',
     '(document:pointerdown)': 'onPointerDown($event)',
     '(document:keydown)': 'onNavigationKey($event)',
   },
@@ -50,6 +52,9 @@ export class App {
   protected readonly appearance = inject(PageAppearanceService);
   protected readonly headerHeight = signal<string | null>(null);
   protected readonly compactHeader = signal(false);
+  protected readonly restoringLibrary = signal(false);
+  private library = inject(LibraryViewService);
+  private headerRestoreFrame = 0;
   private readonly appHeader = viewChild<ElementRef<HTMLElement>>('appHeader');
   private readonly destroyRef = inject(DestroyRef);
   protected readonly hideSettings = signal(false);
@@ -114,6 +119,7 @@ export class App {
       window.addEventListener('scroll', onScroll, { passive: true });
       this.destroyRef.onDestroy(() => {
         observer.disconnect();
+        cancelAnimationFrame(this.headerRestoreFrame);
         window.removeEventListener('scroll', onScroll);
         header.removeEventListener('transitionrun', onHeaderTransition);
         cancelAnimationFrame(themeFrame);
@@ -147,6 +153,20 @@ export class App {
     });
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (!(event instanceof NavigationEnd)) return;
+      cancelAnimationFrame(this.headerRestoreFrame);
+      const home = event.urlAfterRedirects.split(/[?#]/)[0] === '/';
+      this.restoringLibrary.set(home);
+      if (home) {
+        this.compactHeader.set(this.library.read().scrollY >= 80);
+        // Match the saved geometry before the destination snapshot, without scroll anchoring drift.
+        this.headerRestoreFrame = requestAnimationFrame(() => {
+          this.headerRestoreFrame = requestAnimationFrame(() => {
+            this.headerRestoreFrame = 0;
+            this.restoringLibrary.set(false);
+            this.updateHeaderForScroll();
+          });
+        });
+      }
       let route = this.router.routerState.snapshot.root;
       while (route.firstChild) route = route.firstChild;
       this.hideSettings.set(!!route.data['hideSettings']);
@@ -164,6 +184,7 @@ export class App {
   protected readonly touchInput = signal(false);
 
   private updateHeaderForScroll(): void {
+    if (this.restoringLibrary()) return;
     // Shrinking the header changes document height. Separate thresholds avoid flickering.
     this.compactHeader.set(this.compactHeader() ? window.scrollY > 8 : window.scrollY >= 80);
   }

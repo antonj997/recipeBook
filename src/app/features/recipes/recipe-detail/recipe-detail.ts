@@ -152,6 +152,15 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   recipeBody = viewChild<ElementRef<HTMLElement>>('recipeBody');
   tabIndicator = viewChild<ElementRef<HTMLElement>>('tabIndicator');
   private tabMotion?: Animation;
+  private sectionScroll: Record<CookingSection, number> = { ingredients: 0, instructions: 0 };
+  private sectionScrollFrame = 0;
+  private readingStart(): number {
+    const top = this.recipeBody()?.nativeElement.getBoundingClientRect().top ?? 0;
+    const header =
+      document.querySelector<HTMLElement>('.app-header')?.getBoundingClientRect().height ?? 0;
+    const tabs = document.querySelector<HTMLElement>('.section-switch')?.offsetHeight ?? 0;
+    return Math.max(0, top + window.scrollY - header - tabs);
+  }
   private cookingSessions = inject(CookingSessionService);
   constructor() {
     effect((onCleanup) => {
@@ -200,18 +209,24 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   switchSection(section: CookingSection): void {
     if (section === this.activeSection() || this.accountChanged()) return;
-    const body = this.recipeBody()?.nativeElement;
-    if (body) {
-      // Retain space only when scrolled down, so a shorter panel cannot clamp the page upward.
-      this.sectionHeight.set(
-        window.scrollY > 0
-          ? Math.max(this.sectionHeight(), body.getBoundingClientRect().height)
-          : 0,
-      );
-    }
+    const top = window.scrollY;
+    const start = this.readingStart();
+    if (!this.sectionScrollFrame)
+      this.sectionScroll[this.activeSection()] = Math.max(0, top - start);
+    cancelAnimationFrame(this.sectionScrollFrame);
     this.animateTab(section);
     this.activeSection.set(section);
+    this.sectionHeight.set(0);
     this.saveCookingSession();
+    this.sectionScrollFrame = requestAnimationFrame(() => {
+      this.sectionScrollFrame = 0;
+      if (this.accountChanged() || this.wideReading()) return;
+      const offset = this.sectionScroll[section];
+      window.scrollTo({
+        top: offset > 0 || top >= start ? this.readingStart() + offset : top,
+        behavior: 'instant',
+      });
+    });
   }
 
   private animateTab(section: CookingSection): void {
@@ -245,6 +260,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.tabMotion?.cancel();
+    cancelAnimationFrame(this.sectionScrollFrame);
     this.readingMedia?.removeEventListener('change', this.syncReadingLayout);
     if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
   }

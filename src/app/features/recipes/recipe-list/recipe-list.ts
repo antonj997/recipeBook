@@ -15,7 +15,7 @@ import {
   signal,
   viewChildren,
 } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, Scroll } from '@angular/router';
 import type { LibraryPageData } from '../../../core/services/recipe-page-resolvers';
 import { RecipeTransitionPartDirective } from '../../../shared/components/recipe-transition-part';
 import type { Recipe } from '../../../core/models/recipe.model';
@@ -136,24 +136,40 @@ export class RecipeListComponent implements OnDestroy {
     clearTimeout(this.portraitScrollTimer);
     this.portraitScrollTimer = undefined;
   }
+  private destroyed = false;
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.cancelPortraitScrollReset();
+    this.scrollSubscription.unsubscribe();
   }
   private listRows = viewChildren<ElementRef<HTMLAnchorElement>>('listRow');
-  // Restore a row only when returning to the library, never when switching views.
-  private pendingListRestoreId = signal(this.initial.view === 'list' ? this.initial.recipeId : '');
+  private pendingScrollTop: number | null = this.initial.scrollY;
+  private routerScrollTop: number | null = this.initial.scrollY;
+  // Restore before capture, then after the router's own Scroll handler has finished.
+  private scrollSubscription = this.router.events.subscribe((event) => {
+    if (!(event instanceof Scroll) || this.routerScrollTop === null || this.router.url !== '/')
+      return;
+    const top = this.routerScrollTop;
+    const account = this.recipeService.accountVersion();
+    this.routerScrollTop = null;
+    queueMicrotask(() => {
+      if (
+        !this.destroyed &&
+        account === this.recipeService.accountVersion() &&
+        this.router.url === '/'
+      )
+        window.scrollTo({ top, left: window.scrollX, behavior: 'instant' });
+    });
+  });
 
   constructor() {
     afterRenderEffect(() => {
-      const id = this.pendingListRestoreId();
-      const rows = this.listRows();
-      if (this.view() !== 'list' || !id) return;
-      const row = rows.find((item) => item.nativeElement.dataset['recipeId'] === id)?.nativeElement;
-      if (!row) return;
-      this.pendingListRestoreId.set('');
-      const bounds = row.getBoundingClientRect();
-      if (bounds.top < 80 || bounds.bottom > window.innerHeight)
-        row.scrollIntoView({ block: 'center', behavior: 'instant' });
+      this.listRows();
+      this.view();
+      if (this.loading() || !this.recipes().length || this.pendingScrollTop === null) return;
+      const top = this.pendingScrollTop;
+      this.pendingScrollTop = null;
+      window.scrollTo({ top, left: window.scrollX, behavior: 'instant' });
     });
     if (
       this.pageData &&
@@ -169,7 +185,8 @@ export class RecipeListComponent implements OnDestroy {
       if (current !== accountVersion) {
         accountVersion = current;
         const saved = this.library.read();
-        this.pendingListRestoreId.set(saved.view === 'list' ? saved.recipeId : '');
+        this.pendingScrollTop = saved.scrollY;
+        this.routerScrollTop = saved.scrollY;
         this.recipes.set([]);
         this.collections.set([]);
         this.query.set(saved.query);
@@ -209,10 +226,14 @@ export class RecipeListComponent implements OnDestroy {
     this.library.write({ categoryId: '', recipeId: '' });
   }
   setView(view: 'shelf' | 'list'): void {
-    this.pendingListRestoreId.set('');
+    this.pendingScrollTop = null;
+    this.routerScrollTop = null;
     this.restoreRecipeId.set(this.library.read().recipeId);
     this.view.set(view);
     this.library.write({ view });
+  }
+  openRecipe(id: string): void {
+    this.library.write({ recipeId: id, scrollY: window.scrollY });
   }
   rememberRecipe(id: string): void {
     this.library.write({ recipeId: id });

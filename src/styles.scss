@@ -881,7 +881,8 @@ html[data-page-transition='expand'][data-expand-back]::view-transition-new(root)
 .book-recipe-color {
   display: none;
 }
-html[data-page-transition='expand'][data-recipe-morph]:not([data-expand-back]) .book-recipe-color {
+html[data-page-transition='expand'][data-recipe-morph]:not([data-expand-back]) .book-recipe-color,
+html[data-expand-to-list] .book-recipe-color {
   display: block;
   position: fixed;
   inset: 0;
@@ -955,6 +956,34 @@ html[data-page-transition='expand'][data-recipe-morph][data-expand-list]:not(
   animation:
     book-recipe-open var(--book-expand-duration) var(--book-expand-delay) var(--ease-out) both,
     book-list-wait var(--book-expand-delay) linear backwards;
+}
+/* Unshared controls leave before the recipe contracts into its library position. */
+html[data-page-transition='expand']::view-transition-group(book-recipe-controls),
+html[data-book-turn]::view-transition-group(book-recipe-controls) {
+  animation: none;
+}
+html[data-page-transition='expand']::view-transition-old(book-recipe-controls),
+html[data-book-turn]::view-transition-old(book-recipe-controls) {
+  animation: book-part-out 65ms linear both;
+}
+html[data-page-transition='expand']::view-transition-new(book-recipe-controls) {
+  animation: book-part-in 180ms calc(var(--book-expand-delay) + 220ms) ease-out both;
+}
+/* A list return keeps only the shared title/photo above the contracting flat color. */
+html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(root),
+html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(book-recipe-surface),
+html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(book-recipe-time),
+html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(
+    book-recipe-categories
+  ),
+html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(book-recipe-controls),
+html[data-page-transition='expand'][data-expand-to-list]::view-transition-new(book-recipe-time),
+html[data-page-transition='expand'][data-expand-to-list]::view-transition-new(book-recipe-color) {
+  display: none;
+}
+html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(book-recipe-color) {
+  display: block;
+  animation: book-recipe-close 430ms var(--ease-out) both;
 }
 @keyframes book-list-fill {
   0% {

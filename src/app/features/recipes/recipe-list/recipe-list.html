@@ -94,6 +94,7 @@
         [collections]="collections()"
         [initialRecipeId]="restoreRecipeId()"
         (activeRecipeChange)="rememberRecipe($event)"
+        (recipeActivate)="openRecipe($event)"
       >
         <app-library-view-toggle rail-actions [view]="view()" (viewChange)="setView($event)" />
         <div rail-heading><ng-container [ngTemplateOutlet]="libraryHeading" /></div>
@@ -128,7 +129,7 @@
             [appRecipeContext]="recipe"
             [style.--recipe-color]="recipeBackground(recipe)"
             [routerLink]="['/recipes', recipe.id]"
-            (click)="rememberRecipe(recipe.id)"
+            (click)="openRecipe(recipe.id)"
           >
             <span class="index-color" aria-hidden="true"></span>
             <span class="index-image" [style.background-color]="recipeBackground(recipe)">

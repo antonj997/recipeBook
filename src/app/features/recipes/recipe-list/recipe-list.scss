@@ -1,9 +1,9 @@
 .index-color {
   position: absolute;
   inset: 16px 0 16px auto;
-  width: 4px;
+  width: 28px;
   background: var(--recipe-color);
-  border-radius: 999px;
+  border-radius: 12px;
 }
 .add-chevron {
   width: 14px;
@@ -230,13 +230,18 @@
 }
 .index-image {
   display: block;
-  flex: 0 0 86px;
-  width: 86px;
-  height: 72px;
-  border-radius: 8px;
+  flex: 0 0 96px;
+  width: 96px;
+  height: 80px;
+  padding: 6px;
+  border-radius: 12px;
   overflow: hidden;
 }
+.index-image:has(app-food-placeholder) {
+  padding: 0;
+}
 .index-image img {
+  border-radius: 6px;
   width: 100%;
   height: 100%;
   display: block;
@@ -273,9 +278,9 @@
     gap: 14px;
   }
   .index-image {
-    flex-basis: 72px;
-    width: 72px;
-    height: 64px;
+    flex-basis: 84px;
+    width: 84px;
+    height: 72px;
   }
   .index-title {
     font-size: 1.2rem;

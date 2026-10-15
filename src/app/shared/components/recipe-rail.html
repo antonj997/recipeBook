@@ -83,7 +83,7 @@
         @for (recipe of recipes(); track recipe.id; let i = $index) {
           <a
             class="recipe-card"
-            (click)="activeRecipeChange.emit(recipe.id)"
+            (click)="recipeActivate.emit(recipe.id)"
             appCardTilt
             [appRecipeContext]="recipe"
             [routerLink]="['/recipes', recipe.id]"
@@ -124,11 +124,19 @@
                     }
                   </div>
                 }
-                @if (recipe.totalTime != null) {
-                  <p class="recipe-time" [appRecipeTransition]="recipe.id" transitionPart="time">
-                    <app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}
-                  </p>
+                @if (recipe.description?.trim(); as description) {
+                  <p class="card-description">{{ description }}</p>
                 }
+                <div class="card-footer">
+                  @if (recipe.totalTime != null) {
+                    <p class="recipe-time" [appRecipeTransition]="recipe.id" transitionPart="time">
+                      <app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}
+                    </p>
+                  }
+                  @if (calories(recipe); as energy) {
+                    <span class="card-calories">{{ energy }} <span>/ portion</span></span>
+                  }
+                </div>
               </div>
             </div>
           </a>

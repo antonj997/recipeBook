@@ -4,7 +4,7 @@ import { RecipeContextDirective } from './recipe-context';
 import type { RecipeCollection } from '../../core/models/recipe-collection.model';
 import { CardTiltDirective } from './card-tilt';
 import { IconComponent } from './icon';
-import { formatRecipeTime } from '../../core/models/recipe-metadata';
+import { formatRecipeTime, perPortionNutrition } from '../../core/models/recipe-metadata';
 import {
   afterNextRender,
   Component,
@@ -44,6 +44,9 @@ import { FoodPlaceholderComponent } from './food-placeholder';
 })
 export class RecipeRailComponent implements OnDestroy {
   formatTime = formatRecipeTime;
+  calories(recipe: Recipe): string | undefined {
+    return perPortionNutrition(recipe.nutrition)?.calories;
+  }
   recipeBackground = recipeBackground;
   compact = input(false);
   addMenuId = input('');
@@ -51,6 +54,7 @@ export class RecipeRailComponent implements OnDestroy {
   addMenuActivate = output<void>();
   initialRecipeId = input('');
   activeRecipeChange = output<string>();
+  recipeActivate = output<string>();
   private currentRecipeId = '';
   private lastRestoreId = '';
   private restoreFrame = 0;
