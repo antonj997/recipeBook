@@ -177,7 +177,9 @@ small {
   transition:
     background 180ms,
     color 180ms,
-    transform 180ms var(--ease-out);
+    border-color 180ms,
+    opacity 140ms,
+    text-shadow 160ms;
 }
 .add-recipe-placeholder {
   align-items: center;
@@ -221,12 +223,15 @@ button:disabled {
 }
 button:active:not(:disabled),
 .button:active {
-  transform: scale(0.97);
+  opacity: 0.72;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   :where(button, .button):hover:not(:disabled) {
-    transform: translateY(-1px);
+    --icon-stroke-width: 2.1;
     border-color: currentColor;
+    text-shadow:
+      0.2px 0 currentColor,
+      -0.2px 0 currentColor;
   }
   a:not(.button):hover {
     text-decoration-thickness: 2px;
@@ -543,9 +548,7 @@ app-root.touch-input .check-control input:focus + app-checkbox-mark {
   transition: box-shadow 180ms;
 }
 app-checkbox-mark {
-  transition:
-    color 180ms,
-    transform 180ms var(--ease-out);
+  transition: color 180ms;
 }
 @media (min-width: 601px) and (hover: hover) and (pointer: fine) {
   .search-field:hover {
@@ -558,12 +561,6 @@ app-checkbox-mark {
 @media (hover: hover) {
   .check-control:hover app-checkbox-mark {
     color: var(--color-ink);
-    transform: scale(1.06);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .check-control:hover app-checkbox-mark {
-    transform: none;
   }
 }
 
@@ -1013,7 +1010,7 @@ html[data-page-transition='expand'][data-recipe-morph][data-expand-list]:not(
     book-recipe-open var(--book-expand-duration) var(--book-expand-delay) var(--ease-out) both,
     book-list-wait var(--book-expand-delay) linear backwards;
 }
-/* Unshared controls leave before the recipe contracts into its library position. */
+/* Curl navigation keeps its existing control exit; expand isolates all recipe-only content. */
 html[data-page-transition='expand']::view-transition-group(book-recipe-controls),
 html[data-book-turn]::view-transition-group(book-recipe-controls) {
   animation: none;
@@ -1026,21 +1023,51 @@ html[data-page-transition='expand']::view-transition-new(book-recipe-controls),
 html[data-book-turn]::view-transition-new(book-recipe-controls) {
   display: none;
 }
-/* A list return keeps only the shared title/photo above the contracting flat color. */
+/* A list return contracts the flat color without a second recipe-page snapshot. */
 html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(root),
 html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(book-recipe-surface),
-html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(book-recipe-time),
-html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(
-    book-recipe-categories
-  ),
-html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(book-recipe-controls),
-html[data-page-transition='expand'][data-expand-to-list]::view-transition-new(book-recipe-time),
 html[data-page-transition='expand'][data-expand-to-list]::view-transition-new(book-recipe-color) {
   display: none;
 }
 html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(book-recipe-color) {
   display: block;
   animation: book-recipe-close 430ms var(--ease-out) both;
+}
+/* Only the photo, title, categories and time travel. Recipe-only content stays at its
+   final geometry, enters near the landing, and is absent throughout a return. */
+html[data-page-transition='expand'][data-recipe-morph] app-screen-awake.arriving {
+  opacity: 1;
+}
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-group(
+    book-recipe-navigation
+  ),
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-group(
+    book-recipe-description
+  ),
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-group(book-recipe-reading),
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-group(
+    book-recipe-controls
+  ) {
+  animation: none;
+  z-index: 3;
+}
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-old(book-recipe-navigation),
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-old(
+    book-recipe-description
+  ),
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-old(book-recipe-reading),
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-old(book-recipe-controls) {
+  display: none;
+}
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-new(book-recipe-navigation),
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-new(
+    book-recipe-description
+  ),
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-new(book-recipe-reading),
+html[data-page-transition='expand'][data-recipe-morph]::view-transition-new(book-recipe-controls) {
+  display: block;
+  animation: book-part-in 160ms calc(var(--book-expand-delay) + 320ms) ease-out both;
+  mix-blend-mode: normal;
 }
 @keyframes book-list-fill {
   0% {

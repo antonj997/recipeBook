@@ -40,7 +40,7 @@
 }
 .search-field {
   flex: 1;
-  max-width: 600px;
+  min-width: 0;
 }
 .search-field button {
   border: 0;
@@ -67,7 +67,10 @@
   border-radius: 4px;
 }
 #add-recipe-options a:hover {
-  transform: translateX(2px);
+  --icon-stroke-width: 2.1;
+  text-shadow:
+    0.2px 0 currentColor,
+    -0.2px 0 currentColor;
 }
 #add-recipe-options:popover-open {
   animation: menu-in 180ms var(--ease-out);
@@ -355,23 +358,30 @@
   }
 }
 
-.index-title {
-  transition: transform 180ms var(--ease-out);
-}
 .index-row {
   transition: border-color 180ms var(--ease-out);
+}
+.index-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--recipe-color) 35%, var(--color-ink));
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   .index-row:hover {
     border-color: color-mix(in srgb, var(--recipe-color) 35%, var(--color-ink));
   }
-  .index-row:hover .index-title {
-    transform: translateX(3px);
+  .index-row:hover::after {
+    opacity: 1;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .index-title,
-  .index-row {
+  .index-row,
+  .index-row::after {
     transition: none;
   }
 }

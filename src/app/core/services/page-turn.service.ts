@@ -6,7 +6,15 @@ import { PAGE_CURL_DURATION, pageCurl } from './page-curl';
 import { PageTransitionPreferencesService } from './page-transition-preferences.service';
 
 export type RecipeTransitionPart =
-  'surface' | 'image' | 'title' | 'time' | 'categories' | 'controls';
+  | 'surface'
+  | 'image'
+  | 'title'
+  | 'time'
+  | 'categories'
+  | 'controls'
+  | 'navigation'
+  | 'description'
+  | 'reading';
 
 /** Native curl or shared-recipe expansion; no recipe DOM is copied or stored. */
 @Service()

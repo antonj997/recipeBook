@@ -14,7 +14,13 @@ import {
   imports: [IconComponent, RecipeTransitionPartDirective],
   template: `
     @if (description()) {
-      <p class="recipe-description">{{ description() }}</p>
+      <p
+        class="recipe-description"
+        [appRecipeTransition]="recipe().id"
+        transitionPart="description"
+      >
+        {{ description() }}
+      </p>
     }
     @if (categories().length || recipe().totalTime != null) {
       <div class="recipe-metadata">
@@ -104,7 +110,6 @@ export class RecipeSummaryDetailsComponent {
     }
     .additional-details {
       margin-top: 32px;
-      max-width: 70ch;
     }
     .additional-details:empty {
       display: none;

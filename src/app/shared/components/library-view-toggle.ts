@@ -25,22 +25,11 @@ import { IconComponent } from './icon';
       background: transparent;
       color: var(--color-muted);
     }
-    app-icon {
-      transition: transform 180ms var(--ease-out);
-    }
     @media (hover: hover) and (pointer: fine) {
       button:hover {
         background: transparent;
         color: var(--color-ink);
         transform: none;
-      }
-      button:hover app-icon {
-        transform: translateY(-1px);
-      }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      app-icon {
-        transition: none;
       }
     }
   `,

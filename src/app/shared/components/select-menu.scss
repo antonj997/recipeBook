@@ -84,14 +84,16 @@
 .menu-option > span {
   min-width: 0;
   overflow-wrap: anywhere;
-  transition: transform 150ms var(--ease-out);
+  transition: text-shadow 150ms var(--ease-out);
 }
 .menu-option app-icon {
   width: 18px;
   height: 18px;
 }
 .menu-option.is-active > span {
-  transform: translateX(2px);
+  text-shadow:
+    0.2px 0 currentColor,
+    -0.2px 0 currentColor;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -117,11 +119,5 @@
   .menu-trigger app-icon,
   .menu-option > span {
     transition: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .menu-option.is-active > span {
-    transform: none;
   }
 }

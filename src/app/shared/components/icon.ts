@@ -86,6 +86,13 @@ import { Component, input } from '@angular/core';
       svg {
         width: 100%;
         height: 100%;
+        stroke-width: var(--icon-stroke-width, 1.65);
+        transition: stroke-width 160ms var(--ease-out);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        svg {
+          transition: none;
+        }
       }
     `,
   ],

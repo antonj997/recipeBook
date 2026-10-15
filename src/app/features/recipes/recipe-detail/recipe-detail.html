@@ -1,5 +1,9 @@
 <article class="recipe-detail" [class.draft-preview]="isDraft" [class.wide-reading]="wideReading()">
-  <div class="recipe-navigation page">
+  <div
+    class="recipe-navigation page"
+    [appRecipeTransition]="recipe()?.id ?? ''"
+    transitionPart="navigation"
+  >
     <a routerLink="/" class="back-link"><app-icon name="chevron" />Back</a>
     @if (!isDraft && recipe() && !loading() && !error()) {
       <button
@@ -55,7 +59,11 @@
         </div>
         <app-screen-awake [appRecipeTransition]="selectedRecipe.id" transitionPart="controls" />
       </div>
-      <div class="recipe-reading">
+      <div
+        class="recipe-reading"
+        [appRecipeTransition]="selectedRecipe.id"
+        transitionPart="reading"
+      >
         <div class="recipe-sections">
           <div class="section-switch">
             <div
