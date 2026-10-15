@@ -152,8 +152,8 @@
                 [title]="recipe.title"
                 [appRecipeTransition]="recipe.id"
                 transitionPart="title"
-                >{{ recipe.title }}</span
-              >
+                ><app-recipe-title [title]="recipe.title"
+              /></span>
               @if (recipe.totalTime != null) {
                 <span
                   class="index-time recipe-time"

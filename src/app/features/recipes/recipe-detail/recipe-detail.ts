@@ -1,4 +1,5 @@
 import type { RecipePageData } from '../../../core/services/recipe-page-resolvers';
+import { RecipeTitleComponent } from '../../../shared/components/recipe-title';
 import { RecipeTransitionPartDirective } from '../../../shared/components/recipe-transition-part';
 import { PageAppearanceService } from '../../../core/services/page-appearance.service';
 import { recipeBackground } from '../../../core/models/recipe-color';
@@ -46,6 +47,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
     '(window:beforeunload)': 'onBeforeUnload($event)',
   },
   imports: [
+    RecipeTitleComponent,
     RecipeTransitionPartDirective,
     SelectMenuComponent,
     ScreenAwakeComponent,
@@ -139,7 +141,6 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       : focused?.closest('#' + inactive + '-panel') && 'recipe-' + this.activeSection() + '-tab';
     this.tabMotion?.cancel();
     if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
-    this.sectionHeight.set(0);
     this.wideReading.set(wide);
     if (focusTarget) {
       this.layoutFocusFrame = requestAnimationFrame(() => {
@@ -148,19 +149,8 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       });
     }
   };
-  sectionHeight = signal(0);
-  recipeBody = viewChild<ElementRef<HTMLElement>>('recipeBody');
   tabIndicator = viewChild<ElementRef<HTMLElement>>('tabIndicator');
   private tabMotion?: Animation;
-  private sectionScroll: Record<CookingSection, number> = { ingredients: 0, instructions: 0 };
-  private sectionScrollFrame = 0;
-  private readingStart(): number {
-    const top = this.recipeBody()?.nativeElement.getBoundingClientRect().top ?? 0;
-    const header =
-      document.querySelector<HTMLElement>('.app-header')?.getBoundingClientRect().height ?? 0;
-    const tabs = document.querySelector<HTMLElement>('.section-switch')?.offsetHeight ?? 0;
-    return Math.max(0, top + window.scrollY - header - tabs);
-  }
   private cookingSessions = inject(CookingSessionService);
   constructor() {
     effect((onCleanup) => {
@@ -209,24 +199,9 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   switchSection(section: CookingSection): void {
     if (section === this.activeSection() || this.accountChanged()) return;
-    const top = window.scrollY;
-    const start = this.readingStart();
-    if (!this.sectionScrollFrame)
-      this.sectionScroll[this.activeSection()] = Math.max(0, top - start);
-    cancelAnimationFrame(this.sectionScrollFrame);
     this.animateTab(section);
     this.activeSection.set(section);
-    this.sectionHeight.set(0);
     this.saveCookingSession();
-    this.sectionScrollFrame = requestAnimationFrame(() => {
-      this.sectionScrollFrame = 0;
-      if (this.accountChanged() || this.wideReading()) return;
-      const offset = this.sectionScroll[section];
-      window.scrollTo({
-        top: offset > 0 || top >= start ? this.readingStart() + offset : top,
-        behavior: 'instant',
-      });
-    });
   }
 
   private animateTab(section: CookingSection): void {
@@ -260,7 +235,6 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.tabMotion?.cancel();
-    cancelAnimationFrame(this.sectionScrollFrame);
     this.readingMedia?.removeEventListener('change', this.syncReadingLayout);
     if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
   }

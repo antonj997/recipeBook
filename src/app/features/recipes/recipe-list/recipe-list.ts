@@ -26,6 +26,7 @@ import { LibraryViewService } from '../../../core/services/library-view.service'
 import { RecipeRailComponent } from '../../../shared/components/recipe-rail';
 import { FoodPlaceholderComponent } from '../../../shared/components/food-placeholder';
 import { IconComponent } from '../../../shared/components/icon';
+import { RecipeTitleComponent } from '../../../shared/components/recipe-title';
 import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
 
@@ -35,6 +36,7 @@ type AddMenuOwner = 'toolbar' | 'shelf' | 'list';
   selector: 'app-recipe-list',
   host: { '(window:resize)': 'onViewportResize()' },
   imports: [
+    RecipeTitleComponent,
     RecipeTransitionPartDirective,
     SelectMenuComponent,
     RecipeContextDirective,

@@ -111,7 +111,7 @@
               </div>
               <div class="recipe-card__content">
                 <h3 [title]="recipe.title" [appRecipeTransition]="recipe.id" transitionPart="title">
-                  {{ recipe.title }}
+                  <app-recipe-title [title]="recipe.title" />
                 </h3>
                 @if (categoryLabels(recipe).length) {
                   <div
@@ -125,7 +125,11 @@
                   </div>
                 }
                 @if (recipe.description?.trim(); as description) {
-                  <div class="card-description">
+                  <div
+                    class="card-description"
+                    [appRecipeTransition]="recipe.id"
+                    transitionPart="card-description"
+                  >
                     <p>{{ description }}</p>
                   </div>
                 }

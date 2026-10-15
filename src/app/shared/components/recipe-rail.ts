@@ -4,6 +4,7 @@ import { RecipeContextDirective } from './recipe-context';
 import type { RecipeCollection } from '../../core/models/recipe-collection.model';
 import { CardTiltDirective } from './card-tilt';
 import { IconComponent } from './icon';
+import { RecipeTitleComponent } from './recipe-title';
 import { formatRecipeTime, perPortionNutrition } from '../../core/models/recipe-metadata';
 import {
   afterNextRender,
@@ -26,6 +27,7 @@ import { FoodPlaceholderComponent } from './food-placeholder';
 @Component({
   selector: 'app-recipe-rail',
   imports: [
+    RecipeTitleComponent,
     RecipeTransitionPartDirective,
     RouterLink,
     FoodPlaceholderComponent,

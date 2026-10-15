@@ -96,14 +96,12 @@
   object-fit: cover;
 }
 .recipe-body {
-  display: flow-root;
-  min-height: var(--section-height, 0px);
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  height: max(240px, calc(100svh - var(--app-header-height) - 56px));
   padding-left: var(--page-gutter-left);
   padding-right: var(--page-gutter-right);
   background: var(--color-surface);
-}
-.ingredients {
-  padding-block: 28px;
 }
 ul,
 ol {
@@ -121,14 +119,6 @@ li:last-child {
 li::marker {
   color: var(--color-muted);
   font-weight: 700;
-}
-.instructions {
-  padding-block: 28px;
-  max-width: 75ch;
-}
-.instructions li {
-  margin-bottom: 24px;
-  white-space: pre-line;
 }
 .source-link {
   display: inline-flex;
@@ -148,12 +138,6 @@ li::marker {
   }
   .recipe-hero {
     max-height: 220px;
-  }
-  .ingredients {
-    padding: 24px 0;
-  }
-  .instructions {
-    padding-block: 24px;
   }
 }
 
@@ -256,13 +240,23 @@ li::marker {
   outline-offset: -3px;
 }
 .recipe-body .inactive-panel {
-  display: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 .ingredients,
 .instructions {
+  grid-area: 1 / 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
   max-width: 75ch;
   margin-inline: auto;
   padding-block: 28px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-control-border) transparent;
 }
 @media (max-width: 700px) {
   .recipe-summary {
@@ -281,14 +275,13 @@ li::marker {
   display: none;
 }
 .wide-reading .recipe-body {
-  display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
   gap: clamp(24px, 4vw, 48px);
-  min-height: 0;
+  height: max(240px, calc(100svh - var(--app-header-height)));
 }
 .wide-reading :where(.ingredients, .instructions) {
+  grid-area: auto;
   min-width: 0;
-  width: 100%;
   margin: 0;
   padding-block: 32px;
 }
@@ -441,14 +434,6 @@ li::marker {
   justify-content: flex-end;
   min-height: 44px;
   margin-bottom: 20px;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 .reset-instructions {
   border: 0;

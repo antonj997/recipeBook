@@ -14,6 +14,7 @@ export type RecipeTransitionPart =
   | 'controls'
   | 'navigation'
   | 'description'
+  | 'card-description'
   | 'reading';
 
 /** Native curl or shared-recipe expansion; no recipe DOM is copied or stored. */
@@ -27,6 +28,7 @@ export class PageTurnService {
   private morphRecipeId: string | null = null;
   private returningToLibrary = false;
   private expandOrigin?: HTMLElement;
+  private readonly titleWords = new Map<HTMLElement, Map<HTMLElement, string>>();
   private readonly parts = new Map<
     HTMLElement,
     {
@@ -45,6 +47,7 @@ export class PageTurnService {
       this.expandOrigin = element;
     this.namePart(element);
     return () => {
+      this.clearTitleWords(element);
       this.parts.delete(element);
       if (this.expandOrigin === element) this.expandOrigin = undefined;
       if (previousName) element.style.setProperty('view-transition-name', previousName);
@@ -57,15 +60,18 @@ export class PageTurnService {
     const part = this.parts.get(element);
     const window = this.document.defaultView;
     if (!window || part?.recipeId !== this.morphRecipeId || part?.part !== 'title') return;
-    const font = parseFloat(window.getComputedStyle(element).fontSize);
+    const computed = window.getComputedStyle(element);
+    const font = parseFloat(computed.fontSize);
+    const width = parseFloat(computed.width) || element.offsetWidth;
+    const height = parseFloat(computed.height) || element.offsetHeight;
     if (!(font > 0) || !element.offsetWidth || !element.offsetHeight) return;
     const style = this.document.documentElement.style;
     if (end === 'from') this.titleFontFrom = font;
-    style.setProperty('--book-title-width-' + end, element.offsetWidth + 'px');
-    style.setProperty('--book-title-height-' + end, element.offsetHeight + 'px');
+    style.setProperty('--book-title-width-' + end, width + 'px');
+    style.setProperty('--book-title-height-' + end, height + 'px');
     if (end === 'from') {
-      style.setProperty('--book-title-width-to', element.offsetWidth + 'px');
-      style.setProperty('--book-title-height-to', element.offsetHeight + 'px');
+      style.setProperty('--book-title-width-to', width + 'px');
+      style.setProperty('--book-title-height-to', height + 'px');
     }
     style.setProperty('--book-title-old-scale', String(font / (this.titleFontFrom || font)));
     style.setProperty('--book-title-new-scale', String((this.titleFontFrom || font) / font));
@@ -206,11 +212,46 @@ export class PageTurnService {
   private namePart(element: HTMLElement): void {
     const participant = this.parts.get(element);
     if (!participant) return;
+    if (participant.part === 'title') {
+      this.clearTitleWords(element);
+      if (participant.recipeId === this.morphRecipeId) this.nameTitleWords(element);
+    }
     if (participant.recipeId === this.morphRecipeId)
       element.style.setProperty('view-transition-name', 'book-recipe-' + participant.part);
     else if (participant.previousName)
       element.style.setProperty('view-transition-name', participant.previousName);
     else element.style.removeProperty('view-transition-name');
+  }
+
+  private nameTitleWords(title: HTMLElement): void {
+    // Older View Transition implementations retain the whole-title crossfade fallback.
+    if (typeof CSS === 'undefined' || !CSS.supports('view-transition-class: book-title-word'))
+      return;
+    const words = title.querySelectorAll<HTMLElement>('[data-title-word]');
+    if (!words.length || words.length > 48) return;
+    const frame = title.getBoundingClientRect();
+    const names = new Map<HTMLElement, string>();
+    for (const word of words) {
+      const bounds = word.getBoundingClientRect();
+      // Do not reveal words clipped by a list title's three-line limit.
+      if (bounds.top < frame.top - 1 || bounds.bottom > frame.bottom + 1) continue;
+      names.set(word, word.style.getPropertyValue('view-transition-name'));
+      word.style.setProperty(
+        'view-transition-name',
+        'book-title-word-' + word.getAttribute('data-title-word'),
+      );
+    }
+    this.titleWords.set(title, names);
+  }
+
+  private clearTitleWords(title: HTMLElement): void {
+    const names = this.titleWords.get(title);
+    if (!names) return;
+    for (const [word, previous] of names) {
+      if (previous) word.style.setProperty('view-transition-name', previous);
+      else word.style.removeProperty('view-transition-name');
+    }
+    this.titleWords.delete(title);
   }
   private active?: ViewTransition;
   private release?: () => void;

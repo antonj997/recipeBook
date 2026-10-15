@@ -49,7 +49,7 @@
           }
           <header class="recipe-summary">
             <h1 [appRecipeTransition]="selectedRecipe.id" transitionPart="title">
-              {{ selectedRecipe.title || 'New recipe' }}
+              <app-recipe-title [title]="selectedRecipe.title || 'New recipe'" />
             </h1>
             <app-recipe-summary-details
               [recipe]="selectedRecipe"
@@ -98,10 +98,14 @@
               </button>
             </div>
           </div>
-          <div #recipeBody class="recipe-body" [style.--section-height]="sectionHeight() + 'px'">
+          <div class="recipe-body">
             <section
               id="ingredients-panel"
               [class.inactive-panel]="!wideReading() && activeSection() !== 'ingredients'"
+              [attr.inert]="!wideReading() && activeSection() !== 'ingredients' ? '' : null"
+              [attr.aria-hidden]="
+                !wideReading() && activeSection() !== 'ingredients' ? 'true' : null
+              "
               class="ingredients"
               [attr.role]="wideReading() ? 'region' : 'tabpanel'"
               [attr.tabindex]="wideReading() ? -1 : 0"
@@ -134,6 +138,10 @@
             <section
               id="instructions-panel"
               [class.inactive-panel]="!wideReading() && activeSection() !== 'instructions'"
+              [attr.inert]="!wideReading() && activeSection() !== 'instructions' ? '' : null"
+              [attr.aria-hidden]="
+                !wideReading() && activeSection() !== 'instructions' ? 'true' : null
+              "
               class="instructions"
               [attr.role]="wideReading() ? 'region' : 'tabpanel'"
               [attr.tabindex]="wideReading() ? -1 : 0"
