@@ -147,18 +147,22 @@
               }
             </span>
             <span class="index-copy"
-              ><span class="index-title" [appRecipeTransition]="recipe.id" transitionPart="title">{{
-                recipe.title
-              }}</span>
-            </span>
-            @if (recipe.totalTime != null) {
-              <span
-                class="index-time recipe-time"
+              ><span
+                class="index-title"
+                [title]="recipe.title"
                 [appRecipeTransition]="recipe.id"
-                transitionPart="time"
-                ><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</span
+                transitionPart="title"
+                >{{ recipe.title }}</span
               >
-            }
+              @if (recipe.totalTime != null) {
+                <span
+                  class="index-time recipe-time"
+                  [appRecipeTransition]="recipe.id"
+                  transitionPart="time"
+                  ><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</span
+                >
+              }
+            </span>
           </a>
         } @empty {
           <div class="empty-state">

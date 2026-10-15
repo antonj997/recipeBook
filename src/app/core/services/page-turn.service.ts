@@ -1,6 +1,6 @@
 import { LibraryViewService } from './library-view.service';
 import { DOCUMENT } from '@angular/common';
-import { Service, inject } from '@angular/core';
+import { Service, inject, signal } from '@angular/core';
 import type { ActivatedRouteSnapshot, ViewTransitionInfo } from '@angular/router';
 import { PAGE_CURL_DURATION, pageCurl } from './page-curl';
 import { PageTransitionPreferencesService } from './page-transition-preferences.service';
@@ -14,6 +14,8 @@ export class PageTurnService {
   private readonly document = inject(DOCUMENT);
   private readonly preferences = inject(PageTransitionPreferencesService);
   private readonly library = inject(LibraryViewService);
+  readonly openingRecipe = signal(false);
+  private titleFontFrom = 0;
   private morphRecipeId: string | null = null;
   private returningToLibrary = false;
   private expandOrigin?: HTMLElement;
@@ -30,6 +32,7 @@ export class PageTurnService {
     const previousName = element.style.getPropertyValue('view-transition-name');
     this.parts.set(element, { recipeId, part, previousName });
     this.captureCorners(element, 'to');
+    this.captureTitle(element, 'to');
     if (part === 'surface' && recipeId === this.morphRecipeId && this.returningToLibrary)
       this.expandOrigin = element;
     this.namePart(element);
@@ -39,6 +42,25 @@ export class PageTurnService {
       if (previousName) element.style.setProperty('view-transition-name', previousName);
       else element.style.removeProperty('view-transition-name');
     };
+  }
+
+  /** Keep each title snapshot at its own measured size; interpolate glyph scale, not its aspect ratio. */
+  private captureTitle(element: HTMLElement, end: 'from' | 'to'): void {
+    const part = this.parts.get(element);
+    const window = this.document.defaultView;
+    if (!window || part?.recipeId !== this.morphRecipeId || part?.part !== 'title') return;
+    const font = parseFloat(window.getComputedStyle(element).fontSize);
+    if (!(font > 0) || !element.offsetWidth || !element.offsetHeight) return;
+    const style = this.document.documentElement.style;
+    if (end === 'from') this.titleFontFrom = font;
+    style.setProperty('--book-title-width-' + end, element.offsetWidth + 'px');
+    style.setProperty('--book-title-height-' + end, element.offsetHeight + 'px');
+    if (end === 'from') {
+      style.setProperty('--book-title-width-to', element.offsetWidth + 'px');
+      style.setProperty('--book-title-height-to', element.offsetHeight + 'px');
+    }
+    style.setProperty('--book-title-old-scale', String(font / (this.titleFontFrom || font)));
+    style.setProperty('--book-title-new-scale', String((this.titleFontFrom || font) / font));
   }
 
   /** Native snapshots lose ancestor clipping, so preserve only the corners touching a clipped edge. */
@@ -200,6 +222,7 @@ export class PageTurnService {
       return;
     }
 
+    this.openingRecipe.set(/^\/recipes\/[^/]+$/.test(next));
     if (this.preferences.mode() === 'expand') {
       this.expand(
         transition,
@@ -234,6 +257,7 @@ export class PageTurnService {
       window.removeEventListener('resize', cancel);
       this.document.removeEventListener('visibilitychange', hidden);
       root.removeAttribute('data-book-turn');
+      this.openingRecipe.set(false);
       for (const [element, part] of this.parts)
         if (part.part === 'controls') this.namePart(element);
       for (const property of properties) root.style.removeProperty(property);
@@ -320,6 +344,7 @@ export class PageTurnService {
     if (this.expandOrigin) this.measureExpandOrigin(this.expandOrigin);
     for (const element of this.parts.keys()) {
       this.captureCorners(element, 'from');
+      this.captureTitle(element, 'from');
       this.namePart(element);
     }
     root.setAttribute('data-page-transition', 'expand');
@@ -336,6 +361,8 @@ export class PageTurnService {
       window.removeEventListener('resize', cancel);
       this.document.removeEventListener('visibilitychange', hidden);
       this.morphRecipeId = null;
+      this.titleFontFrom = 0;
+      this.openingRecipe.set(false);
       this.returningToLibrary = false;
       this.expandOrigin = undefined;
       root.style.removeProperty('--book-expand-color');
@@ -346,6 +373,15 @@ export class PageTurnService {
       for (const part of ['surface', 'image'])
         for (const end of ['from', 'to'])
           root.style.removeProperty('--book-' + part + '-corners-' + end);
+      for (const property of [
+        'width-from',
+        'height-from',
+        'width-to',
+        'height-to',
+        'old-scale',
+        'new-scale',
+      ])
+        root.style.removeProperty('--book-title-' + property);
       for (const attribute of [
         'data-page-transition',
         'data-recipe-morph',
