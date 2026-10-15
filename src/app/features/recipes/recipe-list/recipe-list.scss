@@ -1,9 +1,9 @@
 .index-color {
   position: absolute;
-  inset: 16px 0 16px auto;
+  inset: 0 0 0 auto;
   width: 28px;
-  background: var(--recipe-color);
-  border-radius: 12px;
+  opacity: 0;
+  pointer-events: none;
 }
 .add-chevron {
   width: 14px;
@@ -124,7 +124,7 @@
 }
 @media (max-width: 600px) {
   .recipe-list {
-    padding-top: 16px;
+    padding-top: clamp(20px, 3svh, 32px);
   }
   .page-intro {
     margin-bottom: 24px;
@@ -132,7 +132,7 @@
   .home-tools {
     gap: 12px;
     flex-wrap: nowrap;
-    margin-bottom: 16px;
+    margin-bottom: clamp(20px, 3svh, 32px);
     padding-bottom: 0;
   }
   .search-field {
@@ -221,37 +221,42 @@
   position: relative;
   -webkit-touch-callout: none;
   user-select: none;
-  display: flex;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
   align-items: center;
+  --recipe-outline: color-mix(in srgb, var(--recipe-color) 52%, var(--color-ink));
   gap: 20px;
-  padding: 16px 20px 16px 0;
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 12px;
+  border: 1px solid var(--recipe-outline);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--recipe-color);
+  color: var(--color-ink);
   text-decoration: none;
 }
 .index-image {
+  position: relative;
   display: block;
-  flex: 0 0 96px;
-  width: 96px;
-  height: 80px;
-  padding: 6px;
-  border-radius: 12px;
+  flex: 0 0 112px;
+  width: 112px;
+  min-height: 104px;
+  align-self: stretch;
   overflow: hidden;
 }
-.index-image:has(app-food-placeholder) {
-  padding: 0;
-}
-.index-image img {
-  border-radius: 6px;
+.index-image :is(img, app-food-placeholder) {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  display: block;
   object-fit: cover;
+}
+.index-image img {
+  display: block;
 }
 .index-copy {
   flex: 1;
   min-width: 0;
-  display: grid;
-  gap: 8px;
+  padding-block: 20px;
 }
 .index-title {
   font-family: Georgia, serif;
@@ -263,24 +268,39 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+  margin-right: 20px;
   font-size: 0.8rem;
-  color: var(--color-ink);
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--color-ink) 85%, var(--recipe-color));
 }
 .index-time app-icon {
   width: 16px;
   height: 16px;
 }
-.row-chevron {
-  transform: rotate(180deg);
-}
 @media (max-width: 600px) {
   .index-row {
-    gap: 14px;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 8px 14px;
   }
   .index-image {
-    flex-basis: 84px;
-    width: 84px;
-    height: 72px;
+    grid-row: 1 / span 2;
+  }
+  .index-copy {
+    padding: 16px 16px 16px 0;
+  }
+  .index-row:has(.index-time) .index-copy {
+    padding-bottom: 0;
+  }
+  .index-time {
+    grid-column: 2;
+    justify-self: end;
+    margin: 0 16px 16px 0;
+  }
+  .index-image {
+    flex-basis: 88px;
+    width: 88px;
+    min-height: 96px;
   }
   .index-title {
     font-size: 1.2rem;
@@ -314,7 +334,6 @@
   }
   .shelf-view .home-tools {
     flex: 0 0 auto;
-    margin-bottom: clamp(20px, 3svh, 32px);
   }
   .shelf-view app-recipe-rail {
     flex: 1;
@@ -339,8 +358,7 @@
   }
 }
 
-.index-title,
-.row-chevron {
+.index-title {
   transition: transform 180ms var(--ease-out);
 }
 .index-row {
@@ -348,18 +366,14 @@
 }
 @media (hover: hover) and (pointer: fine) {
   .index-row:hover {
-    border-bottom-color: var(--color-control-border);
+    border-color: color-mix(in srgb, var(--recipe-color) 35%, var(--color-ink));
   }
   .index-row:hover .index-title {
     transform: translateX(3px);
   }
-  .index-row:hover .row-chevron {
-    transform: rotate(180deg) translateX(-3px);
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .index-title,
-  .row-chevron,
   .index-row {
     transition: none;
   }

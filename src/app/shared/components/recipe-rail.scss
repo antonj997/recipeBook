@@ -142,10 +142,7 @@
   flex: 1;
 }
 .recipe-card h3 {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
+  flex-shrink: 0;
   margin: 0 0 10px;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.55rem;
@@ -155,13 +152,19 @@
   overflow-wrap: anywhere;
 }
 .recipe-card .card-description {
-  margin: 0 0 12px;
-  max-height: 4.35em;
+  flex: 1 1 4.35em;
+  min-height: 0;
+  max-height: 7.25em;
+  contain: size;
+  margin: 0 0 8px;
   overflow: hidden;
   color: color-mix(in srgb, var(--color-ink) 85%, var(--card-color));
   font-size: 0.85rem;
   line-height: 1.45;
-  mask-image: linear-gradient(to bottom, #000 2.9em, transparent 4.35em);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 1.45em), transparent);
+}
+.card-description p {
+  margin: 0;
 }
 .card-footer {
   display: flex;
@@ -169,6 +172,7 @@
   justify-content: space-between;
   gap: 8px;
   margin-top: auto;
+  flex-shrink: 0;
 }
 .card-footer .recipe-time {
   margin: 0;
@@ -377,7 +381,7 @@
   }
   :host(.compact) .rail-window {
     flex: 1;
-    min-height: 264px;
+    min-height: max(264px, var(--card-min-height, 0px));
     max-height: clamp(340px, 56svh, 520px);
   }
   :host(.compact) .recipe-rail {
@@ -400,20 +404,12 @@
     padding: clamp(18px, 2.6svh, 26px) 18px;
   }
   :host(.compact) .recipe-card h3 {
-    flex-shrink: 0;
     font-size: 1.3rem;
     margin-bottom: 8px;
   }
   :host(.compact) .card-categories {
     flex-shrink: 0;
     margin-bottom: 8px;
-  }
-  :host(.compact) .card-description {
-    min-height: 0;
-    flex-shrink: 1;
-  }
-  :host(.compact) .card-footer {
-    flex-shrink: 0;
   }
   :host(.compact) .carousel-progress {
     flex-shrink: 0;
@@ -432,7 +428,7 @@
     margin-bottom: 8px;
   }
   :host(.compact) .rail-window {
-    min-height: 252px;
+    min-height: max(252px, var(--card-min-height, 0px));
   }
   :host(.compact) .recipe-card__media {
     min-height: 80px;
@@ -440,9 +436,6 @@
   }
   :host(.compact) .recipe-card__content {
     padding-block: 12px;
-  }
-  :host(.compact) .card-description {
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 0.75em), transparent);
   }
 }
 

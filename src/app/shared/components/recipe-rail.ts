@@ -196,10 +196,42 @@ export class RecipeRailComponent implements OnDestroy {
       });
     });
   }
+  /** Let full titles and metadata set the minimum; descriptions use only the remaining space. */
+  private fitCardContents(rail: HTMLElement): void {
+    const frame = rail.parentElement;
+    if (!frame) return;
+    frame.style.removeProperty('--card-min-height');
+    if (!this.compact() || window.innerWidth > 600) return;
+    const height = (element: HTMLElement | null) => {
+      if (!element) return 0;
+      return element.offsetHeight + (parseFloat(getComputedStyle(element).marginBottom) || 0);
+    };
+    let minimum = 0;
+    for (const content of rail.querySelectorAll<HTMLElement>('.recipe-card__content')) {
+      const style = getComputedStyle(content);
+      const media = content.previousElementSibling;
+      const required =
+        height(content.querySelector('h3')) +
+        height(content.querySelector('.card-categories')) +
+        height(content.querySelector('.card-footer')) +
+        (content.querySelector('.card-description') ? 8 : 0) +
+        parseFloat(style.paddingTop) +
+        parseFloat(style.paddingBottom) +
+        (media ? parseFloat(getComputedStyle(media).minHeight) || 0 : 0);
+      minimum = Math.max(minimum, required);
+    }
+    const style = getComputedStyle(rail);
+    frame.style.setProperty(
+      '--card-min-height',
+      Math.ceil(minimum + parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + 2) +
+        'px',
+    );
+  }
   private positions(): number[] {
     if (!this.needsMeasurement) return this.cardPositions;
     const rail = this.rail()?.nativeElement;
     if (!rail) return [];
+    this.fitCardContents(rail);
     const padding = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
     const max = Math.max(0, rail.scrollWidth - rail.clientWidth);
     // CSS defines the leading space for both centered and leading-edge snapping.
