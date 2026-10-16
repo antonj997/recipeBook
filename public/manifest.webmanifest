@@ -11,19 +11,19 @@
   "theme_color": "#faf9f5",
   "icons": [
     {
-      "src": "icons/recipebook-192.png",
+      "src": "icons/recipebook-192-1a37ca47.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/recipebook-512.png",
+      "src": "icons/recipebook-512-1a37ca47.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/recipebook-maskable-512.png",
+      "src": "icons/recipebook-maskable-512-1a37ca47.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
