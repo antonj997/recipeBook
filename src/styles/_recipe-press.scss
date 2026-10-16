@@ -1,0 +1,42 @@
+/* Keep recipe colors opaque; acknowledge presses without shifting their contents. */
+.recipe-card__surface,
+.index-row {
+  scale: 1;
+  transition:
+    scale 140ms var(--ease-out),
+    border-color 180ms var(--ease-out);
+}
+.recipe-card__surface {
+  position: relative;
+}
+.recipe-card__surface::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 1px solid var(--recipe-outline);
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms var(--ease-out);
+}
+.recipe-card:active .recipe-card__surface,
+.index-row:active {
+  scale: 0.985;
+}
+:is(.recipe-card:active .recipe-card__surface, .index-row:active)::after {
+  border-width: 2px;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .recipe-card__surface,
+  .recipe-card:active .recipe-card__surface,
+  .index-row,
+  .index-row:active {
+    scale: 1;
+    transition: none;
+  }
+  .recipe-card__surface::after {
+    transition: none;
+  }
+}

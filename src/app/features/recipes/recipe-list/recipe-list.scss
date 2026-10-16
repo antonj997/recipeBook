@@ -358,9 +358,6 @@
   }
 }
 
-.index-row {
-  transition: border-color 180ms var(--ease-out);
-}
 .index-row::after {
   content: '';
   position: absolute;
