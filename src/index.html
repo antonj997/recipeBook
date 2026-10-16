@@ -1,9 +1,76 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-app-loading>
   <head>
     <meta charset="utf-8" />
     <title>Recipebook</title>
     <base href="/" />
+    <style>
+      html[data-app-loading] {
+        overflow: hidden;
+        background: #faf9f5;
+      }
+      html[data-app-loading] dialog {
+        visibility: hidden;
+      }
+      .app-launch {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-items: center;
+        background: #faf9f5;
+        color: #141413;
+        font:
+          16px/1.55 Arial,
+          Helvetica,
+          sans-serif;
+        transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .app-launch[data-ready] {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .app-launch__logo {
+        display: block;
+        width: 88px;
+        height: auto;
+      }
+      .app-launch__label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+      }
+      .app-launch__help {
+        position: absolute;
+        inset: auto 24px max(40px, env(safe-area-inset-bottom)) 24px;
+        text-align: center;
+        visibility: hidden;
+        animation: launch-help 0s 15s forwards;
+      }
+      .app-launch__help p {
+        margin: 0 0 8px;
+      }
+      .app-launch__help a {
+        color: inherit;
+        text-underline-offset: 0.2em;
+      }
+      .app-launch[data-failed] .app-launch__help {
+        visibility: visible;
+        animation: none;
+      }
+      @keyframes launch-help {
+        to {
+          visibility: visible;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-launch {
+          transition: none;
+        }
+      }
+    </style>
     <meta name="referrer" content="no-referrer" />
     <meta
       http-equiv="Content-Security-Policy"
@@ -19,6 +86,23 @@
     <link rel="icon" type="image/svg+xml" href="icons/recipebook-favicon-1a37ca47.svg" />
   </head>
   <body>
-    <app-root></app-root>
+    <app-root inert aria-busy="true"></app-root>
+    <div id="app-launch" class="app-launch" role="status" aria-live="polite">
+      <img
+        class="app-launch__logo"
+        src="icons/recipebook-mark-black-1a37ca47.svg"
+        width="88"
+        height="82"
+        alt=""
+        aria-hidden="true"
+        fetchpriority="high"
+      />
+      <span class="app-launch__label">Loading Recipebook…</span>
+      <div class="app-launch__help">
+        <p data-launch-message>Taking longer than expected.</p>
+        <a href="">Reload app</a>
+      </div>
+      <noscript>Turn on JavaScript to open Recipebook.</noscript>
+    </div>
   </body>
 </html>

@@ -17,6 +17,7 @@ import { IconComponent } from '../../shared/components/icon';
 
 @Component({
   selector: 'app-category-manager',
+  host: { '[attr.aria-busy]': 'loading()' },
   imports: [CheckboxMarkComponent, IconComponent],
   templateUrl: './category-manager.html',
   styleUrl: './category-manager.scss',

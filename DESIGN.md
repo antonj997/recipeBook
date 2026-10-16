@@ -2,102 +2,102 @@
 name: Recipebook
 description: A personal recipe collection with a quiet, readable interface.
 colors:
-  canvas: "#f0eee6"
-  surface: "#faf9f5"
-  ink: "#141413"
-  muted: "#5e5d57"
-  border: "#ceccc2"
-  control-border: "#85847d"
-  action: "#141413"
-  accent: "#cbcbdc"
-  beige: "#e3dacc"
-  green: "#7d8d5f"
-  blue: "#bbd0cb"
-  danger: "#923f35"
-  sage: "#c8cdb8"
-  clay: "#d7b7a5"
-  butter: "#e9dfb7"
-  rose: "#e5c8c2"
-  sky: "#c9d6e0"
-  peach: "#edd0b9"
-  mint: "#cfdbcc"
-  recipe-beige: "#EDE2D2"
-  recipe-butter: "#F4E7BC"
-  recipe-clay: "#F4DDC4"
-  recipe-peach: "#F5DCD5"
-  recipe-rose: "#EEDCE2"
-  recipe-accent: "#E4DEED"
-  recipe-sage: "#DCE4D5"
-  recipe-green: "#E4E8C9"
-  recipe-mint: "#D6E8DF"
-  recipe-blue: "#D5E3E9"
+  canvas: '#f0eee6'
+  surface: '#faf9f5'
+  ink: '#141413'
+  muted: '#5e5d57'
+  border: '#ceccc2'
+  control-border: '#85847d'
+  action: '#141413'
+  accent: '#cbcbdc'
+  beige: '#e3dacc'
+  green: '#7d8d5f'
+  blue: '#bbd0cb'
+  danger: '#923f35'
+  sage: '#c8cdb8'
+  clay: '#d7b7a5'
+  butter: '#e9dfb7'
+  rose: '#e5c8c2'
+  sky: '#c9d6e0'
+  peach: '#edd0b9'
+  mint: '#cfdbcc'
+  recipe-beige: '#EDE2D2'
+  recipe-butter: '#F4E7BC'
+  recipe-clay: '#F4DDC4'
+  recipe-peach: '#F5DCD5'
+  recipe-rose: '#EEDCE2'
+  recipe-accent: '#E4DEED'
+  recipe-sage: '#DCE4D5'
+  recipe-green: '#E4E8C9'
+  recipe-mint: '#D6E8DF'
+  recipe-blue: '#D5E3E9'
 typography:
   display:
-    fontFamily: "Arial, Helvetica, sans-serif"
-    fontSize: "clamp(2.35rem, 5vw, 4rem)"
+    fontFamily: 'Arial, Helvetica, sans-serif'
+    fontSize: 'clamp(2.35rem, 5vw, 4rem)'
     fontWeight: 650
     lineHeight: 1.12
-    letterSpacing: "-0.04em"
+    letterSpacing: '-0.04em'
   headline:
-    fontFamily: "Arial, Helvetica, sans-serif"
-    fontSize: "1.45rem"
+    fontFamily: 'Arial, Helvetica, sans-serif'
+    fontSize: '1.45rem'
     fontWeight: 700
     lineHeight: 1.12
-    letterSpacing: "-0.025em"
+    letterSpacing: '-0.025em'
   recipe-title:
     fontFamily: "Georgia, 'Times New Roman', serif"
-    fontSize: "1.55rem"
+    fontSize: '1.55rem'
     fontWeight: 400
     lineHeight: 1.17
-    letterSpacing: "-0.02em"
+    letterSpacing: '-0.02em'
   body:
-    fontFamily: "Arial, Helvetica, sans-serif"
-    fontSize: "16px"
+    fontFamily: 'Arial, Helvetica, sans-serif'
+    fontSize: '16px'
     lineHeight: 1.55
   button:
-    fontFamily: "Arial, Helvetica, sans-serif"
-    fontSize: "0.9rem"
+    fontFamily: 'Arial, Helvetica, sans-serif'
+    fontSize: '0.9rem'
     fontWeight: 500
     lineHeight: 1.4
 rounded:
-  control: "6px"
-  surface: "14px"
-  overlay: "8px"
+  control: '6px'
+  surface: '14px'
+  overlay: '8px'
 spacing:
-  page-gutter: "clamp(20px, 4vw, 48px)"
+  page-gutter: 'clamp(20px, 4vw, 48px)'
 components:
   button-primary:
-    backgroundColor: "{colors.action}"
-    textColor: "{colors.surface}"
-    typography: "{typography.button}"
-    rounded: "{rounded.control}"
-    padding: "11px 18px"
+    backgroundColor: '{colors.action}'
+    textColor: '{colors.surface}'
+    typography: '{typography.button}'
+    rounded: '{rounded.control}'
+    padding: '11px 18px'
   button-secondary:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink}"
-    typography: "{typography.button}"
-    rounded: "{rounded.control}"
-    padding: "11px 18px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.ink}'
+    typography: '{typography.button}'
+    rounded: '{rounded.control}'
+    padding: '11px 18px'
   button-danger:
-    backgroundColor: "transparent"
-    textColor: "{colors.danger}"
-    typography: "{typography.button}"
-    rounded: "{rounded.control}"
-    padding: "11px 18px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.danger}'
+    typography: '{typography.button}'
+    rounded: '{rounded.control}'
+    padding: '11px 18px'
   input:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.control}"
-    padding: "13px 14px"
+    backgroundColor: '{colors.surface}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.control}'
+    padding: '13px 14px'
   navigation:
-    textColor: "{colors.ink}"
-    padding: "22px var(--page-gutter)"
+    textColor: '{colors.ink}'
+    padding: '22px var(--page-gutter)'
   recipe-card:
-    textColor: "{colors.ink}"
-    width: "clamp(240px, 27vw, 340px)"
+    textColor: '{colors.ink}'
+    width: 'clamp(240px, 27vw, 340px)'
   food-doodle:
-    textColor: "{colors.ink}"
-    width: "160px"
+    textColor: '{colors.ink}'
+    width: '160px'
 ---
 
 # Recipebook design guide
@@ -108,18 +108,18 @@ Use the owner's Anthropic references: off-white surfaces, near-black text, thin 
 
 Recipe backgrounds use ten light, low-saturation colors inspired by ingredients and quiet kitchen surfaces. Keep these fills separate from the darker green used for search underlines and switches. The same recipe token fills its card, page, tabs, list strip and missing-photo artwork.
 
-| Color | Hex |
-| --- | --- |
-| Oat | `#EDE2D2` |
-| Butter | `#F4E7BC` |
-| Apricot | `#F4DDC4` |
-| Peach | `#F5DCD5` |
-| Rhubarb | `#EEDCE2` |
-| Lavender | `#E4DEED` |
-| Sage | `#DCE4D5` |
+| Color     | Hex       |
+| --------- | --------- |
+| Oat       | `#EDE2D2` |
+| Butter    | `#F4E7BC` |
+| Apricot   | `#F4DDC4` |
+| Peach     | `#F5DCD5` |
+| Rhubarb   | `#EEDCE2` |
+| Lavender  | `#E4DEED` |
+| Sage      | `#DCE4D5` |
 | Pistachio | `#E4E8C9` |
-| Mint | `#D6E8DF` |
-| Duck egg | `#D5E3E9` |
+| Mint      | `#D6E8DF` |
+| Duck egg  | `#D5E3E9` |
 
 All ten provide at least 14:1 contrast with near-black text and 5:1 with secondary text. Color-picker swatches have a thin readable border. Existing Sky selections map visually to Duck egg while their saved IDs remain valid. Automatic chooses stably from all ten colors.
 
@@ -173,9 +173,12 @@ Recipe colors use an allowlisted palette. A chosen color is saved with the recip
 
 Reuse semantic global colors and existing shared icons/components. Keep recipes, images, collections and offline storage intact. Avoid slogans, dense raised panels and decorative copy. Navigation must work independently of animation and glass effects.
 
-
 ## Recipe page scrolling
 
 The recipe overview, cooking sections and nutrition use normal page scrolling. Ingredients and Instructions have natural content height, with no nested scrollbars, viewport-height limits or saved section offsets. On mobile, only the selected panel participates in layout; the inactive panel stays mounted with display none, inert and aria-hidden. On wide screens both columns are visible and move together with the page. Preserve the sticky browser-tab treatment, keyboard tab navigation, cooking state, safe gutters and reduced-motion behavior.
 
 The word-layer styling follows the browser’s [view-transition-class](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/view-transition-class) support, with a feature-tested fallback. No recipe text or photos are cloned or sent to another service.
+
+## Launch screen
+
+At application startup, an opaque off-white surface covers the viewport with the existing black logo centered at 88px wide. Render this cover and its essential styles directly in the HTML so it is present before JavaScript, account initialization or lazy routes. Wait for the first stable route, page loading states, fonts and visible photo decoding, then fade out in 180ms. Do not add a minimum wait or reload the cover on ordinary page navigation. Keep the app inert until the cover has left, restore accessible focus, and respect reduced motion. Offscreen lazy images stay lazy; failed or stalled optional assets cannot block the cookbook forever. Provide a quiet delayed Reload link and a clear startup-failure state. Use no additional animation package.
