@@ -89,14 +89,24 @@ html[data-page-transition='expand']::view-transition-new(book-recipe-surface) {
 }
 /* Single snapshots avoid ghosted text and retain the real metadata proportions. */
 html[data-page-transition='expand']::view-transition-old(book-recipe-categories),
-html[data-page-transition='expand']::view-transition-old(book-recipe-image),
 html[data-page-transition='expand']::view-transition-old(book-recipe-time) {
   display: none;
 }
+/* Keep the decoded source bitmap for the flight. A fresh lazy image may still be blank
+   at destination capture; readiness also holds the flight until the live photo can paint. */
+html[data-page-transition='expand']::view-transition-old(book-recipe-image),
 html[data-page-transition='expand']::view-transition-new(book-recipe-image) {
+  display: block;
   animation: none;
+  width: 100%;
   height: 100%;
   object-fit: cover;
+  mix-blend-mode: normal;
+}
+html[data-page-transition='expand'][data-book-photo-source]::view-transition-new(
+    book-recipe-image
+  ):not(:only-child) {
+  display: none;
 }
 html[data-page-transition='expand']::view-transition-new(book-recipe-categories),
 html[data-page-transition='expand']::view-transition-new(book-recipe-time) {
@@ -196,12 +206,16 @@ html[data-page-transition='expand']::view-transition-new(book-header) {
 html[data-page-transition='expand'][data-expand-back]::view-transition-new(root) {
   animation-name: book-expand-back;
 }
-/* A flat color snapshot keeps the opening consistent when the recipe's colored intro is short. */
+/* Named children are extracted from their parent snapshot. Keep the exposed parent
+   recipe-colored until those children enter, rather than revealing white holes. */
+html[data-page-transition='expand'][data-recipe-morph] .recipe-detail {
+  background: var(--book-expand-color, var(--color-canvas));
+}
+/* One flat color snapshot covers the flight in both directions and both library views. */
 .book-recipe-color {
   display: none;
 }
-html[data-page-transition='expand'][data-recipe-morph]:not([data-expand-back]) .book-recipe-color,
-html[data-expand-to-list] .book-recipe-color {
+html[data-page-transition='expand'][data-recipe-morph] .book-recipe-color {
   display: block;
   position: fixed;
   inset: 0;
@@ -276,13 +290,19 @@ html[data-page-transition='expand'][data-recipe-morph][data-expand-list]:not(
     book-recipe-open var(--book-expand-duration) var(--book-expand-delay) var(--ease-out) both,
     book-list-wait var(--book-expand-delay) linear backwards;
 }
-/* A list return contracts the flat color without a second recipe-page snapshot. */
-html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(root),
-html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(book-recipe-surface),
-html[data-page-transition='expand'][data-expand-to-list]::view-transition-new(book-recipe-color) {
+/* Returns contract only the flat recipe color, never a white reading-page snapshot. */
+html[data-page-transition='expand'][data-recipe-morph][data-expand-back]::view-transition-old(root),
+html[data-page-transition='expand'][data-recipe-morph][data-expand-back]::view-transition-old(
+    book-recipe-surface
+  ),
+html[data-page-transition='expand'][data-recipe-morph][data-expand-back]::view-transition-new(
+    book-recipe-color
+  ) {
   display: none;
 }
-html[data-page-transition='expand'][data-expand-to-list]::view-transition-old(book-recipe-color) {
+html[data-page-transition='expand'][data-recipe-morph][data-expand-back]::view-transition-old(
+    book-recipe-color
+  ) {
   display: block;
   animation: book-recipe-close 430ms var(--ease-out) both;
 }

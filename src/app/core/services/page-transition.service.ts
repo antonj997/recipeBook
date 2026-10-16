@@ -1,5 +1,5 @@
+import { prepareTransitionPhotos } from './transition-photos';
 import { expansionOrigin, titleLayout, visibleCorners } from './recipe-transition-layout';
-import { LibraryViewService } from './library-view.service';
 import { DOCUMENT } from '@angular/common';
 import { Service, inject, signal } from '@angular/core';
 import type { ActivatedRouteSnapshot, ViewTransitionInfo } from '@angular/router';
@@ -20,7 +20,6 @@ export type RecipeTransitionPart =
 @Service()
 export class PageTransitionService {
   private readonly document = inject(DOCUMENT);
-  private readonly library = inject(LibraryViewService);
   readonly openingRecipe = signal(false);
   private titleFontFrom = 0;
   private morphRecipeId: string | null = null;
@@ -199,9 +198,12 @@ export class PageTransitionService {
       recipeRoute?.routeConfig?.path === 'recipes/:id' ? recipeRoute.paramMap.get('id') : null;
     this.morphRecipeId =
       id && [...this.parts.values()].some((part) => part.recipeId === id) ? id : null;
+    const sourcePhoto = [...this.parts].find(
+      ([, part]) => part.recipeId === this.morphRecipeId && part.part === 'image',
+    )?.[0] as HTMLImageElement | undefined;
+    if (sourcePhoto?.tagName === 'IMG' && sourcePhoto.complete && sourcePhoto.naturalWidth)
+      root.setAttribute('data-book-photo-source', '');
     this.returningToLibrary = next === '/';
-    if (this.morphRecipeId && this.returningToLibrary && this.library.read().view === 'list')
-      root.setAttribute('data-expand-to-list', '');
     this.expandOrigin = [...this.parts].find(
       ([, part]) => part.recipeId === this.morphRecipeId && part.part === 'surface',
     )?.[0];
@@ -248,13 +250,34 @@ export class PageTransitionService {
         'data-recipe-morph',
         'data-expand-back',
         'data-expand-list',
-        'data-expand-to-list',
+        'data-book-photo-source',
       ])
         root.removeAttribute(attribute);
     };
     const clear = () => this.finish(transition);
     void transition.ready.then(
       () => {
+        if (this.active !== transition) return;
+        const photos = [...this.parts]
+          .filter(
+            ([element, part]) =>
+              part.recipeId === this.morphRecipeId &&
+              part.part === 'image' &&
+              element.tagName === 'IMG',
+          )
+          .map(([element]) => element as HTMLImageElement);
+        if (photos.length)
+          void prepareTransitionPhotos(this.document, photos, transition)
+            .then(() => {
+              if (
+                this.active === transition &&
+                photos.every((photo) => photo.complete && photo.naturalWidth)
+              )
+                root.removeAttribute('data-book-photo-source');
+            })
+            .catch(() => {
+              if (this.active === transition) this.cancel();
+            });
         // The carousel/list restores its position before capture. Read the landing bounds afterwards.
         if (this.active !== transition || !this.returningToLibrary || !this.morphRecipeId) return;
         if (!this.expandOrigin || !this.parts.has(this.expandOrigin)) {
