@@ -97,8 +97,7 @@
 }
 .recipe-body {
   display: grid;
-  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
-  height: max(240px, calc(100svh - var(--app-header-height) - 56px));
+  grid-template-columns: minmax(0, 1fr);
   padding-left: var(--page-gutter-left);
   padding-right: var(--page-gutter-right);
   background: var(--color-surface);
@@ -240,23 +239,15 @@ li::marker {
   outline-offset: -3px;
 }
 .recipe-body .inactive-panel {
-  visibility: hidden;
-  pointer-events: none;
+  display: none;
 }
 .ingredients,
 .instructions {
   grid-area: 1 / 1;
-  min-height: 0;
-  height: 100%;
   width: 100%;
   max-width: 75ch;
   margin-inline: auto;
   padding-block: 28px;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-control-border) transparent;
 }
 @media (max-width: 700px) {
   .recipe-summary {
@@ -277,7 +268,6 @@ li::marker {
 .wide-reading .recipe-body {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
   gap: clamp(24px, 4vw, 48px);
-  height: max(240px, calc(100svh - var(--app-header-height)));
 }
 .wide-reading :where(.ingredients, .instructions) {
   grid-area: auto;
