@@ -1,5 +1,3 @@
-import { PageTransitionPreferencesService } from '../../core/services/page-transition-preferences.service';
-import { SelectMenuComponent } from '../../shared/components/select-menu';
 import { AppUpdateService } from '../../core/services/app-update.service';
 import { IconComponent } from '../../shared/components/icon';
 import { AccountAccessComponent } from './account-access';
@@ -12,7 +10,7 @@ import { CloudCookbookService } from '../../core/services/cloud-cookbook.service
 
 @Component({
   selector: 'app-settings',
-  imports: [IconComponent, RouterLink, AccountAccessComponent, SelectMenuComponent],
+  imports: [IconComponent, RouterLink, AccountAccessComponent],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
@@ -21,7 +19,6 @@ export class SettingsComponent {
   readonly cloud = inject(CloudCookbookService);
   readonly auth = this.cloud.auth;
   readonly app = inject(AppUpdateService);
-  readonly transitions = inject(PageTransitionPreferencesService);
   readonly returnToImport =
     inject(ActivatedRoute).snapshot.queryParamMap.get('returnTo') === '/recipes/import';
   private active = true;

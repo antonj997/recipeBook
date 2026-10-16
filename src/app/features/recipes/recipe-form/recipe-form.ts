@@ -28,7 +28,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { RecipeService } from '../../../core/services/recipe.service';
-import type { Recipe } from '../../../core/models/recipe.model';
 
 import { FeedbackService } from '../../../core/services/feedback.service';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';

@@ -1,32 +1,17 @@
 <a class="skip-link" href="#main-content" (click)="$event.preventDefault(); mainContent.focus()"
   >Skip to content</a
 >
-<svg
-  class="book-page-fold"
-  viewBox="0 0 120 100"
-  preserveAspectRatio="none"
-  aria-hidden="true"
-  focusable="false"
->
-  <defs>
-    <linearGradient id="book-fold-paper" x1="0" x2="1">
-      <stop offset="0" stop-color="#c8c5ba" />
-      <stop offset="0.2" stop-color="#ece9df" />
-      <stop offset="0.55" stop-color="#faf9f5" />
-      <stop offset="0.8" stop-color="#f0eee6" />
-      <stop offset="1" stop-color="#d4d0c4" />
-    </linearGradient>
-    <linearGradient id="book-fold-shadow" x1="0" x2="1">
-      <stop offset="0" stop-color="#141413" stop-opacity="0.18" />
-      <stop offset="1" stop-color="#141413" stop-opacity="0" />
-    </linearGradient>
-  </defs>
-  <path d="M96 0C112 22 112 78 96 100H120V0Z" fill="url(#book-fold-shadow)" />
-  <path d="M0 0C20 22 20 78 0 100H96C112 78 112 22 96 0Z" fill="url(#book-fold-paper)" />
-</svg>
 <div class="book-recipe-color" aria-hidden="true"></div>
 <header #appHeader class="app-header">
   <a class="brand" routerLink="/" aria-label="Recipebook home">
+    <img
+      class="brand-mark"
+      ngSrc="icons/recipebook-mark-black.svg"
+      width="24"
+      height="24"
+      alt=""
+      aria-hidden="true"
+    />
     <span class="brand-word" aria-hidden="true">Recipebook</span>
   </a>
   @if (!hideSettings()) {

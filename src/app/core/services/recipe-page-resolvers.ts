@@ -2,7 +2,6 @@ import { inject } from '@angular/core';
 import type { ResolveFn } from '@angular/router';
 import type { Recipe } from '../models/recipe.model';
 import type { RecipeCollection } from '../models/recipe-collection.model';
-import { PageTransitionPreferencesService } from './page-transition-preferences.service';
 import { RecipeService } from './recipe.service';
 
 export interface LibraryPageData {
@@ -22,7 +21,6 @@ export interface RecipePageData {
 
 // Resolve local data before the browser captures the destination. No network wait or DOM copy.
 export const resolveLibraryPage: ResolveFn<LibraryPageData | undefined> = async () => {
-  if (inject(PageTransitionPreferencesService).mode() !== 'expand') return undefined;
   const recipes = inject(RecipeService);
   const accountVersion = recipes.accountVersion();
   const revision = recipes.revision();
@@ -45,7 +43,6 @@ export const resolveLibraryPage: ResolveFn<LibraryPageData | undefined> = async 
 };
 
 export const resolveRecipePage: ResolveFn<RecipePageData | undefined> = async (route) => {
-  if (inject(PageTransitionPreferencesService).mode() !== 'expand') return undefined;
   const recipes = inject(RecipeService);
   const accountVersion = recipes.accountVersion();
   const revision = recipes.revision();

@@ -47,7 +47,7 @@ import { FoodPlaceholderComponent } from './food-placeholder';
 export class RecipeRailComponent implements OnDestroy {
   formatTime = formatRecipeTime;
   calories(recipe: Recipe): string | undefined {
-    return perPortionNutrition(recipe.nutrition)?.calories;
+    return this.cardMetadata().get(recipe)?.calories;
   }
   recipeBackground = recipeBackground;
   compact = input(false);
@@ -66,11 +66,23 @@ export class RecipeRailComponent implements OnDestroy {
   private collectionLabels = computed(
     () => new Map(this.collections().map((item) => [item.id, item.name])),
   );
+  private readonly cardMetadata = computed(() => {
+    const labels = this.collectionLabels();
+    return new Map(
+      this.recipes().map((recipe) => [
+        recipe,
+        {
+          categories: (recipe.collectionIds ?? [])
+            .map((id) => labels.get(id))
+            .filter((name): name is string => !!name)
+            .slice(0, 3),
+          calories: perPortionNutrition(recipe.nutrition)?.calories,
+        },
+      ]),
+    );
+  });
   categoryLabels(recipe: Recipe): string[] {
-    return (recipe.collectionIds ?? [])
-      .map((id) => this.collectionLabels().get(id))
-      .filter((name): name is string => !!name)
-      .slice(0, 3);
+    return this.cardMetadata().get(recipe)?.categories ?? [];
   }
   railId = input.required<string>();
   filterId = computed(() => this.railId() + '-glass');
@@ -112,7 +124,6 @@ export class RecipeRailComponent implements OnDestroy {
     return title + ', position ' + (index + 1) + ' of ' + stops.length;
   });
   currentStop = computed(() => Math.round(this.progress()));
-  progressControls = viewChild<ElementRef<HTMLDivElement>>('progressControls');
   private frame = 0;
   private edgeFrame = 0;
   private targetIndex: number | null = null;

@@ -1,5 +1,11 @@
+import {
+  captureSnapshotNavigation,
+  recoverSnapshotNavigation,
+  type SnapshotNavigationPress,
+} from './core/services/page-transition-input';
+import { NgOptimizedImage } from '@angular/common';
 import { LibraryViewService } from './core/services/library-view.service';
-import { PageTurnService } from './core/services/page-turn.service';
+import { PageTransitionService } from './core/services/page-transition.service';
 import { PageAppearanceService } from './core/services/page-appearance.service';
 import { RecipeActionsOverlayComponent } from './shared/components/recipe-actions-overlay';
 import { CloudCookbookService } from './core/services/cloud-cookbook.service';
@@ -27,6 +33,7 @@ import { FeedbackService } from './core/services/feedback.service';
 
 @Component({
   imports: [
+    NgOptimizedImage,
     RecipeActionsOverlayComponent,
     RouterOutlet,
     RouterLink,
@@ -43,6 +50,7 @@ import { FeedbackService } from './core/services/feedback.service';
     '[class.compact-header]': 'compactHeader()',
     '[class.restoring-library]': 'restoringLibrary()',
     '(document:pointerdown)': 'onPointerDown($event)',
+    '(document:click)': 'onNavigationClick($event)',
     '(document:keydown)': 'onNavigationKey($event)',
   },
   styleUrl: './app.scss',
@@ -59,7 +67,7 @@ export class App {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly hideSettings = signal(false);
   private router = inject(Router);
-  private readonly pageTurn = inject(PageTurnService);
+  private readonly pageTransition = inject(PageTransitionService);
   protected readonly onSettings = signal(false);
   protected readonly settingsTarget = signal('/settings');
   private lastPage = '/';
@@ -131,7 +139,7 @@ export class App {
       const next = this.cloud.auth.accountVersion();
       if (next === version) return;
       version = next;
-      this.pageTurn.cancel();
+      this.pageTransition.cancel();
       this.accountChanging.set(true);
       this.drafts.clear();
       this.confirmation.answer(true);
@@ -189,13 +197,22 @@ export class App {
     this.compactHeader.set(this.compactHeader() ? window.scrollY > 8 : window.scrollY >= 80);
   }
 
+  private headerPress?: SnapshotNavigationPress;
+
+  protected onNavigationClick(event: MouseEvent): void {
+    const press = this.headerPress;
+    this.headerPress = undefined;
+    recoverSnapshotNavigation(event, press);
+  }
+
   protected onPointerDown(event: PointerEvent): void {
-    this.pageTurn.cancel();
+    this.headerPress = captureSnapshotNavigation(event, this.appHeader()?.nativeElement);
+    this.pageTransition.cancel();
     this.touchInput.set(event.pointerType === 'touch' || event.pointerType === 'pen');
   }
 
   protected onNavigationKey(event: KeyboardEvent): void {
-    this.pageTurn.cancel();
+    this.pageTransition.cancel();
     if (event.key === 'Tab' || event.key?.startsWith('Arrow')) {
       this.touchInput.set(false);
     }

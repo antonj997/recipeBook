@@ -80,7 +80,7 @@
         (wheel)="interruptScroll()"
         (keydown)="onKeydown($event)"
       >
-        @for (recipe of recipes(); track recipe.id; let i = $index) {
+        @for (recipe of recipes(); track recipe.id) {
           <a
             class="recipe-card"
             (click)="recipeActivate.emit(recipe.id)"
@@ -175,7 +175,6 @@
   }
   @if (stops().length > 1) {
     <div
-      #progressControls
       class="carousel-progress"
       [class.is-windowed]="condensed()"
       [style.width.px]="condensed() ? indicatorCapacity() * 32 : null"

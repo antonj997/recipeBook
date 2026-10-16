@@ -141,8 +141,15 @@ export class CategoryManagerComponent {
     }
   }
 
+  private readonly categoryCounts = computed(() => {
+    const counts = new Map<string, number>();
+    for (const recipe of this.recipes())
+      for (const id of new Set(recipe.collectionIds ?? []))
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+    return counts;
+  });
   count(id: string): number {
-    return this.recipes().filter((recipe) => recipe.collectionIds?.includes(id)).length;
+    return this.categoryCounts().get(id) ?? 0;
   }
 
   canLeave(): boolean | Promise<boolean> {

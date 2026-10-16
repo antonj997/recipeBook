@@ -91,14 +91,21 @@ export class RecipeListComponent implements OnDestroy {
     () =>
       this.collections().find((c) => c.id === this.selectedCollectionId())?.name ?? 'All recipes',
   );
+  private readonly searchIndex = computed(() =>
+    this.recipes().map((recipe) => ({
+      recipe,
+      text: [recipe.title, ...recipe.ingredients].join(' ').toLocaleLowerCase(),
+    })),
+  );
   filteredRecipes = computed(() => {
     const words = this.query().trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
     const collectionId = this.selectedCollectionId();
-    return this.recipes().filter((recipe) => {
-      if (collectionId && !recipe.collectionIds?.includes(collectionId)) return false;
-      const text = [recipe.title, ...recipe.ingredients].join(' ').toLocaleLowerCase();
-      return words.every((word) => text.includes(word));
-    });
+    return this.searchIndex()
+      .filter(({ recipe, text }) => {
+        if (collectionId && !recipe.collectionIds?.includes(collectionId)) return false;
+        return words.every((word) => text.includes(word));
+      })
+      .map(({ recipe }) => recipe);
   });
   loading = signal(!this.pageData);
   error = signal(this.pageData?.error ?? '');

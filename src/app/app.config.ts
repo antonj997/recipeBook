@@ -15,7 +15,7 @@ import {
   withInMemoryScrolling,
   withViewTransitions,
 } from '@angular/router';
-import { PageTurnService } from './core/services/page-turn.service';
+import { PageTransitionService } from './core/services/page-transition.service';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -32,7 +32,7 @@ export const appConfig: ApplicationConfig = {
       ...(runtimeConfig.pages ? [withHashLocation()] : []),
       withViewTransitions({
         skipInitialTransition: true,
-        onViewTransitionCreated: (info) => inject(PageTurnService).start(info),
+        onViewTransitionCreated: (info) => inject(PageTransitionService).start(info),
       }),
       withInMemoryScrolling({
         anchorScrolling: 'enabled',

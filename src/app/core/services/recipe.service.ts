@@ -158,9 +158,6 @@ export class RecipeService {
       await this.cloud.put('recipes', snapshot, database);
     };
   }
-  async deleteRecipe(id: string): Promise<void> {
-    await this.cloud.remove('recipes', id);
-  }
 
   async exportBackup(): Promise<RecipeBackup> {
     const database = this.cloud.database;

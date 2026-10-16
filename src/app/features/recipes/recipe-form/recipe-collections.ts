@@ -1,4 +1,4 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormControl } from '@angular/forms';
 import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
@@ -106,9 +106,9 @@ export class RecipeCollectionsComponent {
   added = signal<RecipeCollection[]>([]);
   creating = signal(false);
   error = signal('');
-  choices() {
-    return [...this.collections(), ...this.added()].sort((a, b) => a.sortOrder - b.sortOrder);
-  }
+  readonly choices = computed(() =>
+    [...this.collections(), ...this.added()].sort((a, b) => a.sortOrder - b.sortOrder),
+  );
   selectedCount() {
     return this.choices().filter((c) => this.control().value.includes(c.id)).length;
   }

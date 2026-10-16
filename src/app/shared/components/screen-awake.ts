@@ -1,14 +1,8 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { PageTurnService } from '../../core/services/page-turn.service';
 
 // Scoped to a recipe view: the browser releases the lock when hidden or closed.
 @Component({
   selector: 'app-screen-awake',
-  host: {
-    '[class.arriving]': 'pageTurn.openingRecipe()',
-    '[attr.inert]': 'pageTurn.openingRecipe() ? "" : null',
-    '[attr.aria-hidden]': 'pageTurn.openingRecipe() ? "true" : null',
-  },
   template: `
     @if (supported) {
       <div class="awake-control">
@@ -34,12 +28,6 @@ import { PageTurnService } from '../../core/services/page-turn.service';
   styles: `
     :host {
       display: block;
-      transition: opacity 160ms var(--ease-out);
-    }
-    :host(.arriving) {
-      opacity: 0;
-      transition: none;
-      pointer-events: none;
     }
     .awake-control {
       margin-top: 24px;
@@ -104,7 +92,6 @@ import { PageTurnService } from '../../core/services/page-turn.service';
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      :host,
       .switch-track,
       .switch-thumb {
         transition: none;
@@ -113,7 +100,6 @@ import { PageTurnService } from '../../core/services/page-turn.service';
   `,
 })
 export class ScreenAwakeComponent {
-  protected readonly pageTurn = inject(PageTurnService);
   readonly supported = window.isSecureContext && 'wakeLock' in navigator;
   readonly requested = signal(false);
   readonly active = signal(false);
