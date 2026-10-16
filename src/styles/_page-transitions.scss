@@ -50,6 +50,8 @@ html[data-page-transition='expand']::view-transition-image-pair(book-recipe-imag
   animation-fill-mode: both;
 }
 html[data-page-transition='expand']::view-transition-image-pair(book-recipe-surface) {
+  // Keep the card opaque while its old and new content fade independently.
+  background: var(--book-expand-color, var(--color-canvas));
   animation-name: book-surface-corners;
 }
 html[data-page-transition='expand']::view-transition-image-pair(book-recipe-image) {
