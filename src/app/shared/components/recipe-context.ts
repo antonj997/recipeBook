@@ -20,7 +20,7 @@ export class RecipeContextDirective {
   private actions = inject(RecipeActionsService);
   private element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private timer?: ReturnType<typeof setTimeout>;
-  private point?: { x: number; y: number };
+  private point?: { x: number; y: number; pointerId: number };
   private ignoreClickUntil = 0;
   private openedOnHold = false;
   constructor() {
@@ -42,11 +42,9 @@ export class RecipeContextDirective {
     this.openedOnHold = false;
     this.ignoreClickUntil = 0;
     if (event.pointerType !== 'touch' || !event.isPrimary) return;
-    this.point = { x: event.clientX, y: event.clientY };
+    this.point = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
     this.timer = setTimeout(() => {
-      this.openedOnHold = true;
-      this.ignoreClickUntil = Date.now() + 1200;
-      this.open(event.clientX, event.clientY);
+      this.openHold(event.clientX, event.clientY, event.pointerId);
       this.point = undefined;
     }, 500);
   }
@@ -65,8 +63,13 @@ export class RecipeContextDirective {
   }
   context(event: MouseEvent): void {
     event.preventDefault();
+    if (this.openedOnHold && this.actions.menu()?.trigger === this.element) return;
+    const pointer = event as PointerEvent;
+    const pointerId =
+      this.point?.pointerId ?? (pointer.pointerType === 'touch' ? pointer.pointerId : undefined);
     this.cancel();
-    this.open(event.clientX, event.clientY);
+    if (pointerId === undefined) this.open(event.clientX, event.clientY);
+    else this.openHold(event.clientX, event.clientY, pointerId);
   }
   key(event: KeyboardEvent): void {
     if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
@@ -75,7 +78,12 @@ export class RecipeContextDirective {
       this.open(r.left + 20, Math.min(r.bottom, innerHeight - 20));
     }
   }
-  private open(x: number, y: number): void {
-    this.actions.open(this.recipe(), x, y, this.element);
+  private openHold(x: number, y: number, pointerId: number): void {
+    this.openedOnHold = true;
+    this.ignoreClickUntil = Date.now() + 1200;
+    this.open(x, y, pointerId);
+  }
+  private open(x: number, y: number, pointerId?: number): void {
+    this.actions.open(this.recipe(), x, y, this.element, pointerId);
   }
 }

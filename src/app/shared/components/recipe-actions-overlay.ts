@@ -292,6 +292,16 @@ export class RecipeActionsOverlayComponent {
         );
         this.menuTop.set(Math.max(16, Math.min(selected.y, innerHeight - 200)));
         if (!menu.matches(':popover-open')) menu.showPopover();
+        if (selected.pointerId !== undefined) {
+          // Touch initially captures on the card. Retarget its release to the menu so
+          // native light-dismiss cannot close it, and the release cannot click an action.
+          try {
+            menu.setPointerCapture(selected.pointerId);
+          } catch (error) {
+            // A fast release can precede this render; there is then no pointer to capture.
+            if (!(error instanceof DOMException && error.name === 'NotFoundError')) throw error;
+          }
+        }
         requestAnimationFrame(() => {
           if (this.actions.menu() === selected) {
             const bounds = menu.getBoundingClientRect();

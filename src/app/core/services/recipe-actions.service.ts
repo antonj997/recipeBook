@@ -7,6 +7,8 @@ export interface RecipeMenu {
   x: number;
   y: number;
   trigger: HTMLElement;
+  /** The finger that opened the menu and has not been released yet. */
+  pointerId?: number;
   fromDetail?: boolean;
   afterDelete?: () => Promise<unknown>;
 }
@@ -30,8 +32,8 @@ export class RecipeActionsService {
       }
     });
   }
-  open(recipe: Recipe, x: number, y: number, trigger: HTMLElement): void {
-    this.menu.set({ recipe, x, y, trigger });
+  open(recipe: Recipe, x: number, y: number, trigger: HTMLElement, pointerId?: number): void {
+    this.menu.set({ recipe, x, y, trigger, pointerId });
   }
   openDetails(recipe: Recipe, trigger: HTMLElement, afterDelete: () => Promise<unknown>): void {
     if (this.menu()?.trigger === trigger) {
