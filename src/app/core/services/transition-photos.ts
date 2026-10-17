@@ -1,19 +1,12 @@
 /** Decode the selected live photo before its landing handoff, including cache hits.
- * The source snapshot stays opaque; these waits are bounded and cancelled with the flight.
+ * The source stays opaque; the controller pauses snapshot animation declaratively in CSS.
+ * Never enumerate native animations while their old DOM owners are being destroyed.
  */
 export async function prepareTransitionPhotos(
-  document: Document,
   images: HTMLImageElement[],
   transition: Pick<ViewTransition, 'finished'>,
 ): Promise<boolean> {
   if (!images.length) return true;
-  const animations = document.getAnimations().filter((animation) => {
-    const effect = animation.effect as KeyframeEffect | null;
-    return (
-      animation.playState === 'running' && effect?.pseudoElement?.startsWith('::view-transition')
-    );
-  });
-  for (const animation of animations) animation.pause();
   let ended = false;
   let settled = false;
   let frame: number | undefined;
@@ -61,7 +54,5 @@ export async function prepareTransitionPhotos(
     settled = true;
     clearTimeout(timeout);
     if (frame !== undefined) cancelAnimationFrame(frame);
-    if (!ended)
-      for (const animation of animations) if (animation.playState === 'paused') animation.play();
   }
 }

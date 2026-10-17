@@ -252,6 +252,7 @@ export class PageTransitionService {
         'data-expand-list',
         'data-book-photo-source',
         'data-book-photo-ready',
+        'data-book-photo-preparing',
       ])
         root.removeAttribute(attribute);
     };
@@ -267,17 +268,22 @@ export class PageTransitionService {
               element.tagName === 'IMG',
           )
           .map(([element]) => element as HTMLImageElement);
-        if (photos.length)
-          void prepareTransitionPhotos(this.document, photos, transition)
+        if (photos.length) {
+          // Avoid getAnimations(): Safari can crash sorting animations whose route
+          // elements were just removed. CSS pauses only the snapshot pseudo-elements.
+          root.setAttribute('data-book-photo-preparing', '');
+          void prepareTransitionPhotos(photos, transition)
             .then((ready) => {
               // Never replace the source mid-flight. The decoded target only blends in
               // at landing, with the opaque source still underneath until finished.
-              if (this.active === transition && ready)
-                root.setAttribute('data-book-photo-ready', '');
+              if (this.active !== transition) return;
+              if (ready) root.setAttribute('data-book-photo-ready', '');
+              root.removeAttribute('data-book-photo-preparing');
             })
             .catch(() => {
               if (this.active === transition) this.cancel();
             });
+        }
         // The carousel/list restores its position before capture. Read the landing bounds afterwards.
         if (this.active !== transition || !this.returningToLibrary || !this.morphRecipeId) return;
         if (!this.expandOrigin || !this.parts.has(this.expandOrigin)) {

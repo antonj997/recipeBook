@@ -466,3 +466,13 @@ html[data-page-transition='expand'][data-recipe-morph]::view-transition-new(
     animation: none;
   }
 }
+
+/* Pause snapshot layers without querying native animation objects. Enumerating them
+   after removing route elements is a documented Mobile Safari crash path:
+   https://github.com/react/react/issues/35336 */
+html[data-book-photo-preparing]::view-transition-group(*),
+html[data-book-photo-preparing]::view-transition-image-pair(*),
+html[data-book-photo-preparing]::view-transition-old(*),
+html[data-book-photo-preparing]::view-transition-new(*) {
+  animation-play-state: paused !important;
+}
