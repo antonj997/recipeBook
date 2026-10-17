@@ -26,6 +26,7 @@ describe('shared photo snapshot ownership', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) =>
       setTimeout(() => callback(0), 16),
     );
@@ -65,7 +66,7 @@ describe('shared photo snapshot ownership', () => {
     return { ready, finished };
   }
 
-  it('keeps the rendered source until the selected destination photo can paint', async () => {
+  it('retains one rendered source for the entire flight, even after destination decoding', async () => {
     const service = TestBed.inject(PageTransitionService);
     const source = photo(service, 'one', true);
     const run = start(service, 'one');
@@ -86,14 +87,18 @@ describe('shared photo snapshot ownership', () => {
     run.ready.resolve();
     await vi.advanceTimersByTimeAsync(0);
     expect(animation.playState).toBe('paused');
+    expect(document.documentElement.hasAttribute('data-book-photo-ready')).toBe(false);
     expect(document.documentElement.hasAttribute('data-book-photo-source')).toBe(true);
     target.decoded.resolve();
     await vi.advanceTimersByTimeAsync(40);
     expect(animation.playState).toBe('running');
-    expect(document.documentElement.hasAttribute('data-book-photo-source')).toBe(false);
+    expect(document.documentElement.hasAttribute('data-book-photo-ready')).toBe(true);
+    expect(document.documentElement.hasAttribute('data-book-photo-source')).toBe(true);
     run.finished.resolve();
     await vi.advanceTimersByTimeAsync(0);
     expect(document.documentElement.hasAttribute('data-page-transition')).toBe(false);
+    expect(document.documentElement.hasAttribute('data-book-photo-source')).toBe(false);
+    expect(document.documentElement.hasAttribute('data-book-photo-ready')).toBe(false);
     target.unregister();
   });
 
@@ -104,15 +109,40 @@ describe('shared photo snapshot ownership', () => {
     const run = start(service, 'one');
     source.unregister();
     const target = photo(service, 'one', true);
+    target.decoded.resolve();
     document.getAnimations = () => [];
     run.ready.resolve();
     await vi.advanceTimersByTimeAsync(40);
-    expect(document.documentElement.hasAttribute('data-book-photo-source')).toBe(false);
+    expect(document.documentElement.hasAttribute('data-book-photo-source')).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
     run.finished.resolve();
     await vi.advanceTimersByTimeAsync(0);
     target.unregister();
     unrelated.unregister();
+  });
+
+  it('does not declare a stalled destination ready or let late decoding change a replacement', async () => {
+    const service = TestBed.inject(PageTransitionService);
+    const source = photo(service, 'one', true);
+    const first = start(service, 'one');
+    source.unregister();
+    const target = photo(service, 'one', false);
+    document.getAnimations = () => [];
+    first.ready.resolve();
+    await vi.advanceTimersByTimeAsync(2100);
+    expect(document.documentElement.hasAttribute('data-book-photo-source')).toBe(true);
+    expect(document.documentElement.hasAttribute('data-book-photo-ready')).toBe(false);
+    target.unregister();
+    const replacementSource = photo(service, 'two', true);
+    const second = start(service, 'two');
+    target.decoded.resolve();
+    first.finished.resolve();
+    await vi.advanceTimersByTimeAsync(40);
+    expect(document.documentElement.hasAttribute('data-book-photo-ready')).toBe(false);
+    expect(document.documentElement.hasAttribute('data-book-photo-source')).toBe(true);
+    second.finished.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    replacementSource.unregister();
   });
 
   it('cannot use a blank source image as its fallback', async () => {

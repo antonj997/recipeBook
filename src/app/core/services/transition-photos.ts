@@ -1,11 +1,12 @@
-/** Keep the captured source visible until a newly mounted destination photo can paint. */
+/** Decode the selected live photo before its landing handoff, including cache hits.
+ * The source snapshot stays opaque; these waits are bounded and cancelled with the flight.
+ */
 export async function prepareTransitionPhotos(
   document: Document,
   images: HTMLImageElement[],
   transition: Pick<ViewTransition, 'finished'>,
-): Promise<void> {
-  const pending = images.filter((image) => !image.complete || !image.naturalWidth);
-  if (!pending.length) return;
+): Promise<boolean> {
+  if (!images.length) return true;
   const animations = document.getAnimations().filter((animation) => {
     const effect = animation.effect as KeyframeEffect | null;
     return (
@@ -14,32 +15,52 @@ export async function prepareTransitionPhotos(
   });
   for (const animation of animations) animation.pause();
   let ended = false;
+  let settled = false;
+  let frame: number | undefined;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   const finished = transition.finished.then(
     () => {
       ended = true;
+      return false;
     },
     () => {
       ended = true;
+      return false;
     },
   );
-  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const decoded = Promise.all(
+    images.map(async (image) => {
+      // Returning to a card can mount a lazy image before carousel restoration.
+      image.loading = 'eager';
+      try {
+        await image.decode();
+        return image.complete && image.naturalWidth > 0;
+      } catch {
+        return false;
+      }
+    }),
+  ).then((ready) => {
+    if (settled || ended || !ready.every(Boolean)) return false;
+    // rAF runs BEFORE paint. Two frames allow an intervening rendering opportunity;
+    // they are not a guarantee of hardware presentation.
+    return new Promise<boolean>((resolve) => {
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => resolve(true));
+      });
+    });
+  });
   try {
-    await Promise.race([
-      Promise.all(pending.map((image) => image.decode().catch(() => undefined))),
+    return await Promise.race([
+      decoded,
       finished,
-      new Promise<void>((resolve) => {
-        timeout = setTimeout(resolve, 2000);
+      new Promise<boolean>((resolve) => {
+        timeout = setTimeout(() => resolve(false), 2000);
       }),
     ]);
-    if (!ended) {
-      // decode() settles before the browser paints; let the live photo reach the compositor too.
-      await Promise.race([
-        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
-        finished,
-      ]);
-    }
   } finally {
+    settled = true;
     clearTimeout(timeout);
+    if (frame !== undefined) cancelAnimationFrame(frame);
     if (!ended)
       for (const animation of animations) if (animation.playState === 'paused') animation.play();
   }

@@ -92,8 +92,9 @@ html[data-page-transition='expand']::view-transition-old(book-recipe-categories)
 html[data-page-transition='expand']::view-transition-old(book-recipe-time) {
   display: none;
 }
-/* Keep the decoded source bitmap for the flight. A fresh lazy image may still be blank
-   at destination capture; readiness also holds the flight until the live photo can paint. */
+/* Keep the source opaque throughout the flight. The destination has its own crop;
+   blend it over the source only at landing, after decoding and a paint opportunity.
+   Avoid changing display/layer ownership while a photo is moving. */
 html[data-page-transition='expand']::view-transition-old(book-recipe-image),
 html[data-page-transition='expand']::view-transition-new(book-recipe-image) {
   display: block;
@@ -106,7 +107,21 @@ html[data-page-transition='expand']::view-transition-new(book-recipe-image) {
 html[data-page-transition='expand'][data-book-photo-source]::view-transition-new(
     book-recipe-image
   ):not(:only-child) {
-  display: none;
+  opacity: 0;
+}
+html[data-page-transition='expand'][data-book-photo-source][data-book-photo-ready]::view-transition-new(
+    book-recipe-image
+  ):not(:only-child) {
+  animation: book-photo-land 80ms
+    calc(var(--book-expand-delay) + var(--book-expand-duration) - 80ms) linear both;
+}
+@keyframes book-photo-land {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 html[data-page-transition='expand']::view-transition-new(book-recipe-categories),
 html[data-page-transition='expand']::view-transition-new(book-recipe-time) {

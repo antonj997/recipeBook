@@ -251,6 +251,7 @@ export class PageTransitionService {
         'data-expand-back',
         'data-expand-list',
         'data-book-photo-source',
+        'data-book-photo-ready',
       ])
         root.removeAttribute(attribute);
     };
@@ -268,12 +269,11 @@ export class PageTransitionService {
           .map(([element]) => element as HTMLImageElement);
         if (photos.length)
           void prepareTransitionPhotos(this.document, photos, transition)
-            .then(() => {
-              if (
-                this.active === transition &&
-                photos.every((photo) => photo.complete && photo.naturalWidth)
-              )
-                root.removeAttribute('data-book-photo-source');
+            .then((ready) => {
+              // Never replace the source mid-flight. The decoded target only blends in
+              // at landing, with the opaque source still underneath until finished.
+              if (this.active === transition && ready)
+                root.setAttribute('data-book-photo-ready', '');
             })
             .catch(() => {
               if (this.active === transition) this.cancel();

@@ -15,6 +15,7 @@ describe('photo transition readiness', () => {
   const originalAnimations = Object.getOwnPropertyDescriptor(document, 'getAnimations');
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) =>
       setTimeout(() => callback(0), 16),
     );
@@ -31,9 +32,13 @@ describe('photo transition readiness', () => {
     const decoded = deferred();
     const finished = deferred();
     const image = document.createElement('img');
-    image.decode = () => decoded.promise;
-    Object.defineProperty(image, 'complete', { value: complete });
-    Object.defineProperty(image, 'naturalWidth', { value: complete ? 1024 : 0 });
+    image.decode = vi.fn(() =>
+      decoded.promise.then(() => {
+        complete = true;
+      }),
+    );
+    Object.defineProperty(image, 'complete', { get: () => complete });
+    Object.defineProperty(image, 'naturalWidth', { get: () => (complete ? 1024 : 0) });
     const animation = {
       effect: { pseudoElement: '::view-transition-group(book-recipe-image)' },
       playState: 'running',
@@ -93,7 +98,7 @@ describe('photo transition readiness', () => {
     expect(f.animation.playState).toBe('paused');
     f.decoded.reject(new Error('Broken image'));
     await vi.advanceTimersByTimeAsync(40);
-    await done;
+    expect(await done).toBe(false);
     expect(f.animation.playState).toBe('running');
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -103,7 +108,7 @@ describe('photo transition readiness', () => {
     const done = prepareTransitionPhotos(document, [f.image], { finished: f.finished.promise });
     expect(f.animation.playState).toBe('paused');
     await vi.advanceTimersByTimeAsync(3000);
-    await done;
+    expect(await done).toBe(false);
     expect(f.animation.playState).toBe('running');
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -119,10 +124,47 @@ describe('photo transition readiness', () => {
     expect(f.unrelated.playState).toBe('running');
   });
 
-  it('leaves ready photos and no-photo routes on the normal animation path', async () => {
+  it('decodes cached complete photos too, before handing over to the live image', async () => {
     const f = fixture(true);
-    await prepareTransitionPhotos(document, [f.image], { finished: f.finished.promise });
+    const done = prepareTransitionPhotos(document, [f.image], { finished: f.finished.promise });
+    expect(f.image.decode).toHaveBeenCalledOnce();
+    expect(f.animation.playState).toBe('paused');
+    f.decoded.resolve();
+    await vi.advanceTimersByTimeAsync(16);
+    // A requestAnimationFrame callback runs BEFORE paint, not after it.
+    expect(f.animation.playState).toBe('paused');
+    await vi.advanceTimersByTimeAsync(16);
+    expect(await done).toBe(true);
+    expect(f.animation.playState).toBe('running');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('makes the selected lazy photo eager without waiting for offscreen cookbook images', async () => {
+    const f = fixture();
+    f.image.loading = 'lazy';
+    const done = prepareTransitionPhotos(document, [f.image], { finished: f.finished.promise });
+    expect(f.image.loading).toBe('eager');
+    f.decoded.resolve();
+    await vi.advanceTimersByTimeAsync(40);
+    await done;
+  });
+
+  it('cancels the pending paint opportunity if navigation ends between frames', async () => {
+    const f = fixture(true);
+    const done = prepareTransitionPhotos(document, [f.image], { finished: f.finished.promise });
+    f.decoded.resolve();
+    await vi.advanceTimersByTimeAsync(16);
+    f.animation.playState = 'idle';
+    f.finished.resolve();
+    expect(await done).toBe(false);
+    expect(f.animation.playState).toBe('idle');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('does no animation or decoding work for a no-photo route', async () => {
+    const f = fixture();
     await prepareTransitionPhotos(document, [], { finished: f.finished.promise });
+    expect(f.image.decode).not.toHaveBeenCalled();
     expect(f.animation.playState).toBe('running');
     expect(vi.getTimerCount()).toBe(0);
   });
