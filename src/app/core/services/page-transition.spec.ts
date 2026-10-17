@@ -180,4 +180,66 @@ describe('shared photo snapshot ownership', () => {
     await vi.advanceTimersByTimeAsync(0);
     source.unregister();
   });
+  it('keeps secondary recipe sections out of the shared snapshot layer tree', () => {
+    const service = TestBed.inject(PageTransitionService);
+    const source = photo(service, 'one', true);
+    const run = start(service, 'one');
+    const release = ['reading', 'navigation', 'controls', 'description'].map((part) => {
+      const element = document.createElement('section');
+      const unregister = service.registerPart(element, 'one', part as 'reading');
+      expect(element.style.getPropertyValue('view-transition-name')).toBe('');
+      return unregister;
+    });
+    run.finished.resolve();
+    source.unregister();
+    release.forEach((stop) => stop());
+  });
+  it('reveals metadata absent from the source row as live content only after landing', async () => {
+    const service = TestBed.inject(PageTransitionService);
+    const time = document.createElement('span');
+    const releaseTime = service.registerPart(time, 'one', 'time');
+    const run = start(service, 'one');
+    const categories = document.createElement('div');
+    const releaseCategories = service.registerPart(categories, 'one', 'categories');
+    expect(time.style.getPropertyValue('view-transition-name')).toBe('book-recipe-time');
+    expect(categories.style.getPropertyValue('view-transition-name')).toBe('');
+    expect(service.isLivePart('categories')).toBe(true);
+    expect(service.isLivePart('time')).toBe(false);
+    run.finished.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(service.openingRecipe()).toBe(false);
+    releaseTime();
+    releaseCategories();
+  });
+  it('does not restart a cancelled capture when the native ready promise arrives late', async () => {
+    const service = TestBed.inject(PageTransitionService);
+    const run = start(service, 'one');
+    service.cancel();
+    run.ready.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(service.phase()).toBe('cancelled');
+    run.finished.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(service.phase()).toBe('idle');
+  });
+  it('keeps cancellation authoritative if an old photo finishes before native cleanup', async () => {
+    const service = TestBed.inject(PageTransitionService);
+    const source = photo(service, 'one', true);
+    const run = start(service, 'one');
+    expect(service.phase()).toBe('capturing');
+    source.unregister();
+    const target = photo(service, 'one', false);
+    run.ready.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(service.phase()).toBe('preparing');
+    service.cancel();
+    expect(service.phase()).toBe('cancelled');
+    target.decoded.resolve();
+    await vi.advanceTimersByTimeAsync(40);
+    expect(service.phase()).toBe('cancelled');
+    run.finished.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(service.phase()).toBe('idle');
+    target.unregister();
+  });
 });

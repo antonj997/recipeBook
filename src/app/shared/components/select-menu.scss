@@ -11,7 +11,7 @@
   border: 1px solid var(--color-control-border);
   font: inherit;
   cursor: pointer;
-  transition: border-color 180ms var(--ease-out);
+  transition: border-color var(--motion-fast) var(--ease-out);
 }
 .menu-trigger.drag-enabled,
 .menu-panel.drag-enabled {
@@ -33,7 +33,7 @@
   width: 16px;
   height: 16px;
   transform: rotate(-90deg);
-  transition: transform 180ms var(--ease-out);
+  transition: transform var(--motion-fast) var(--ease-out);
 }
 .menu-trigger app-icon.is-open {
   transform: rotate(90deg);

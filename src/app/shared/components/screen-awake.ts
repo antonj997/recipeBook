@@ -56,8 +56,8 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
       border-radius: 8px;
       background: var(--color-surface);
       transition:
-        background 220ms var(--ease-out),
-        border-color 220ms var(--ease-out);
+        background var(--motion-control) var(--ease-out),
+        border-color var(--motion-control) var(--ease-out);
     }
     .switch-thumb {
       display: block;
@@ -66,8 +66,8 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
       border-radius: 5px;
       background: var(--color-ink);
       transition:
-        transform 250ms var(--ease-out),
-        background 220ms var(--ease-out);
+        transform var(--motion-control) var(--ease-out),
+        background var(--motion-control) var(--ease-out);
     }
     .is-on .switch-track {
       background: var(--color-green);

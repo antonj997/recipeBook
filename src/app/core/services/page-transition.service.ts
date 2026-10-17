@@ -1,7 +1,8 @@
+import { RecipePhotoWarmupService } from './recipe-photo-warmup.service';
 import { prepareTransitionPhotos } from './transition-photos';
 import { expansionOrigin, titleLayout, visibleCorners } from './recipe-transition-layout';
 import { DOCUMENT } from '@angular/common';
-import { Service, inject, signal } from '@angular/core';
+import { Service, computed, inject, signal } from '@angular/core';
 import type { ActivatedRouteSnapshot, ViewTransitionInfo } from '@angular/router';
 
 export type RecipeTransitionPart =
@@ -16,11 +17,43 @@ export type RecipeTransitionPart =
   | 'card-description'
   | 'reading';
 
+export function isLiveRecipePart(part: RecipeTransitionPart): boolean {
+  return ['navigation', 'description', 'reading', 'controls'].includes(part);
+}
+
+export type PageMotionDirection = 'opening' | 'closing' | 'page';
+export type PageMotionPhase =
+  'idle' | 'capturing' | 'preparing' | PageMotionDirection | 'cancelled';
+
 /** One native shared-recipe transition; no recipe DOM is copied or stored. */
 @Service()
 export class PageTransitionService {
   private readonly document = inject(DOCUMENT);
-  readonly openingRecipe = signal(false);
+  private readonly photos = inject(RecipePhotoWarmupService);
+  reset(): void {
+    this.cancel();
+    this.photos.clear();
+  }
+  readonly phase = signal<PageMotionPhase>('idle');
+  private readonly direction = signal<PageMotionDirection>('page');
+  readonly openingRecipe = computed(
+    () => this.phase() !== 'idle' && this.direction() === 'opening',
+  );
+  readonly closingRecipe = computed(
+    () => this.phase() !== 'idle' && this.direction() === 'closing',
+  );
+  isSharedRecipe(id: string): boolean {
+    return this.phase() !== 'idle' && this.morphRecipeId === id;
+  }
+  private readonly sharedParts = signal<ReadonlySet<RecipeTransitionPart>>(new Set());
+  isLivePart(part: RecipeTransitionPart): boolean {
+    return (
+      isLiveRecipePart(part) ||
+      (this.openingRecipe() &&
+        (part === 'time' || part === 'categories') &&
+        !this.sharedParts().has(part))
+    );
+  }
   private titleFontFrom = 0;
   private morphRecipeId: string | null = null;
   private returningToLibrary = false;
@@ -115,7 +148,11 @@ export class PageTransitionService {
       this.clearTitleWords(element);
       if (participant.recipeId === this.morphRecipeId) this.nameTitleWords(element);
     }
-    if (participant.recipeId === this.morphRecipeId)
+    if (
+      participant.recipeId === this.morphRecipeId &&
+      !this.isLivePart(participant.part) &&
+      !(participant.part === 'card-description' && this.returningToLibrary)
+    )
       element.style.setProperty('view-transition-name', 'book-recipe-' + participant.part);
     else if (participant.previousName)
       element.style.setProperty('view-transition-name', participant.previousName);
@@ -175,7 +212,10 @@ export class PageTransitionService {
       transition.skipTransition();
       return;
     }
-    this.openingRecipe.set(/^\/recipes\/[^/]+$/.test(next));
+    this.direction.set(
+      /^\/recipes\/[^/]+$/.test(next) ? 'opening' : next === '/' ? 'closing' : 'page',
+    );
+    this.phase.set('capturing');
     this.expand(
       transition,
       previous,
@@ -198,6 +238,13 @@ export class PageTransitionService {
       recipeRoute?.routeConfig?.path === 'recipes/:id' ? recipeRoute.paramMap.get('id') : null;
     this.morphRecipeId =
       id && [...this.parts.values()].some((part) => part.recipeId === id) ? id : null;
+    this.sharedParts.set(
+      new Set(
+        [...this.parts.values()]
+          .filter((part) => part.recipeId === this.morphRecipeId)
+          .map((part) => part.part),
+      ),
+    );
     const sourcePhoto = [...this.parts].find(
       ([, part]) => part.recipeId === this.morphRecipeId && part.part === 'image',
     )?.[0] as HTMLImageElement | undefined;
@@ -226,7 +273,9 @@ export class PageTransitionService {
       this.document.removeEventListener('visibilitychange', hidden);
       this.morphRecipeId = null;
       this.titleFontFrom = 0;
-      this.openingRecipe.set(false);
+      this.phase.set('idle');
+      this.direction.set('page');
+      this.sharedParts.set(new Set());
       this.returningToLibrary = false;
       this.expandOrigin = undefined;
       root.style.removeProperty('--book-expand-color');
@@ -259,7 +308,7 @@ export class PageTransitionService {
     const clear = () => this.finish(transition);
     void transition.ready.then(
       () => {
-        if (this.active !== transition) return;
+        if (this.active !== transition || this.phase() === 'cancelled') return;
         const photos = [...this.parts]
           .filter(
             ([element, part]) =>
@@ -271,19 +320,21 @@ export class PageTransitionService {
         if (photos.length) {
           // Avoid getAnimations(): Safari can crash sorting animations whose route
           // elements were just removed. CSS pauses only the snapshot pseudo-elements.
+          this.phase.set('preparing');
           root.setAttribute('data-book-photo-preparing', '');
           void prepareTransitionPhotos(photos, transition)
             .then((ready) => {
               // Never replace the source mid-flight. The decoded target only blends in
               // at landing, with the opaque source still underneath until finished.
-              if (this.active !== transition) return;
+              if (this.active !== transition || this.phase() === 'cancelled') return;
               if (ready) root.setAttribute('data-book-photo-ready', '');
               root.removeAttribute('data-book-photo-preparing');
+              this.phase.set(this.direction());
             })
             .catch(() => {
               if (this.active === transition) this.cancel();
             });
-        }
+        } else this.phase.set(this.direction());
         // The carousel/list restores its position before capture. Read the landing bounds afterwards.
         if (this.active !== transition || !this.returningToLibrary || !this.morphRecipeId) return;
         if (!this.expandOrigin || !this.parts.has(this.expandOrigin)) {
@@ -299,8 +350,15 @@ export class PageTransitionService {
   }
 
   /** Skipping still runs the route update. Keep snapshot CSS until the browser has finished. */
-  cancel(): void {
-    this.active?.skipTransition();
+  cancel(): Promise<void> | undefined {
+    const transition = this.active;
+    if (!transition) return;
+    this.phase.set('cancelled');
+    transition.skipTransition();
+    return transition.finished.then(
+      () => undefined,
+      () => undefined,
+    );
   }
 
   private finish(transition: ViewTransition): void {

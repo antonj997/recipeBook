@@ -9,7 +9,7 @@
   width: 14px;
   height: 14px;
   transform: rotate(-90deg);
-  transition: transform 180ms var(--ease-out);
+  transition: transform var(--motion-fast) var(--ease-out);
 }
 .add-chevron.open {
   transform: rotate(90deg);
@@ -73,7 +73,7 @@
     -0.2px 0 currentColor;
 }
 #add-recipe-options:popover-open {
-  animation: menu-in 180ms var(--ease-out);
+  animation: menu-in var(--motion-fast) var(--ease-out);
 }
 @supports (position-anchor: auto) {
   #add-recipe-options {
@@ -366,7 +366,7 @@
   border-radius: inherit;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 180ms var(--ease-out);
+  transition: opacity var(--motion-fast) var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   .index-row:hover {

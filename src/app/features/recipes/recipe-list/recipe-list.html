@@ -14,7 +14,12 @@
           (input)="onSearch($event)"
         />
         @if (query()) {
-          <button type="button" aria-label="Clear search" (click)="search('')">
+          <button
+            type="button"
+            aria-label="Clear search"
+            (pointerdown)="$event.preventDefault()"
+            (click)="search('')"
+          >
             <app-icon name="close" />
           </button>
         }

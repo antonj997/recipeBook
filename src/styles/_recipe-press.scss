@@ -3,8 +3,8 @@
 .index-row {
   scale: 1;
   transition:
-    scale 140ms var(--ease-out),
-    border-color 180ms var(--ease-out);
+    scale var(--motion-press) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
 }
 .recipe-card__surface {
   position: relative;

@@ -1,3 +1,4 @@
+import { RecipePhotoWarmupService } from '../../core/services/recipe-photo-warmup.service';
 import { DestroyRef, Directive, ElementRef, inject, input } from '@angular/core';
 import type { Recipe } from '../../core/models/recipe.model';
 import { RecipeActionsService } from '../../core/services/recipe-actions.service';
@@ -8,6 +9,8 @@ import { RecipeActionsService } from '../../core/services/recipe-actions.service
     'aria-describedby': 'recipe-actions-hint',
     '(contextmenu)': 'context($event)',
     '(pointerdown)': 'start($event)',
+    '(pointerenter)': 'warmPhoto()',
+    '(focusin)': 'warmPhoto()',
     '(pointermove)': 'move($event)',
     '(pointerup)': 'finishHold()',
     '(pointercancel)': 'finishHold()',
@@ -18,6 +21,10 @@ import { RecipeActionsService } from '../../core/services/recipe-actions.service
 export class RecipeContextDirective {
   recipe = input.required<Recipe>({ alias: 'appRecipeContext' });
   private actions = inject(RecipeActionsService);
+  private readonly photos = inject(RecipePhotoWarmupService);
+  warmPhoto(): void {
+    this.photos.warm(this.recipe().imageDataUrl);
+  }
   private element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private timer?: ReturnType<typeof setTimeout>;
   private point?: { x: number; y: number; pointerId: number };
@@ -38,6 +45,7 @@ export class RecipeContextDirective {
     });
   }
   start(event: PointerEvent): void {
+    this.warmPhoto();
     this.cancel();
     this.openedOnHold = false;
     this.ignoreClickUntil = 0;

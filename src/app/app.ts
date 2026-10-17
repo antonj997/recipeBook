@@ -1,6 +1,8 @@
 import {
   captureSnapshotNavigation,
   recoverSnapshotNavigation,
+  observeSnapshotGesture,
+  advanceSnapshotFocus,
   type SnapshotNavigationPress,
 } from './core/services/page-transition-input';
 import { NgOptimizedImage } from '@angular/common';
@@ -81,6 +83,10 @@ export class App {
   readonly accountChanging = signal(false);
 
   constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.stopSnapshotGesture?.();
+      cancelAnimationFrame(this.snapshotFocusFrame);
+    });
     afterNextRender(() => {
       const header = this.appHeader()?.nativeElement;
       if (!header) return;
@@ -125,10 +131,13 @@ export class App {
         if (wasCompact !== this.compactHeader()) queueThemeColor();
       };
       window.addEventListener('scroll', onScroll, { passive: true });
+      const onWheel = () => this.pageTransition.cancel();
+      window.addEventListener('wheel', onWheel, { passive: true });
       this.destroyRef.onDestroy(() => {
         observer.disconnect();
         cancelAnimationFrame(this.headerRestoreFrame);
         window.removeEventListener('scroll', onScroll);
+        window.removeEventListener('wheel', onWheel);
         header.removeEventListener('transitionrun', onHeaderTransition);
         cancelAnimationFrame(themeFrame);
         if (themeColor && originalThemeColor) themeColor.content = originalThemeColor;
@@ -139,7 +148,7 @@ export class App {
       const next = this.cloud.auth.accountVersion();
       if (next === version) return;
       version = next;
-      this.pageTransition.cancel();
+      this.pageTransition.reset();
       this.accountChanging.set(true);
       this.drafts.clear();
       this.confirmation.answer(true);
@@ -197,22 +206,54 @@ export class App {
     this.compactHeader.set(this.compactHeader() ? window.scrollY > 8 : window.scrollY >= 80);
   }
 
-  private headerPress?: SnapshotNavigationPress;
+  private snapshotPress?: SnapshotNavigationPress;
+  private snapshotFocusFrame = 0;
 
   protected onNavigationClick(event: MouseEvent): void {
-    const press = this.headerPress;
-    this.headerPress = undefined;
-    recoverSnapshotNavigation(event, press);
+    const press = this.snapshotPress;
+    this.snapshotPress = undefined;
+    recoverSnapshotNavigation(event, press, () => this.pageTransition.cancel());
   }
 
   protected onPointerDown(event: PointerEvent): void {
-    this.headerPress = captureSnapshotNavigation(event, this.appHeader()?.nativeElement);
-    this.pageTransition.cancel();
+    // A second finger must not replace the observer awaiting the primary pan/pinch cancellation.
+    if (!event.isPrimary) return;
+    this.snapshotPress = captureSnapshotNavigation(event, this.appHeader()?.nativeElement);
+    this.watchSnapshotGesture(event);
     this.touchInput.set(event.pointerType === 'touch' || event.pointerType === 'pen');
   }
 
+  private stopSnapshotGesture?: () => void;
+  private watchSnapshotGesture(press: PointerEvent): void {
+    this.stopSnapshotGesture?.();
+    this.stopSnapshotGesture = observeSnapshotGesture(document, press, () => {
+      this.snapshotPress = undefined;
+      this.pageTransition.cancel();
+    });
+  }
+
   protected onNavigationKey(event: KeyboardEvent): void {
-    this.pageTransition.cancel();
+    if (event.key === 'Tab' && this.pageTransition.phase() !== 'idle') {
+      // Native snapshot teardown is asynchronous. Preserve this Tab rather than
+      // letting its default traversal skip controls that are temporarily inert.
+      event.preventDefault();
+      const route = this.router.url;
+      void this.pageTransition.cancel()?.then(() => {
+        cancelAnimationFrame(this.snapshotFocusFrame);
+        this.snapshotFocusFrame = requestAnimationFrame(() => {
+          this.snapshotFocusFrame = 0;
+          if (this.router.url === route && this.pageTransition.phase() === 'idle')
+            advanceSnapshotFocus(document, event.shiftKey);
+        });
+      });
+      this.touchInput.set(false);
+      return;
+    }
+    if (
+      ['Tab', 'Enter', ' ', 'Escape', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key) ||
+      event.key?.startsWith('Arrow')
+    )
+      this.pageTransition.cancel();
     if (event.key === 'Tab' || event.key?.startsWith('Arrow')) {
       this.touchInput.set(false);
     }

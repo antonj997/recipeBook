@@ -1,3 +1,4 @@
+import { RecipePhotoWarmupService } from '../../core/services/recipe-photo-warmup.service';
 import { RecipeTransitionPartDirective } from './recipe-transition-part';
 import { recipeBackground } from '../../core/models/recipe-color';
 import { RecipeContextDirective } from './recipe-context';
@@ -8,6 +9,7 @@ import { RecipeTitleComponent } from './recipe-title';
 import { formatRecipeTime, perPortionNutrition } from '../../core/models/recipe-metadata';
 import {
   afterNextRender,
+  inject,
   Component,
   computed,
   effect,
@@ -58,6 +60,7 @@ export class RecipeRailComponent implements OnDestroy {
   activeRecipeChange = output<string>();
   recipeActivate = output<string>();
   private currentRecipeId = '';
+  private readonly photos = inject(RecipePhotoWarmupService);
   private lastRestoreId = '';
   private restoreFrame = 0;
   title = input.required<string>();
@@ -300,6 +303,10 @@ export class RecipeRailComponent implements OnDestroy {
     const id = this.recipes()[nearest]?.id ?? '';
     if (id && id !== this.currentRecipeId) {
       this.currentRecipeId = id;
+      // Wait for fast scrubbing to settle; selected is newest in the bounded cache.
+      this.photos.schedule(
+        [nearest - 1, nearest + 1, nearest].map((index) => this.recipes()[index]?.imageDataUrl),
+      );
       this.activeRecipeChange.emit(id);
     }
   }

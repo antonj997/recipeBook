@@ -1,0 +1,44 @@
+// Canonical navigation durations also derive the list-fill keyframe boundary.
+$travel: 430ms;
+$list-lead: 100ms;
+:root {
+  --motion-press: 140ms;
+  --motion-fast: 180ms;
+  --motion-control: 220ms;
+  --motion-page: 260ms;
+  --motion-surface: 280ms;
+  --motion-tabs: 280ms;
+  --motion-travel: #{$travel};
+  --motion-list-lead: #{$list-lead};
+  --motion-reveal: 160ms;
+  --motion-reading-reveal: 180ms;
+  --motion-photo-land: 80ms;
+  --motion-dismiss: 65ms;
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+// Secondary content is live DOM. It waits for the shared geometry, then settles
+// without keeping a full reading-section snapshot or extending input shielding.
+.recipe-part-live {
+  opacity: 1;
+  transition: opacity var(--motion-reveal) var(--motion-ease-standard);
+}
+.recipe-part-reading {
+  translate: 0 0;
+  transition:
+    opacity var(--motion-reading-reveal) var(--motion-ease-standard),
+    translate var(--motion-reading-reveal) var(--motion-ease-out);
+}
+.recipe-part-waiting {
+  opacity: 0;
+}
+.recipe-part-reading.recipe-part-waiting {
+  translate: 0 14px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .recipe-part-live {
+    transition: none;
+    translate: none;
+  }
+}

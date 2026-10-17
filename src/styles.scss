@@ -1,3 +1,4 @@
+@use './styles/motion';
 @use './styles/page-transitions';
 @use './styles/recipe-press';
 
@@ -40,7 +41,7 @@
   --page-gutter-right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
   --app-top-inset: env(safe-area-inset-top, 0px);
   --app-header-height: calc(89px + var(--app-top-inset));
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: var(--motion-ease-out);
 }
 @media (max-width: 600px) {
   :root {
@@ -178,9 +179,9 @@ small {
   text-decoration: none;
   cursor: pointer;
   transition:
-    background 180ms,
-    color 180ms,
-    border-color 180ms,
+    background var(--motion-fast),
+    color var(--motion-fast),
+    border-color var(--motion-fast),
     opacity 140ms,
     text-shadow 160ms;
 }
@@ -308,7 +309,7 @@ input::file-selector-button {
   background: var(--color-surface);
 }
 .field {
-  animation: field-enter 220ms var(--ease-out);
+  animation: field-enter var(--motion-control) var(--ease-out);
 }
 @keyframes field-enter {
   from {
@@ -468,12 +469,12 @@ app-checkbox-mark svg {
   stroke-linejoin: round;
 }
 .checkbox-frame {
-  transition: stroke 180ms;
+  transition: stroke var(--motion-fast);
 }
 .checkbox-tick {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  transition: stroke-dashoffset 180ms var(--ease-out);
+  transition: stroke-dashoffset var(--motion-fast) var(--ease-out);
 }
 .check-control input:checked + app-checkbox-mark {
   color: var(--color-ink);
@@ -548,10 +549,10 @@ app-root.touch-input .check-control input:focus + app-checkbox-mark {
 }
 
 .search-field {
-  transition: box-shadow 180ms;
+  transition: box-shadow var(--motion-fast);
 }
 app-checkbox-mark {
-  transition: color 180ms;
+  transition: color var(--motion-fast);
 }
 @media (min-width: 601px) and (hover: hover) and (pointer: fine) {
   .search-field:hover {
