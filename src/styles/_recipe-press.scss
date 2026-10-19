@@ -20,19 +20,19 @@
   pointer-events: none;
   transition: opacity 100ms var(--ease-out);
 }
-.recipe-card:active .recipe-card__surface,
-.index-row:active {
+.recipe-card.recipe-pressed .recipe-card__surface,
+.index-row.recipe-pressed {
   scale: 0.985;
 }
-:is(.recipe-card:active .recipe-card__surface, .index-row:active)::after {
+:is(.recipe-card.recipe-pressed .recipe-card__surface, .index-row.recipe-pressed)::after {
   border-width: 2px;
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
   .recipe-card__surface,
-  .recipe-card:active .recipe-card__surface,
+  .recipe-card.recipe-pressed .recipe-card__surface,
   .index-row,
-  .index-row:active {
+  .index-row.recipe-pressed {
     scale: 1;
     transition: none;
   }

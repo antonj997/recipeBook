@@ -1,5 +1,5 @@
 import { RecipePhotoWarmupService } from '../../core/services/recipe-photo-warmup.service';
-import { DestroyRef, Directive, ElementRef, inject, input } from '@angular/core';
+import { DestroyRef, Directive, ElementRef, effect, inject, input, signal } from '@angular/core';
 import type { Recipe } from '../../core/models/recipe.model';
 import { RecipeActionsService } from '../../core/services/recipe-actions.service';
 
@@ -7,6 +7,7 @@ import { RecipeActionsService } from '../../core/services/recipe-actions.service
   selector: '[appRecipeContext]',
   host: {
     'aria-describedby': 'recipe-actions-hint',
+    '[class.recipe-pressed]': 'pressed()',
     '(contextmenu)': 'context($event)',
     '(pointerdown)': 'start($event)',
     '(pointerenter)': 'warmPhoto()',
@@ -14,6 +15,7 @@ import { RecipeActionsService } from '../../core/services/recipe-actions.service
     '(pointermove)': 'move($event)',
     '(pointerup)': 'finishHold()',
     '(pointercancel)': 'finishHold()',
+    '(pointerleave)': 'cancel()',
     '(window:scroll)': 'cancel()',
     '(keydown)': 'key($event)',
   },
@@ -26,7 +28,9 @@ export class RecipeContextDirective {
     this.photos.warm(this.recipe().imageDataUrl);
   }
   private element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  protected readonly pressed = signal(false);
   private timer?: ReturnType<typeof setTimeout>;
+  private pressTimer?: ReturnType<typeof setTimeout>;
   private point?: { x: number; y: number; pointerId: number };
   private ignoreClickUntil = 0;
   private openedOnHold = false;
@@ -38,10 +42,18 @@ export class RecipeContextDirective {
         this.ignoreClickUntil = 0;
       }
     };
+    const scroll = () => this.cancel();
     this.element.addEventListener('click', click, true);
+    // Element scroll events do not bubble. Capture carousel/list scrolling before
+    // native touch cancellation, including a scroll that starts after feedback.
+    this.element.ownerDocument.addEventListener('scroll', scroll, { capture: true, passive: true });
+    effect(() => {
+      if (this.actions.menu()) this.cancel();
+    });
     inject(DestroyRef).onDestroy(() => {
       this.cancel();
       this.element.removeEventListener('click', click, true);
+      this.element.ownerDocument.removeEventListener('scroll', scroll, true);
     });
   }
   start(event: PointerEvent): void {
@@ -49,8 +61,13 @@ export class RecipeContextDirective {
     this.cancel();
     this.openedOnHold = false;
     this.ignoreClickUntil = 0;
-    if (event.pointerType !== 'touch' || !event.isPrimary) return;
+    if (!event.isPrimary || event.button !== 0) return;
+    if (event.pointerType !== 'touch') {
+      this.pressed.set(true);
+      return;
+    }
     this.point = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+    this.pressTimer = setTimeout(() => this.pressed.set(true), 100);
     this.timer = setTimeout(() => {
       this.openHold(event.clientX, event.clientY, event.pointerId);
       this.point = undefined;
@@ -67,6 +84,8 @@ export class RecipeContextDirective {
   }
   cancel(): void {
     clearTimeout(this.timer);
+    clearTimeout(this.pressTimer);
+    this.pressed.set(false);
     this.point = undefined;
   }
   context(event: MouseEvent): void {
@@ -92,6 +111,7 @@ export class RecipeContextDirective {
     this.open(x, y, pointerId);
   }
   private open(x: number, y: number, pointerId?: number): void {
+    this.cancel();
     this.actions.open(this.recipe(), x, y, this.element, pointerId);
   }
 }

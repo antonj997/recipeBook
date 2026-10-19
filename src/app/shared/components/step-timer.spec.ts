@@ -56,8 +56,7 @@ describe('editable step timer controls', () => {
     view.detectChanges();
     const root = view.nativeElement as HTMLElement;
     const timers = TestBed.inject(StepTimerService);
-    const adjust = root.querySelectorAll<HTMLButtonElement>('.step-timer .timer-adjust');
-    return { view, root, timers, minus: adjust[0], plus: adjust[1] };
+    return { view, root, timers };
   }
 
   function field(root: HTMLElement) {
@@ -86,26 +85,37 @@ describe('editable step timer controls', () => {
     element.dispatchEvent(event);
   }
 
-  it('keeps Start, Pause, Resume and Reset outside the countdown border', () => {
+  it('uses an accessible minute ruler instead of plus/minus controls', () => {
     const f = fixture();
-    for (const action of ['Start', 'Pause', 'Resume']) {
-      f.view.detectChanges();
-      const button = f.root.querySelector<HTMLButtonElement>('.timer-action')!;
-      expect(button.textContent?.trim()).toBe(action);
+    expect(f.root.querySelector('[role="slider"]')).not.toBeNull();
+    expect(f.root.querySelector('[aria-label^="Add one minute"]')).toBeNull();
+    expect(f.root.querySelector('[aria-label^="Subtract one minute"]')).toBeNull();
+  });
+  it('keeps Start, Stop and Reset below the ruler, and resumes stopped timers', () => {
+    const f = fixture();
+    const start = f.root.querySelector<HTMLButtonElement>('[aria-label="Start timer for step 1"]')!;
+    const stop = f.root.querySelector<HTMLButtonElement>('[aria-label="Stop timer for step 1"]')!;
+    expect(stop.disabled).toBe(true);
+    for (const button of f.root.querySelectorAll('.timer-action'))
       expect(button.closest('.step-timer')).toBeNull();
-      button.click();
-    }
-    f.timers.pause(target);
+    start.click();
     f.view.detectChanges();
-    expect(
-      f.root.querySelector('[aria-label="Reset timer for step 1"]')?.closest('.step-timer'),
-    ).toBeNull();
+    expect(start.disabled).toBe(true);
+    expect(stop.disabled).toBe(false);
+    stop.click();
+    f.view.detectChanges();
+    expect(f.timers.state(target).running).toBe(false);
+    start.click();
+    expect(f.timers.state(target).running).toBe(true);
   });
 
   it.each([
-    ['3', 180],
-    ['1.5', 90],
-    [' 4 ', 240],
+    ['3', 3],
+    ['0100', 60],
+    ['1234', 754],
+    ['6000', 3600],
+    ['12000', 7200],
+    ['1008000', 604800],
     ['0:01', 1],
     ['12:34', 754],
     ['90:00', 5400],
@@ -121,7 +131,7 @@ describe('editable step timer controls', () => {
     expect(input.getAttribute('aria-invalid')).not.toBe('true');
   });
 
-  it.each(['', '0', '-1', '1e2', '2 minutes', '1:60', '1:60:00', '1:00:60', '10081'])(
+  it.each(['', '0', '0060', '1:60', '1:60:00', '1:00:60', '169:00:00', '1008001', '10080000'])(
     'keeps the duration and explains invalid input %j',
     (text) => {
       const f = fixture();
@@ -130,11 +140,173 @@ describe('editable step timer controls', () => {
       input.dispatchEvent(new FocusEvent('blur'));
       f.view.detectChanges();
       expect(f.timers.state(target).remaining).toBe(120);
-      expect(input.value).toBe(text);
       expect(input.getAttribute('aria-invalid')).toBe('true');
       expect(f.root.querySelector('[role="alert"]')?.textContent).toContain('0:01');
     },
   );
+
+  it('selects the full duration when focusing or tapping the field', () => {
+    const f = fixture();
+    const input = field(f.root);
+    expect(input.inputMode).toBe('numeric');
+    input.dispatchEvent(new FocusEvent('focus'));
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, input.value.length]);
+    input.setSelectionRange(1, 1);
+    pointer(input, 'pointerup');
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, input.value.length]);
+    expect(input.dispatchEvent(new MouseEvent('mouseup', { cancelable: true }))).toBe(false);
+  });
+
+  it('adds separators while consecutive numeric keys replace the selected duration', () => {
+    const f = fixture();
+    const input = field(f.root);
+    input.dispatchEvent(new FocusEvent('focus'));
+    for (const [digit, display] of [
+      ['0', '00:00'],
+      ['1', '00:01'],
+      ['0', '00:10'],
+      ['0', '01:00'],
+      ['0', '010:00'],
+      ['0', '0100:00'],
+    ]) {
+      input.dispatchEvent(
+        new InputEvent('beforeinput', {
+          inputType: 'insertText',
+          data: digit,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      f.view.detectChanges();
+      expect(input.value).toBe(display);
+    }
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(f.timers.state(target).remaining).toBe(6000);
+  });
+
+  it('keeps numeric entry editable with backspace and strips nonnumeric pasted characters', () => {
+    const f = fixture();
+    const input = field(f.root);
+    type(input, 'a0b1c0d0');
+    f.view.detectChanges();
+    expect(input.value).toBe('01:00');
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.dispatchEvent(
+      new InputEvent('beforeinput', {
+        inputType: 'deleteContentBackward',
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    f.view.detectChanges();
+    expect(input.value).toBe('00:10');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(f.timers.state(target).remaining).toBe(10);
+  });
+
+  it('keeps the numeric mask stable for keyboards that send input without a cancelable beforeinput', () => {
+    const f = fixture();
+    const input = field(f.root);
+    type(input, '0');
+    for (const [raw, display] of [
+      ['00:001', '00:01'],
+      ['00:010', '00:10'],
+      ['00:100', '01:00'],
+    ]) {
+      input.value = raw;
+      input.dispatchEvent(
+        new InputEvent('input', {
+          inputType: 'insertCompositionText',
+          bubbles: true,
+        }),
+      );
+      f.view.detectChanges();
+      expect(input.value).toBe(display);
+    }
+    input.dispatchEvent(new FocusEvent('blur'));
+    expect(f.timers.state(target).remaining).toBe(60);
+  });
+
+  it.each([
+    ['insertText', '3', '00:03', 3],
+    ['deleteContentBackward', null, '00:20', 20],
+  ])(
+    'normalizes a noncancelable %s only after its native edit',
+    (inputType, data, display, seconds) => {
+      const f = fixture();
+      const input = field(f.root);
+      input.dispatchEvent(new FocusEvent('focus'));
+      if (inputType === 'deleteContentBackward')
+        input.setSelectionRange(input.value.length, input.value.length);
+      input.dispatchEvent(
+        new InputEvent('beforeinput', {
+          inputType,
+          data,
+          bubbles: true,
+          cancelable: false,
+        }),
+      );
+      // The browser still applies its default edit when beforeinput cannot be cancelled.
+      const start = input.selectionStart!;
+      const end = input.selectionEnd!;
+      input.setRangeText(
+        data ?? '',
+        inputType === 'deleteContentBackward' ? start - 1 : start,
+        end,
+        'end',
+      );
+      input.dispatchEvent(new InputEvent('input', { inputType, data, bubbles: true }));
+      f.view.detectChanges();
+      expect(input.value).toBe(display);
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(f.timers.state(target).remaining).toBe(seconds);
+    },
+  );
+
+  it('offers Reset while a timer is running', () => {
+    const f = fixture();
+    f.timers.start(target);
+    f.view.detectChanges();
+    const reset = f.root.querySelector<HTMLButtonElement>('[aria-label="Reset timer for step 1"]');
+    expect(reset).not.toBeNull();
+    reset!.click();
+    expect(f.timers.state(target)).toMatchObject({
+      remaining: 120,
+      running: false,
+      started: false,
+    });
+  });
+
+  it('shows the time elapsed after the deadline with Restart and Reset controls', async () => {
+    const f = fixture();
+    f.timers.start(target);
+    await vi.advanceTimersByTimeAsync(150_000);
+    f.view.detectChanges();
+    expect(field(f.root).value).toBe('00:30');
+    expect(field(f.root).getAttribute('aria-label')).toContain('Time overdue');
+    expect(f.root.querySelector('.timer-action')?.textContent?.trim()).toBe('Start');
+    f.root.querySelector<HTMLButtonElement>('[aria-label="Reset timer for step 1"]')!.click();
+    f.view.detectChanges();
+    expect(field(f.root).value).toBe('02:00');
+    expect(f.root.querySelector('.timer-action')?.textContent?.trim()).toBe('Start');
+  });
+
+  it('keeps an overdue timer stopped when its ruler changes duration until Start is pressed', async () => {
+    const f = fixture();
+    f.timers.start(target);
+    await vi.advanceTimersByTimeAsync(130_000);
+    f.view.detectChanges();
+    expect(f.timers.state(target).done).toBe(true);
+    f.root
+      .querySelector('[role="slider"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await vi.advanceTimersByTimeAsync(1000);
+    f.view.detectChanges();
+    expect(f.timers.state(target)).toMatchObject({ remaining: 180, running: false, done: false });
+    f.root.querySelector<HTMLButtonElement>('[aria-label="Start timer for step 1"]')!.click();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(f.timers.state(target)).toMatchObject({ remaining: 179, running: true });
+  });
 
   it('retains the typed draft while the running countdown ticks', async () => {
     const f = fixture();
@@ -147,7 +319,7 @@ describe('editable step timer controls', () => {
     expect(f.timers.state(target).remaining).toBe(117);
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     f.view.detectChanges();
-    expect(input.value).toBe('1:57');
+    expect(input.value).toBe('01:57');
   });
 
   it('commits on blur while preserving a running countdown', async () => {
@@ -162,7 +334,7 @@ describe('editable step timer controls', () => {
       remaining: 194,
       running: true,
     });
-    expect(input.value).toBe('3:14');
+    expect(input.value).toBe('03:14');
   });
 
   it('does not rewind a countdown when the field is focused without changing its value', async () => {
@@ -174,7 +346,7 @@ describe('editable step timer controls', () => {
     input.dispatchEvent(new FocusEvent('blur'));
     f.view.detectChanges();
     expect(f.timers.state(target).remaining).toBe(117);
-    expect(input.value).toBe('1:57');
+    expect(input.value).toBe('01:57');
   });
 
   it('hides even a started countdown when the step is completed', () => {
@@ -183,83 +355,5 @@ describe('editable step timer controls', () => {
     f.view.componentRef.setInput('completed', true);
     f.view.detectChanges();
     expect(f.root.hidden).toBe(true);
-  });
-
-  it('changes once on press, then repeats slowly and accelerates', async () => {
-    const f = fixture();
-    pointer(f.plus, 'pointerdown');
-    expect(f.timers.state(target).remaining).toBe(180);
-    await vi.advanceTimersByTimeAsync(449);
-    expect(f.timers.state(target).remaining).toBe(180);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(f.timers.state(target).remaining).toBe(240);
-    await vi.advanceTimersByTimeAsync(900);
-    expect(f.timers.state(target).remaining).toBe(420);
-    await vi.advanceTimersByTimeAsync(300);
-    expect(f.timers.state(target).remaining).toBe(480);
-    await vi.advanceTimersByTimeAsync(150);
-    expect(f.timers.state(target).remaining).toBe(540);
-  });
-
-  it('does not add the trailing pointer click after release and keeps keyboard activation', async () => {
-    const f = fixture();
-    pointer(f.plus, 'pointerdown');
-    await vi.advanceTimersByTimeAsync(450);
-    pointer(f.plus, 'pointerup');
-    f.plus.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(f.timers.state(target).remaining).toBe(240);
-    f.plus.click();
-    expect(f.timers.state(target).remaining).toBe(300);
-  });
-
-  it.each(['pointercancel', 'lostpointercapture'])('stops repeat on %s', async (type) => {
-    const f = fixture();
-    pointer(f.plus, 'pointerdown');
-    pointer(f.plus, type);
-    await vi.advanceTimersByTimeAsync(2000);
-    expect(f.timers.state(target).remaining).toBe(180);
-  });
-
-  it('stops on release outside the button and ignores other pointer releases', async () => {
-    const f = fixture();
-    pointer(f.plus, 'pointerdown');
-    pointer(document.body, 'pointerup', 12);
-    await vi.advanceTimersByTimeAsync(450);
-    pointer(document.body, 'pointerup');
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(f.timers.state(target).remaining).toBe(240);
-  });
-
-  it('stops subtracting at one second and disables the minus button', async () => {
-    const f = fixture();
-    pointer(f.minus, 'pointerdown');
-    await vi.advanceTimersByTimeAsync(2000);
-    f.view.detectChanges();
-    expect(f.timers.state(target).remaining).toBe(1);
-    expect(f.minus.disabled).toBe(true);
-  });
-
-  it.each(['completed', 'disabled'])('stops a held button when %s changes', async (input) => {
-    const f = fixture();
-    pointer(f.plus, 'pointerdown');
-    f.view.componentRef.setInput(input, true);
-    f.view.detectChanges();
-    await vi.advanceTimersByTimeAsync(2000);
-    expect(f.timers.state(target).remaining).toBe(180);
-  });
-
-  it('stops repeating when the document becomes hidden or the component is destroyed', async () => {
-    const f = fixture();
-    pointer(f.plus, 'pointerdown');
-    vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
-    document.dispatchEvent(new Event('visibilitychange'));
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(f.timers.state(target).remaining).toBe(180);
-    vi.restoreAllMocks();
-    pointer(f.plus, 'pointerdown');
-    f.view.destroy();
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(f.timers.state(target).remaining).toBe(240);
   });
 });

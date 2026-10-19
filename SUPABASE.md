@@ -53,7 +53,7 @@ Run `npm.cmd run build`, the Pages build, and Deno's type check for `supabase/fu
 
 ## Background timer alerts
 
-`timer-alerts` uses Web Push with a private per-account/device queue. Deploy migration `20261019110511_timer_push_alerts.sql`, then deploy the function with the tracked configuration (`verify_jwt = false`). This bypasses only the gateway verifier: the handler independently verifies every account token with Auth, checks its live session in SQL, and uses a separate secret for dispatch requests. Anonymous callers can only read readiness and the public VAPID key.
+`timer-alerts` uses Web Push with a private per-account/device queue. Deploy migrations `20261019110511_timer_push_alerts.sql` and `20261019173330_timer_reminder_presence.sql`, then deploy the function with the tracked configuration (`verify_jwt = false`). This bypasses only the gateway verifier: the handler independently verifies every account token with Auth, checks its live session in SQL, and uses a separate secret for dispatch requests. Anonymous callers can only read readiness and the public VAPID key.
 
 Generate a P-256 VAPID key pair once using a reputable Web Push library. Store `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a contact HTTPS URL or mailto address), and a separate random 256-bit `TIMER_DISPATCH_SECRET` as **Edge Function secrets**. Keep the private key and dispatch secret out of the frontend, Git, SQL history and logs. Retain the VAPID pair across deploys; rotation requires devices to subscribe again.
 
@@ -63,11 +63,13 @@ The queue tables are private with RLS and no browser grants. Only service-role R
 
 Alerts require sign-in, an online setup and explicit browser permission. On iPhone/iPad, use Add to Home Screen and open the installed app. Countdown state and unsent alert changes persist on the device; offline cancellation cannot reach the server until Recipebook reconnects. The UI shows pending changes rather than claiming delivery is armed. Signing out attempts to cancel this device's alerts and session revocation prevents later delivery.
 
+The reminder migration preserves the original deadline and delivery progress across reconnects. Each run has an initial phase and one reminder at deadline + 60 seconds, with up to three bounded delivery attempts per phase. A late initial phase skips directly to the reminder. The reminder expires five minutes after it becomes due; overdue queue rows are removed after one hour. A per-tab presence heartbeat renews a 25-second device/session lease every ten seconds while active timers are visible. The worker consumes a due phase while any matching lease is live. Visibility/network races can still allow a notification; Safari requires a visible notification for every delivered push, so suppression belongs on the server. Presence never includes recipe content and expires automatically.
+
 Backend checks (using Deno):
 
 ```sh
 deno check --config supabase/functions/timer-alerts/deno.json supabase/functions/timer-alerts/index.ts
-deno test --allow-read --allow-env --allow-net --config supabase/functions/timer-alerts/deno.json --no-lock supabase/functions/timer-alerts/validation.test.mjs supabase/functions/timer-alerts/runtime.test.mjs supabase/functions/timer-alerts/migration.test.mjs
+deno test --allow-read --allow-env --allow-net --config supabase/functions/timer-alerts/deno.json --no-lock supabase/functions/timer-alerts/validation.test.mjs supabase/functions/timer-alerts/runtime.test.mjs supabase/functions/timer-alerts/migration.test.mjs supabase/functions/timer-alerts/reminder-presence.test.mjs
 ```
 
 The migration tests use an isolated PostgreSQL WASM database and never touch hosted user data. Check a real installed device after deployment: enable alerts, start a short timer, close the app, and confirm notification arrival and recipe navigation. Also check pause/reset/completion cancellation before relying on alerts.

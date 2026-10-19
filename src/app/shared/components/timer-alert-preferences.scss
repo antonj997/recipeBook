@@ -2,6 +2,9 @@
   display: block;
   margin-block: 18px;
 }
+:host([hidden]) {
+  display: none;
+}
 .timer-alert-preference {
   display: flex;
   align-items: center;
@@ -13,6 +16,10 @@
 }
 .alert-copy {
   flex: 1 1 240px;
+}
+.timer-alert-preference.is-contextual {
+  position: relative;
+  padding-right: 52px;
 }
 .alert-label {
   color: var(--color-ink);
@@ -64,5 +71,15 @@ button:focus-visible {
   outline-offset: 2px;
 }
 .retry-alerts {
+  border-color: transparent;
+}
+.dismiss-alerts {
+  position: absolute;
+  top: 4px;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  padding: 10px;
   border-color: transparent;
 }

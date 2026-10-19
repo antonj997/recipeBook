@@ -57,9 +57,12 @@ import { Component, input } from '@angular/core';
         <path d="M12 4v15m-7-7 7 7 7-7" />
       }
       @case ('shelf') {
-        <rect x="3" y="4" width="7" height="16" rx="1" />
-        <rect x="14" y="4" width="7" height="16" rx="1" />
-        <path d="M3 13h7m4 0h7" />
+        <rect x="7" y="3" width="10" height="18" rx="1.5" />
+        <path d="M3 6H1v12h2m18-12h2v12h-2" />
+      }
+      @case ('category') {
+        <path d="M3 3h7l11 11-7 7L3 10Z" />
+        <circle cx="7.5" cy="7.5" r="1" />
       }
       @case ('list') {
         <path d="M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1" />
@@ -119,6 +122,7 @@ export class IconComponent {
     | 'external'
     | 'arrow-down'
     | 'shelf'
+    | 'category'
     | 'list'
   >();
 }

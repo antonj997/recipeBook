@@ -1,7 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import {
   Component,
-  DestroyRef,
   ElementRef,
   computed,
   effect,
@@ -14,14 +13,13 @@ import { StepTimerService } from '../../core/services/step-timer.service';
 import {
   formatCountdown,
   isStepTimerSeconds,
-  maxStepTimerSeconds,
   type StepTimerTarget,
 } from '../../core/models/step-timer';
-import { IconComponent } from './icon';
+import { MinuteRulerComponent } from './minute-ruler';
 
 @Component({
   selector: 'app-step-timer',
-  imports: [IconComponent],
+  imports: [MinuteRulerComponent],
   host: { '[hidden]': 'completed()' },
   styleUrl: './step-timer.scss',
   template: `
@@ -31,74 +29,71 @@ import { IconComponent } from './icon';
       [attr.aria-label]="'Timer for step ' + (target().index + 1)"
     >
       <div class="step-timer" [class.is-running]="state().running" [class.is-done]="state().done">
-        <button
-          type="button"
-          class="timer-adjust"
-          [disabled]="disabled() || state().remaining <= 1"
-          [attr.aria-label]="'Subtract one minute from step ' + (target().index + 1) + ' timer'"
-          (pointerdown)="beginHold($event, -1)"
-          (lostpointercapture)="endHold($event)"
-          (contextmenu)="$event.preventDefault()"
-          (click)="adjust($event, -1)"
-        >
-          <app-icon name="minus" />
-        </button>
         <span class="timer-face" role="timer" aria-live="off">
-          <app-icon name="clock" />
           <input
             type="text"
+            inputmode="numeric"
             class="timer-input"
+            [class.is-overdue]="state().done && !editing()"
             autocomplete="off"
             spellcheck="false"
             maxlength="16"
             [disabled]="disabled()"
-            [value]="editing() ? draft() : format(state().remaining)"
+            [value]="editing() ? draft() : display()"
             [attr.aria-label]="
-              'Time remaining for step ' + (target().index + 1) + '. Edit timer duration'
+              (state().done ? 'Time overdue' : 'Time remaining') +
+              ' for step ' +
+              (target().index + 1) +
+              '. Edit timer duration'
             "
             [attr.aria-invalid]="invalid()"
             [attr.aria-describedby]="editing() ? 'timer-help-' + target().index : null"
-            (focus)="beginEdit()"
+            (focus)="beginEdit($event)"
+            (pointerup)="selectValue($event)"
+            (mouseup)="$event.preventDefault()"
+            (beforeinput)="maskInput($event)"
             (input)="edit($event)"
             (blur)="commitEdit()"
             (keydown.enter)="acceptEdit($event)"
             (keydown.escape)="cancelEdit($event)"
           />
         </span>
-        <button
-          type="button"
-          class="timer-adjust"
-          [disabled]="disabled() || state().remaining >= maximum"
-          [attr.aria-label]="'Add one minute to step ' + (target().index + 1) + ' timer'"
-          (pointerdown)="beginHold($event, 1)"
-          (lostpointercapture)="endHold($event)"
-          (contextmenu)="$event.preventDefault()"
-          (click)="adjust($event, 1)"
-        >
-          <app-icon name="plus" />
-        </button>
+        <app-minute-ruler
+          [seconds]="state().done ? target().seconds : state().remaining"
+          [disabled]="disabled() || completed()"
+          [identity]="target().key"
+          [label]="'Timer duration for step ' + (target().index + 1)"
+          (durationChange)="setDuration($event)"
+        />
       </div>
       <div class="timer-actions">
         <button
           type="button"
+          class="timer-action timer-start"
+          [disabled]="disabled() || state().running"
+          [attr.aria-label]="'Start timer for step ' + (target().index + 1)"
+          (click)="start()"
+        >
+          Start
+        </button>
+        <button
+          type="button"
+          class="timer-action"
+          [disabled]="disabled() || (!state().running && !state().done)"
+          [attr.aria-label]="'Stop timer for step ' + (target().index + 1)"
+          (click)="stop()"
+        >
+          Stop
+        </button>
+        <button
+          type="button"
           class="timer-action"
           [disabled]="disabled()"
-          [attr.aria-label]="action() + ' timer for step ' + (target().index + 1)"
-          (click)="toggle()"
+          [attr.aria-label]="'Reset timer for step ' + (target().index + 1)"
+          (click)="reset()"
         >
-          {{ action() }}
+          Reset
         </button>
-        @if (state().started && !state().running && !state().done) {
-          <button
-            type="button"
-            class="timer-adjust"
-            [disabled]="disabled()"
-            [attr.aria-label]="'Reset timer for step ' + (target().index + 1)"
-            (click)="reset()"
-          >
-            <app-icon name="reset" />
-          </button>
-        }
       </div>
     </div>
     @if (editing()) {
@@ -110,12 +105,9 @@ import { IconComponent } from './icon';
         {{
           invalid()
             ? 'Enter a time from 0:01 to 168:00:00.'
-            : 'Minutes, M:SS or H:MM:SS. Enter to set.'
+            : 'Type minutes and seconds. 6000 = 1 hour. Enter to set.'
         }}
       </p>
-    }
-    @if (state().done) {
-      <p class="timer-done" role="status">Timer finished</p>
     }
   `,
 })
@@ -127,42 +119,21 @@ export class StepTimerComponent {
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
   protected readonly state = computed(() => this.timers.state(this.target()));
-  protected readonly action = computed(() => {
+  protected readonly display = computed(() => {
     const state = this.state();
-    return state.running ? 'Pause' : state.done ? 'Restart' : state.started ? 'Resume' : 'Start';
+    return formatCountdown(state.done ? state.elapsed : state.remaining);
   });
-  protected readonly format = formatCountdown;
-  protected readonly maximum = maxStepTimerSeconds;
   protected readonly editing = signal(false);
   protected readonly draft = signal('');
   protected readonly invalid = signal(false);
   private editTarget = '';
   private initialDraft = '';
-  private held?: {
-    pointerId: number;
-    button: HTMLElement;
-    targetKey: string;
-    minutes: -1 | 1;
-    startedAt: number;
-  };
-  private holdTimeout?: ReturnType<typeof setTimeout>;
-  private suppressClick?: EventTarget | null;
-
+  private digitDraft?: string;
   constructor() {
-    const release = (event: PointerEvent) => this.endHold(event);
-    const blur = () => this.stopHold();
-    const visibility = () => {
-      if (this.document.hidden) this.stopHold();
-    };
-    this.document.addEventListener('pointerup', release, true);
-    this.document.addEventListener('pointercancel', release, true);
-    this.document.addEventListener('visibilitychange', visibility);
-    this.document.defaultView?.addEventListener('blur', blur);
     effect(() => {
       const key = this.target().key;
       const unavailable = this.completed() || this.disabled();
       untracked(() => {
-        if (unavailable || (this.held && this.held.targetKey !== key)) this.stopHold();
         if (unavailable || (this.editing() && this.editTarget !== key)) this.cancelEdit();
         if (this.completed() && this.element.nativeElement.contains(this.document.activeElement))
           this.element.nativeElement
@@ -171,27 +142,77 @@ export class StepTimerComponent {
             ?.focus({ preventScroll: true });
       });
     });
-    inject(DestroyRef).onDestroy(() => {
-      this.stopHold();
-      this.document.removeEventListener('pointerup', release, true);
-      this.document.removeEventListener('pointercancel', release, true);
-      this.document.removeEventListener('visibilitychange', visibility);
-      this.document.defaultView?.removeEventListener('blur', blur);
-    });
   }
 
-  protected beginEdit(): void {
-    if (this.editing()) return;
-    this.stopHold();
-    this.editTarget = this.target().key;
-    this.initialDraft = formatCountdown(this.state().remaining);
-    this.draft.set(this.initialDraft);
+  protected beginEdit(event: Event): void {
+    if (!this.editing()) {
+      this.editTarget = this.target().key;
+      const seconds = this.state().done ? this.target().seconds : this.state().remaining;
+      this.digitDraft = String(Math.floor(seconds / 60)) + String(seconds % 60).padStart(2, '0');
+      this.initialDraft = maskDigits(this.digitDraft);
+      this.draft.set(this.initialDraft);
+      this.invalid.set(false);
+      this.editing.set(true);
+    }
+    const field = event.target as HTMLInputElement;
+    field.value = this.draft();
+    field.select();
+  }
+
+  protected selectValue(event: Event): void {
+    (event.target as HTMLInputElement).select();
+  }
+
+  protected maskInput(event: Event): void {
+    const entry = event as InputEvent;
+    if (!entry.cancelable) return;
+    const inserting = entry.inputType === 'insertText';
+    const backward = entry.inputType === 'deleteContentBackward';
+    const forward = entry.inputType === 'deleteContentForward';
+    if (!inserting && !backward && !forward) return;
+    event.preventDefault();
+    if (inserting && !/^\d+$/.test(entry.data ?? '')) return;
+    const field = event.target as HTMLInputElement;
+    const digits = this.digitDraft ?? field.value.replace(/\D/g, '');
+    const padding = field.value.replace(/\D/g, '').length - digits.length;
+    const digitPosition = (position: number) =>
+      Math.max(0, field.value.slice(0, position).replace(/\D/g, '').length - padding);
+    let start = digitPosition(field.selectionStart ?? 0);
+    let end = digitPosition(field.selectionEnd ?? field.value.length);
+    if (start === end) {
+      if (backward) start = Math.max(0, start - 1);
+      if (forward) end = Math.min(digits.length, end + 1);
+    }
+    const inserted = inserting ? entry.data! : '';
+    const next = digits.slice(0, start) + inserted + digits.slice(end);
+    if (next.length > 7) return;
+    this.digitDraft = next;
+    const value = maskDigits(next);
+    this.draft.set(value);
     this.invalid.set(false);
-    this.editing.set(true);
+    field.value = value;
+    const position = start + inserted.length + Math.max(0, 4 - next.length);
+    let caret = 0;
+    for (let count = 0; caret < value.length && count < position; caret++)
+      if (/\d/.test(value[caret])) count++;
+    if (value[caret] === ':') caret++;
+    field.setSelectionRange(caret, caret);
   }
 
   protected edit(event: Event): void {
-    this.draft.set((event.target as HTMLInputElement).value);
+    const field = event.target as HTMLInputElement;
+    const value = field.value.trim();
+    const inputType = (event as InputEvent).inputType;
+    const pasted = !inputType || inputType === 'insertFromPaste' || inputType === 'insertFromDrop';
+    if (pasted && /^\d+(?::\d{0,2}){1,2}$/.test(value)) {
+      // A complete colon-formatted paste also accepts an explicit hours segment.
+      this.digitDraft = undefined;
+      this.draft.set(value);
+    } else {
+      this.digitDraft = value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+      this.draft.set(maskDigits(this.digitDraft));
+    }
+    field.value = this.draft();
     this.invalid.set(false);
   }
 
@@ -225,101 +246,41 @@ export class StepTimerComponent {
     if (event) (event.target as HTMLInputElement).blur();
   }
 
-  protected toggle(): void {
+  protected start(): void {
     if (this.disabled() || this.completed() || !this.commitEdit()) return;
-    this.state().running ? this.timers.pause(this.target()) : this.timers.start(this.target());
+    this.timers.start(this.target());
+  }
+
+  protected stop(): void {
+    if (this.disabled() || this.completed()) return;
+    this.cancelEdit();
+    this.state().done ? this.timers.reset(this.target()) : this.timers.pause(this.target());
   }
 
   protected reset(): void {
     if (this.disabled() || this.completed()) return;
-    this.stopHold();
     this.cancelEdit();
     this.timers.reset(this.target());
   }
 
-  protected adjust(event: MouseEvent, minutes: -1 | 1): void {
-    // Pointer presses already applied their first minute; native keyboard clicks have detail 0.
-    if (event.detail > 0 && this.suppressClick === event.currentTarget) {
-      this.suppressClick = undefined;
-      return;
-    }
-    if (this.commitEdit() && this.canAdjust(minutes)) this.timers.adjust(this.target(), minutes);
-  }
-
-  protected beginHold(event: PointerEvent, minutes: -1 | 1): void {
-    if (
-      event.button !== 0 ||
-      event.isPrimary === false ||
-      !this.commitEdit() ||
-      !this.canAdjust(minutes)
-    )
-      return;
-    this.stopHold();
-    const button = event.currentTarget as HTMLElement;
-    this.suppressClick = button;
-    this.timers.adjust(this.target(), minutes);
-    this.held = {
-      pointerId: event.pointerId,
-      button,
-      targetKey: this.target().key,
-      minutes,
-      startedAt: Date.now(),
-    };
-    try {
-      button.setPointerCapture(event.pointerId);
-    } catch {
-      // Document release/cancel listeners also cover browsers without pointer capture.
-    }
-    this.holdTimeout = setTimeout(() => this.repeat(), 450);
-  }
-
-  protected endHold(event: PointerEvent): void {
-    if (this.held?.pointerId === event.pointerId) this.stopHold();
-  }
-
-  private canAdjust(minutes: -1 | 1): boolean {
-    return (
-      !this.disabled() &&
-      !this.completed() &&
-      (minutes === 1 ? this.state().remaining < this.maximum : this.state().remaining > 1)
-    );
-  }
-
-  private repeat(): void {
-    const held = this.held;
-    if (
-      !held ||
-      this.document.hidden ||
-      held.targetKey !== this.target().key ||
-      !this.canAdjust(held.minutes)
-    ) {
-      this.stopHold();
-      return;
-    }
-    this.timers.adjust(this.target(), held.minutes);
-    this.holdTimeout = setTimeout(
-      () => this.repeat(),
-      Date.now() - held.startedAt >= 1500 ? 150 : 300,
-    );
-  }
-
-  private stopHold(): void {
-    clearTimeout(this.holdTimeout);
-    this.holdTimeout = undefined;
-    const held = this.held;
-    this.held = undefined;
-    if (held?.button.hasPointerCapture?.(held.pointerId))
-      held.button.releasePointerCapture(held.pointerId);
+  protected setDuration(seconds: number): void {
+    if (this.disabled() || this.completed()) return;
+    this.cancelEdit();
+    this.timers.setDuration(this.target(), seconds);
   }
 }
 
-/** A bare number means minutes; colon notation follows the countdown display. */
+/** Numeric entry has a growing minutes segment and a two-digit seconds segment. */
+function maskDigits(digits: string): string {
+  if (!digits) return '';
+  const value = digits.padStart(4, '0');
+  return value.slice(0, -2) + ':' + value.slice(-2);
+}
+
 function parseDuration(text: string): number | undefined {
   const value = text.trim();
   let seconds: number;
-  if (/^\d+(?:[.,]\d+)?$/.test(value)) {
-    seconds = Math.round(Number(value.replace(',', '.')) * 60);
-  } else if (/^\d+:\d{2}(?::\d{2})?$/.test(value)) {
+  if (/^\d+:\d{2}(?::\d{2})?$/.test(value)) {
     const parts = value.split(':').map(Number);
     if (parts.at(-1)! >= 60 || (parts.length === 3 && parts[1] >= 60)) return;
     seconds =

@@ -27,17 +27,7 @@ import {
 import { RecipeSummaryDetailsComponent, RecipeExtraDetailsComponent } from './recipe-metadata-view';
 import { IconComponent } from '../../../shared/components/icon';
 import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark';
-import {
-  Component,
-  computed,
-  effect,
-  ElementRef,
-  inject,
-  OnInit,
-  OnDestroy,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { Component, computed, effect, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { Recipe } from '../../../core/models/recipe.model';
 import { RecipeService } from '../../../core/services/recipe.service';
@@ -145,7 +135,6 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     const focusTarget = wide
       ? focused?.closest('.section-switch') && this.activeSection() + '-panel'
       : focused?.closest('#' + inactive + '-panel') && 'recipe-' + this.activeSection() + '-tab';
-    this.tabMotion?.cancel();
     if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
     this.wideReading.set(wide);
     if (focusTarget) {
@@ -155,8 +144,6 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       });
     }
   };
-  tabIndicator = viewChild<ElementRef<HTMLElement>>('tabIndicator');
-  private tabMotion?: Animation;
   private cookingSessions = inject(CookingSessionService);
   private readonly timers = inject(StepTimerService);
   readonly stepTimers = computed(() => {
@@ -220,45 +207,11 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   switchSection(section: CookingSection): void {
     if (section === this.activeSection() || this.accountChanged()) return;
-    this.animateTab(section);
     this.activeSection.set(section);
     this.saveCookingSession();
   }
 
-  private animateTab(section: CookingSection): void {
-    const indicator = this.tabIndicator()?.nativeElement;
-    if (!indicator) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      this.tabMotion?.cancel();
-      return;
-    }
-    if (typeof indicator.animate !== 'function') return;
-    // Start from the visible shape, so reversing a tab mid-motion never snaps.
-    const style = getComputedStyle(indicator);
-    const transform = style.transform;
-    const radius = style.borderRadius;
-    const from = new DOMMatrixReadOnly(transform === 'none' ? undefined : transform).m41;
-    const to = section === 'instructions' ? Number.parseFloat(style.width) : 0;
-    this.tabMotion?.cancel();
-    this.tabMotion = indicator.animate(
-      [
-        { transform, borderRadius: radius },
-        {
-          transform: 'translateX(' + (from + (to - from) * 0.55) + 'px) scaleX(1.04)',
-          borderRadius: '14px 14px 0 0',
-          offset: 0.55,
-        },
-        { transform: 'translateX(' + to + 'px)', borderRadius: '10px 10px 0 0' },
-      ],
-      {
-        duration: parseFloat(style.getPropertyValue('--motion-tabs')) || 280,
-        easing: style.getPropertyValue('--motion-ease-out').trim() || 'ease-out',
-      },
-    );
-  }
-
   ngOnDestroy(): void {
-    this.tabMotion?.cancel();
     this.readingMedia?.removeEventListener('change', this.syncReadingLayout);
     if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
   }

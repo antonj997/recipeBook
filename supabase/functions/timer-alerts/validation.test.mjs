@@ -10,6 +10,28 @@ const subscription = {
   keys: { p256dh: 'B' + 'A'.repeat(86), auth: 'A'.repeat(22) },
 };
 
+test('presence accepts only a tab identity and boolean visibility, without client lease control', () => {
+  assert.deepEqual(validateAction({ action: 'presence', deviceId, tabId: deviceId, visible: true, leaseSeconds: 999999 }),
+    { action: 'presence', deviceId, tabId: deviceId, visible: true });
+  assert.equal(validateAction({ action: 'presence', deviceId, tabId: deviceId, visible: false }).visible, false);
+  for (const invalid of [{}, { tabId: deviceId }, { tabId: 'bad', visible: true }, { tabId: deviceId, visible: 'true' }])
+    assert.throws(() => validateAction({ action: 'presence', deviceId, ...invalid }));
+});
+
+test('one-minute reminders use a separate visible notification and reveal no recipe content', () => {
+  const job = { timer_key: timer.key, revision: 12, recipe_id: 'soup', step_index: 2, key_hash: 'abc' };
+  const initial = notificationPayload(job);
+  const reminder = notificationPayload({ ...job, notification_stage: 'reminder', instruction: 'private' });
+  assert.equal(reminder.notification.title, 'Recipe timer reminder');
+  assert.equal(reminder.notification.body, 'Your timer is still waiting. Check your recipe when you are ready.');
+  assert.notEqual(reminder.notification.tag, initial.notification.tag);
+  const restarted = notificationPayload({ ...job, revision: 13 });
+  assert.notEqual(restarted.notification.tag, initial.notification.tag);
+  assert.equal(notificationPayload(job).notification.tag, initial.notification.tag);
+  assert.equal(JSON.stringify(reminder).includes('private'), false);
+  assert.equal(reminder.notification.data.revision, 12);
+});
+
 test('sync keeps cancellations and exact safe integer revisions', () => {
   const result = validateAction({ action: 'sync', deviceId, timers: [{ ...timer, deadline: null, revision: Number.MAX_SAFE_INTEGER }] }, now);
   assert.equal(result.timers[0].deadline, null);

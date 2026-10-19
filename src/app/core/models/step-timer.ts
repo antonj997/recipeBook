@@ -119,5 +119,7 @@ export function formatCountdown(seconds: number): string {
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor(total / 60) % 60;
   const rest = String(total % 60).padStart(2, '0');
-  return hours ? hours + ':' + String(minutes).padStart(2, '0') + ':' + rest : minutes + ':' + rest;
+  return hours
+    ? String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + rest
+    : String(minutes).padStart(2, '0') + ':' + rest;
 }

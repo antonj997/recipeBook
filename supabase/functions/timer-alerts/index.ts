@@ -17,11 +17,11 @@ interface Timer {
   deadline: number | null; revision: number;
 }
 interface Subscription { endpoint: string; keys: { auth: string; p256dh: string } }
-interface Action { action: string; deviceId?: string; subscription?: Subscription; timers?: Timer[] }
+interface Action { action: string; deviceId?: string; subscription?: Subscription; timers?: Timer[]; tabId?: string; visible?: boolean }
 interface Claim { id: string; claim_token: string; revision: number }
 interface Delivery extends Claim {
   timer_key: string; recipe_id: string; step_index: number; key_hash: string;
-  subscription: Subscription; deadline: string; attempts: number;
+  subscription: Subscription; deadline: string; notification_stage: 'initial' | 'reminder'; delivery_at: string; attempts: number;
 }
 
 // Deploy with verify_jwt=false: config is public, dispatch uses an independent secret,
@@ -74,6 +74,8 @@ Deno.serve(async (request: Request) => {
         await crypto.subtle.importKey('raw', decodeBase64Url(subscription.keys.p256dh), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
       } catch { throw new RequestError('Invalid push public key.'); }
       payload = subscription;
+    } else if (action.action === 'presence') {
+      payload = { tabId: action.tabId, visible: action.visible };
     } else if (action.action === 'sync') {
       const timers = action.timers!;
       const ids = [...new Set(timers.filter((timer) => timer.deadline !== null).map((timer) => timer.recipeId))];
@@ -163,9 +165,15 @@ async function dispatch(admin: SupabaseClient, vapid: { publicKey: string; priva
       let status = 0;
       try {
         const subscription = validateSubscription(job.subscription);
+        // A retry replaces its own notification; another timer run or phase stays independent.
+        const identity = JSON.stringify([job.key_hash, job.revision, job.notification_stage]);
+        const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(identity)));
+        const topic = [...digest.subarray(0, 16)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
         const details = webpush.generateRequestDetails(subscription, JSON.stringify(notificationPayload(job)), {
-          vapidDetails: vapid, contentEncoding: 'aes128gcm', urgency: 'high', TTL: 300,
-          topic: job.key_hash.slice(0, 32),
+          vapidDetails: vapid, contentEncoding: 'aes128gcm', urgency: 'high',
+          // Initial alerts expire before the reminder window; reminders also have a short TTL.
+          TTL: Math.max(1, Math.min(60, Math.ceil((Date.parse(job.delivery_at) + (job.notification_stage === 'initial' ? 60000 : 300000) - Date.now()) / 1000))),
+          topic,
         });
         // Use fetch for a hard wall-clock timeout and reject redirects to other hosts.
         const response = await fetch(subscription.endpoint, {
@@ -176,7 +184,7 @@ async function dispatch(admin: SupabaseClient, vapid: { publicKey: string; priva
         await response.body?.cancel();
       } catch { /* An ambiguous network outcome is retried at most twice, with a stable notification tag. */ }
       const outcome = status >= 200 && status < 300 ? { state: 'sent', delaySeconds: 0 }
-        : retryOutcome(status, job.attempts, (Date.now() - Date.parse(job.deadline)) / 1000);
+        : retryOutcome(status, job.attempts, (Date.now() - Date.parse(job.delivery_at)) / 1000);
       await rpc(admin, 'timer_alerts_finish', { ...args, p_outcome: outcome.state, p_delay: outcome.delaySeconds ?? 0 });
       if (outcome.state === 'sent') counts.sent++;
       else if (outcome.state === 'retry') counts.retried++;

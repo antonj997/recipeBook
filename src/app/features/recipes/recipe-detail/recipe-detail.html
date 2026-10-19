@@ -173,7 +173,7 @@
                 @if (isDraft) {
                   <p class="timer-help">Save the recipe to start timers.</p>
                 } @else {
-                  <app-timer-alert-preferences />
+                  <app-timer-alert-preferences [contextual]="true" />
                 }
               }
               <ol>

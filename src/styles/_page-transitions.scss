@@ -59,6 +59,11 @@ html[data-page-transition='expand']::view-transition-image-pair(book-recipe-surf
   animation-name: book-surface-corners;
 }
 html[data-page-transition='expand']::view-transition-image-pair(book-recipe-image) {
+  // Outline paints over the opaque source snapshot without changing its crop.
+  // The native pair owns both the geometry and animated corners from first frame.
+  outline: 1px solid
+    color-mix(in srgb, var(--book-expand-color, var(--color-canvas)) 52%, var(--color-ink));
+  outline-offset: -1px;
   animation-name: book-image-corners;
 }
 @keyframes book-surface-corners {

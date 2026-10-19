@@ -193,6 +193,7 @@ li::marker {
   background: var(--color-surface);
   transform: translateX(0);
   transform-origin: center bottom;
+  transition: transform var(--motion-tabs) var(--motion-ease-out);
   pointer-events: none;
 }
 /* Concave base joins flare into the content surface, like a browser tab. */
@@ -255,7 +256,8 @@ li::marker {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .recipe-options app-icon {
+  .recipe-options app-icon,
+  .tab-indicator {
     transition: none;
   }
 }

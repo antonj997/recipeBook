@@ -39,6 +39,10 @@ export function validateAction(value, now = Date.now()) {
   if (!uuid.test(value.deviceId ?? '')) throw new RequestError('Invalid device ID.');
   const deviceId = value.deviceId.toLowerCase();
   if (value.action === 'disable') return { action: 'disable', deviceId };
+  if (value.action === 'presence') {
+    if (!uuid.test(value.tabId ?? '') || typeof value.visible !== 'boolean') throw new RequestError('Invalid tab presence.');
+    return { action: 'presence', deviceId, tabId: value.tabId.toLowerCase(), visible: value.visible };
+  }
   if (value.action === 'register') return { action: 'register', deviceId, subscription: validateSubscription(value.subscription) };
   if (value.action !== 'sync') throw new RequestError('Unknown action.');
   if (!Array.isArray(value.timers) || value.timers.length > 100) throw new RequestError('Too many timers.');
@@ -70,9 +74,11 @@ export function verifiedSessionId(token, freshUserId) {
 }
 
 export function notificationPayload(job) {
+  const reminder = job.notification_stage === 'reminder';
   return { notification: {
-    title: 'Recipe timer finished', body: `Step ${job.step_index + 1} is ready to check`,
-    tag: `recipe-timer-${job.key_hash}`, renotify: false,
+    title: reminder ? 'Recipe timer reminder' : 'Recipe timer finished',
+    body: reminder ? 'Your timer is still waiting. Check your recipe when you are ready.' : `Step ${job.step_index + 1} is ready to check`,
+    tag: `recipe-timer-${job.key_hash}-${job.revision}-${reminder ? 'reminder' : 'initial'}`, renotify: false,
     data: { timerKey: job.timer_key, revision: job.revision, recipeId: job.recipe_id,
       onActionClick: { default: { operation: 'navigateLastFocusedOrOpen', url: '/recipeBook/#/recipes/' + encodeURIComponent(job.recipe_id) } } },
   } };

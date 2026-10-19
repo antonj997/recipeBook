@@ -139,15 +139,34 @@ describe('optional timer push alerts', () => {
     ]);
   });
 
+  it('reconnects an unchanged overdue run without creating a new delivery revision', async () => {
+    const service = await ready();
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    const deadline = Date.now() - 61_000;
+    service.replaceTimers([{ target, deadline }]);
+    await vi.advanceTimersByTimeAsync(300);
+    const original = { ...syncs()[0][1].body.timers[0] };
+    invoke.mockClear();
+    document.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(300);
+    const reconnected = syncs().at(-1)?.[1].body.timers[0];
+    expect(reconnected).toEqual(original);
+    service.replaceTimers([{ target, deadline: Date.now() + 120_000 }]);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(syncs().at(-1)?.[1].body.timers[0].revision).toBeGreaterThan(original.revision);
+  });
+
   it('keeps a cancellation queued when an older schedule is still in flight', async () => {
     const service = await ready();
     let acknowledge!: (value: unknown) => void;
-    invoke.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          acknowledge = resolve;
-        }),
-    );
+    let first = true;
+    invoke.mockImplementation(async (_name, options) => {
+      if (options.body.action === 'sync' && first) {
+        first = false;
+        return new Promise(resolve => { acknowledge = resolve; });
+      }
+      return { data: {ok:true}, error:null };
+    });
     service.replaceTimers([{ target, deadline: Date.now() + 120_000 }]);
     await vi.advanceTimersByTimeAsync(300);
     service.replaceTimers([]);
@@ -213,13 +232,18 @@ describe('optional timer push alerts', () => {
 
   it('keeps an unsynced recipe pending until the server accepts it on retry', async () => {
     const service = await ready();
-    invoke.mockResolvedValueOnce({
+    let first = true;
+    invoke.mockImplementation(async (_name, options) => {
+      if (options.body.action !== 'sync' || !first) return {data:{ok:true},error:null};
+      first = false;
+      return {
       data: {
         ok: true,
         scheduled: 0,
         unavailable: [{ key: target.key, reason: 'recipe-not-synced' }],
       },
       error: null,
+    };
     });
     service.replaceTimers([{ target, deadline: Date.now() + 120_000 }]);
     await vi.advanceTimersByTimeAsync(300);
@@ -361,4 +385,38 @@ describe('optional timer push alerts', () => {
     await vi.advanceTimersByTimeAsync(300);
     expect(syncs()).toHaveLength(0);
   });
+  it('reports visible timer activity per tab and clears only this tab when hidden', async () => {
+    const visible=vi.spyOn(document,'visibilityState','get').mockReturnValue('visible');
+    const service=await ready();
+    service.replaceTimers([{target,deadline:Date.now()+120_000}]);
+    await vi.advanceTimersByTimeAsync(300);
+    const presences=()=>invoke.mock.calls.filter(([,options])=>options.body.action==='presence');
+    expect(presences().at(-1)?.[1].body).toMatchObject({visible:true});
+    const tabId=presences().at(-1)?.[1].body.tabId;
+    expect(tabId).toMatch(/^[0-9a-f-]{36}$/i);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(presences().filter(([,options])=>options.body.visible)).toHaveLength(2);
+    visible.mockReturnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(presences().at(-1)?.[1].body).toMatchObject({visible:false,tabId});
+    const count=presences().length;
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(presences()).toHaveLength(count);
+  });
+  it('stops presence activity when the final timer is reset or the account changes', async () => {
+    vi.spyOn(document,'visibilityState','get').mockReturnValue('visible');
+    const service=await ready();
+    service.replaceTimers([{target,deadline:Date.now()+120_000}]);
+    await vi.advanceTimersByTimeAsync(300);
+    service.replaceTimers([]);
+    await vi.advanceTimersByTimeAsync(300);
+    const presences=()=>invoke.mock.calls.filter(([,options])=>options.body.action==='presence');
+    expect(presences().at(-1)?.[1].body.visible).toBe(false);
+    user.set(null); accountVersion.update(v=>v+1); TestBed.tick();
+    const count=presences().length;
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(presences()).toHaveLength(count);
+  });
+
 });

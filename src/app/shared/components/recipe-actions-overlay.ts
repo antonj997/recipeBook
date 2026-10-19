@@ -45,7 +45,7 @@ import { FoodDoodleComponent } from './food-doodle';
         @if (!selected.fromDetail) {
           <p>{{ selected.recipe.title }}</p>
           <button type="button" role="menuitem" (click)="changeCategories()">
-            Change categories
+            <app-icon name="category" />Change categories
           </button>
         }
         <button type="button" role="menuitem" (click)="edit()">

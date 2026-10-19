@@ -73,6 +73,104 @@ describe('recipe long-press menu', () => {
     target.dispatchEvent(event);
   }
 
+  it('waits before showing touch feedback and clears it on release', async () => {
+    const f = fixture();
+    pointer(f.card, 'pointerdown');
+    await vi.advanceTimersByTimeAsync(80);
+    f.host.detectChanges();
+    expect(f.card.classList.contains('recipe-pressed')).toBe(false);
+    await vi.advanceTimersByTimeAsync(40);
+    f.host.detectChanges();
+    expect(f.card.classList.contains('recipe-pressed')).toBe(true);
+    pointer(f.card, 'pointerup');
+    f.host.detectChanges();
+    expect(f.card.classList.contains('recipe-pressed')).toBe(false);
+  });
+
+  it('keeps a fast tap available to the link without waiting for feedback', async () => {
+    const f = fixture();
+    const activate = vi.fn((event: Event) => {
+      expect(event.defaultPrevented).toBe(false);
+      event.preventDefault();
+    });
+    f.card.addEventListener('click', activate);
+    pointer(f.card, 'pointerdown');
+    await vi.advanceTimersByTimeAsync(50);
+    pointer(f.card, 'pointerup');
+    f.card.click();
+    await vi.advanceTimersByTimeAsync(500);
+    f.host.detectChanges();
+    expect(activate).toHaveBeenCalledOnce();
+    expect(f.actions.menu()).toBe(null);
+    expect(f.card.classList.contains('recipe-pressed')).toBe(false);
+  });
+
+  it('keeps primary mouse feedback immediate', () => {
+    const f = fixture();
+    const event = new MouseEvent('pointerdown', { bubbles: true, button: 0 });
+    Object.defineProperties(event, {
+      pointerType: { value: 'mouse' },
+      isPrimary: { value: true },
+    });
+    f.card.dispatchEvent(event);
+    f.host.detectChanges();
+    expect(f.card.classList.contains('recipe-pressed')).toBe(true);
+    pointer(f.card, 'pointerleave');
+    f.host.detectChanges();
+    expect(f.card.classList.contains('recipe-pressed')).toBe(false);
+  });
+
+  it('cancels a pending touch gesture when another menu takes over', async () => {
+    const f = fixture();
+    pointer(f.card, 'pointerdown');
+    await vi.advanceTimersByTimeAsync(50);
+    const otherRecipe = { id: 'other', title: 'Other recipe', ingredients: [], instructions: [] };
+    f.actions.open(otherRecipe, 30, 40, document.createElement('button'));
+    f.host.detectChanges();
+    await vi.advanceTimersByTimeAsync(600);
+    f.host.detectChanges();
+    expect(f.card.classList.contains('recipe-pressed')).toBe(false);
+    expect(f.actions.menu()?.recipe.id).toBe('other');
+  });
+
+  it.each([40, 150])(
+    'cancels touch feedback and the hold after movement at %sms',
+    async (delay) => {
+      const f = fixture();
+      pointer(f.card, 'pointerdown');
+      await vi.advanceTimersByTimeAsync(delay);
+      pointer(f.card, 'pointermove', 130, 230);
+      await vi.advanceTimersByTimeAsync(600);
+      f.host.detectChanges();
+      expect(f.card.classList.contains('recipe-pressed')).toBe(false);
+      expect(f.actions.menu()).toBe(null);
+    },
+  );
+
+  it('cancels touch feedback on an ancestor scroll that does not bubble', async () => {
+    const f = fixture();
+    pointer(f.card, 'pointerdown');
+    await vi.advanceTimersByTimeAsync(150);
+    f.host.detectChanges();
+    expect(f.card.classList.contains('recipe-pressed')).toBe(true);
+    f.card.parentElement!.dispatchEvent(new Event('scroll'));
+    await vi.advanceTimersByTimeAsync(600);
+    f.host.detectChanges();
+    expect(f.card.classList.contains('recipe-pressed')).toBe(false);
+    expect(f.actions.menu()).toBe(null);
+  });
+
+  it.each(['pointercancel', 'contextmenu'])('clears shown touch feedback on %s', async (type) => {
+    const f = fixture();
+    pointer(f.card, 'pointerdown');
+    await vi.advanceTimersByTimeAsync(150);
+    f.host.detectChanges();
+    expect(f.card.classList.contains('recipe-pressed')).toBe(true);
+    pointer(f.card, type);
+    f.host.detectChanges();
+    expect(f.card.classList.contains('recipe-pressed')).toBe(false);
+  });
+
   it('hands the held pointer to the opened menu so release cannot light-dismiss it', async () => {
     const f = fixture();
     pointer(f.card, 'pointerdown');
@@ -81,6 +179,7 @@ describe('recipe long-press menu', () => {
     expect(f.actions.menu()).toEqual(expect.objectContaining({ trigger: f.card, pointerId: 7 }));
     expect(f.menu.matches(':popover-open')).toBe(true);
     expect(f.menu.setPointerCapture).toHaveBeenCalledWith(7);
+    expect(f.card.classList.contains('recipe-pressed')).toBe(false);
   });
 
   it('keeps the menu after the opening release and allows a separate action tap', async () => {

@@ -70,6 +70,11 @@ export class TimerPushService {
   private network: Promise<unknown> = Promise.resolve();
   private debounce?: ReturnType<typeof setTimeout>;
   private alive = true;
+  private readonly tabId = deviceId();
+  private presenceTimer?: ReturnType<typeof setInterval>;
+  private presenceNetwork: Promise<unknown> = Promise.resolve();
+  private lastPresenceVisible = false;
+  private lastPresenceAt = 0;
 
   constructor() {
     const destroy = inject(DestroyRef);
@@ -100,13 +105,18 @@ export class TimerPushService {
             'Offline. Timer alert changes are saved here; reconnect to send them.',
           );
       } else this.retry();
+      if (this.account) this.updatePresence(this.account);
     };
     const visibility = () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible') {
+        if (this.account) this.updatePresence(this.account);
+        return;
+      }
       this.permission.set(typeof Notification === 'undefined' ? 'denied' : Notification.permission);
       this.selectAccount();
       const account = this.account;
       if (!account) return;
+      this.updatePresence(account, true);
       const unavailable = this.unavailable();
       if (unavailable) {
         this.isEnabled.set(false);
@@ -150,14 +160,18 @@ export class TimerPushService {
     window.addEventListener('online', connection);
     window.addEventListener('offline', connection);
     window.addEventListener('storage', storage);
+    const pagehide = () => { if (this.account) this.updatePresence(this.account, true, true); };
     document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('pagehide', pagehide);
     destroy.onDestroy(() => {
       this.alive = false;
+      clearInterval(this.presenceTimer);
       clearTimeout(this.debounce);
       window.removeEventListener('online', connection);
       window.removeEventListener('offline', connection);
       window.removeEventListener('storage', storage);
       document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('pagehide', pagehide);
     });
   }
 
@@ -200,6 +214,7 @@ export class TimerPushService {
     account.state.known = [...next.values()];
     account.state.pending = [...pending.values()];
     this.persist(account);
+    this.updatePresence(account);
     if (pending.size) {
       this.setStatus(
         'pending',
@@ -248,6 +263,7 @@ export class TimerPushService {
         this.refreshKnown(account);
         this.persist(account);
         this.isEnabled.set(true);
+        this.updatePresence(account, true);
         this.setStatus(
           account.state.pending.length ? 'pending' : 'enabled',
           account.state.pending.length
@@ -276,6 +292,7 @@ export class TimerPushService {
     clearTimeout(this.debounce);
     this.debounce = undefined;
     account.state.enabled = false;
+    this.updatePresence(account);
     account.state.disablePending = true;
     this.pendingDisable.set(true);
     account.state.known = [];
@@ -329,6 +346,10 @@ export class TimerPushService {
       return;
     }
     clearTimeout(this.debounce);
+    clearInterval(this.presenceTimer);
+    this.presenceTimer = undefined;
+    this.lastPresenceVisible = false;
+    this.lastPresenceAt = 0;
     this.debounce = undefined;
     this.account = undefined;
     this.publicKey.set('');
@@ -470,6 +491,7 @@ export class TimerPushService {
           this.refreshKnown(account);
           this.persist(account);
           this.isEnabled.set(true);
+          this.updatePresence(account, true);
         }
         while (this.current(account) && account.state.enabled && account.state.pending.length) {
           const timers: AlertTimer[] = [];
@@ -561,6 +583,31 @@ export class TimerPushService {
     }
   }
 
+  /** Each tab owns a short server lease. Hiding one tab cannot clear a visible sibling. */
+  private updatePresence(account: AccountDevice, force = false, leaving = false): void {
+    const active = this.current(account) && account.state.enabled && account.registered &&
+      navigator.onLine && account.state.known.some(timer => timer.deadline !== null && timer.deadline > Date.now() - 360_000);
+    const visible = !leaving && active && document.visibilityState === 'visible';
+    if (visible && this.presenceTimer === undefined)
+      this.presenceTimer = setInterval(() => this.updatePresence(account), 10_000);
+    if (!visible) {
+      clearInterval(this.presenceTimer);
+      this.presenceTimer = undefined;
+    }
+    if (!this.current(account) || !account.registered || !navigator.onLine) return;
+    if ((!visible && !this.lastPresenceVisible) ||
+      (visible && this.lastPresenceVisible && !force && Date.now() - this.lastPresenceAt < 8000)) return;
+    this.lastPresenceVisible = visible;
+    this.lastPresenceAt = Date.now();
+    this.presenceNetwork = this.presenceNetwork.catch(() => undefined).then(async () => {
+      if (!this.current(account) || !account.registered || !navigator.onLine) return;
+      // Recheck at send time so an enqueued heartbeat cannot outlive a hide/reset.
+      const currentlyVisible = !leaving && account.state.enabled && document.visibilityState === 'visible' &&
+        account.state.known.some(timer => timer.deadline !== null && timer.deadline > Date.now() - 360_000);
+      await this.invoke(account, { action:'presence', deviceId:account.state.deviceId, tabId:this.tabId, visible:currentlyVisible }, 3000);
+    }).catch(() => { this.lastPresenceAt = 0; /* Presence is best effort; alerts must remain deliverable. */ });
+  }
+
   private serial<T>(account: AccountDevice, operation: () => Promise<T>): Promise<T | undefined> {
     const result = this.network
       .catch(() => undefined)
@@ -572,11 +619,12 @@ export class TimerPushService {
   private async invoke(
     account: AccountDevice,
     body: Record<string, unknown>,
+    timeout = 10_000,
   ): Promise<Record<string, unknown>> {
     if (!this.current(account)) throw new Error('account changed');
     const { data, error } = await account.client.functions.invoke('timer-alerts', {
       body,
-      timeout: 10_000,
+      timeout,
     });
     if (error || !data || typeof data !== 'object') throw new Error('timer alerts unavailable');
     return data as Record<string, unknown>;
@@ -598,11 +646,11 @@ export class TimerPushService {
   }
   private refreshKnown(account: AccountDevice): void {
     const pending = new Map(account.state.pending.map((timer) => [timer.key, timer]));
-    account.state.known = account.state.known.map((timer) => {
-      const refreshed = { ...timer, revision: this.revision(account) };
-      pending.set(refreshed.key, refreshed);
-      return refreshed;
-    });
+    // Reconnecting resends the same run; only a timer change creates a newer revision.
+    for (const timer of account.state.known) {
+      const queued = pending.get(timer.key);
+      if (!queued || queued.revision < timer.revision) pending.set(timer.key, timer);
+    }
     account.state.pending = [...pending.values()];
   }
   private persist(account: AccountDevice): boolean {
@@ -642,6 +690,7 @@ export class TimerPushService {
             : 'Background timer alerts are off.',
         );
       }
+      this.updatePresence(account);
       return true;
     } catch {
       this.storageProblem.set(true);

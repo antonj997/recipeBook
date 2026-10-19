@@ -63,9 +63,9 @@ describe('conservative English and Swedish step timers', () => {
   });
   it('formats countdowns without changing digit widths each second', () => {
     expect(formatCountdown(1800)).toBe('30:00');
-    expect(formatCountdown(65)).toBe('1:05');
-    expect(formatCountdown(5400)).toBe('1:30:00');
-    expect(formatCountdown(0)).toBe('0:00');
+    expect(formatCountdown(65)).toBe('01:05');
+    expect(formatCountdown(5400)).toBe('01:30:00');
+    expect(formatCountdown(0)).toBe('00:00');
   });
 });
 

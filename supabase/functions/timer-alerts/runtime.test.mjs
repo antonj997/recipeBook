@@ -38,6 +38,16 @@ Deno.test('HTTP actions enforce separate dispatcher and fresh-user authorization
   let freshAuthCalls = 0;
   let revoked = false;
   let anonymous = false;
+  let presencePayload;
+  let dispatchJob;
+  const deliveries = [];
+  const finishes = [];
+  const browserKey = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const toBase64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const pushSubscription = { endpoint: 'https://fcm.googleapis.com/fcm/send/runtime-fixture', keys: {
+    p256dh: toBase64(await crypto.subtle.exportKey('raw', browserKey.publicKey)),
+    auth: toBase64(crypto.getRandomValues(new Uint8Array(16))),
+  } };
   Deno.serve = (callback) => { handler = callback; return {}; };
   globalThis.fetch = async (input, options) => {
     const request = input instanceof Request ? input : new Request(input, options);
@@ -49,13 +59,20 @@ Deno.test('HTTP actions enforce separate dispatcher and fresh-user authorization
         app_metadata: { provider: 'email', providers: ['email'] }, user_metadata: {}, identities: [],
         created_at: '2026-01-01T00:00:00Z', is_anonymous: anonymous });
     }
+    if (url.hostname === 'fcm.googleapis.com') {
+      deliveries.push({ ttl: Number(request.headers.get('TTL')), topic: request.headers.get('Topic') });
+      return new Response(null, { status: 201 });
+    }
     assert.equal(request.headers.get('authorization'), 'Bearer service-role-fixture');
     if (url.pathname === '/rest/v1/rpc/timer_alerts_ready') return Response.json(true);
-    if (url.pathname === '/rest/v1/rpc/timer_alerts_claim') return Response.json([]);
+    if (url.pathname === '/rest/v1/rpc/timer_alerts_claim') return Response.json(dispatchJob ? [{ id: userId, revision: dispatchJob.revision ?? 7, claim_token: sessionId }] : []);
+    if (url.pathname === '/rest/v1/rpc/timer_alerts_authorize') return Response.json(dispatchJob?.authorized === false ? null : dispatchJob);
+    if (url.pathname === '/rest/v1/rpc/timer_alerts_finish') { finishes.push(await request.json()); return Response.json(true); }
     if (url.pathname === '/rest/v1/rpc/timer_alerts_manage') {
       const args = await request.json();
       assert.equal(args.p_user, userId);
       assert.equal(args.p_session, sessionId);
+      if (args.p_action === 'presence') presencePayload = args.p_payload;
       if (revoked) return Response.json({ code: 'P0001', message: 'TIMER_SESSION' }, { status: 400 });
       return Response.json({ ok: true });
     }
@@ -76,6 +93,10 @@ Deno.test('HTTP actions enforce separate dispatcher and fresh-user authorization
     assert.equal(freshAuthCalls, 0);
     assert.equal((await post({ action: 'disable', deviceId: userId }, token)).status, 200);
     assert.equal(freshAuthCalls, 1);
+    const presence = await post({ action: 'presence', deviceId: userId, tabId: sessionId, visible: true }, token);
+    assert.equal(presence.status, 200);
+    assert.deepEqual(presencePayload, { tabId: sessionId, visible: true });
+    assert.equal((await post({ action: 'presence', deviceId: userId, tabId: sessionId, visible: 'true' }, token)).status, 400);
     revoked = true;
     assert.equal((await post({ action: 'disable', deviceId: userId }, token)).status, 401);
     anonymous = true;
@@ -83,6 +104,24 @@ Deno.test('HTTP actions enforce separate dispatcher and fresh-user authorization
     const dispatch = await post({ action: 'dispatch' }, dispatcherSecret);
     assert.equal(dispatch.status, 200);
     assert.equal((await dispatch.json()).claimed, 0);
+    for (const [stage, revision] of [['initial',7], ['reminder',7], ['initial',8], ['initial',8]]) {
+      dispatchJob = { id: userId, revision, claim_token: sessionId, timer_key: 'opaque-key', recipe_id: 'fixture', step_index: 0,
+        key_hash: 'a'.repeat(64), notification_stage: stage, delivery_at: new Date(Date.now()-10000).toISOString(),
+        deadline: new Date(Date.now()-(stage === 'initial' ? 10000 : 70000)).toISOString(), attempts: 1, subscription: pushSubscription };
+      const delivered = await post({ action: 'dispatch' }, dispatcherSecret);
+      assert.equal((await delivered.json()).sent, 1);
+    }
+    assert.equal(deliveries.length, 4);
+    assert.ok(deliveries[0].ttl > 0 && deliveries[0].ttl <= 50);
+    assert.ok(deliveries[1].ttl > 0 && deliveries[1].ttl <= 60);
+    assert.notEqual(deliveries[0].topic, deliveries[1].topic);
+    assert.notEqual(deliveries[0].topic, deliveries[2].topic);
+    assert.equal(deliveries[2].topic, deliveries[3].topic);
+    for (const delivery of deliveries) assert.match(delivery.topic, /^[0-9a-f]{32}$/);
+    assert.deepEqual(finishes.map((args) => args.p_outcome), ['sent', 'sent', 'sent', 'sent']);
+    dispatchJob = { authorized: false };
+    assert.equal((await (await post({ action: 'dispatch' }, dispatcherSecret)).json()).skipped, 1);
+    assert.equal(deliveries.length, 4);
     assert.equal((await post({ action: 'config' }, undefined, 'https://hostile.example')).status, 403);
   } finally {
     Deno.serve = originalServe;

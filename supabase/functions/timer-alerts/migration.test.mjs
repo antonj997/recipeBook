@@ -25,6 +25,8 @@ async function database() {
     create table public.recipes(user_id uuid, id text, payload jsonb, deleted boolean default false, primary key(user_id,id));
   `);
   await db.exec(await Deno.readTextFile(migrationUrl));
+  const extension = new URL('../../migrations/20261019173330_timer_reminder_presence.sql', import.meta.url);
+  await db.exec(await Deno.readTextFile(extension));
   await db.query('insert into auth.users(id) values ($1), ($2)', [user, otherUser]);
   await db.query('insert into auth.sessions(id,user_id) values ($1,$2),($3,$4)', [session, user, otherSession, otherUser]);
   await db.query('insert into public.recipes(user_id,id,payload) values ($1,$2,$3)', [user, 'soup', JSON.stringify(payload)]);
@@ -193,7 +195,8 @@ Deno.test('expired leases replace claim tokens and delivery attempts stop at thr
     assert.equal((await authorize(db, third)).attempts, 3);
     await db.query("select public.timer_alerts_finish($1,$2,$3,'retry',0)", [third.id, third.revision, third.claim_token]);
     assert.deepEqual(await claim(db), []);
-    assert.equal((await db.query('select state from private.timer_push_jobs')).rows[0].state, 'failed');
+    const stored = (await db.query('select state,notification_stage,attempts from private.timer_push_jobs')).rows[0];
+    assert.deepEqual(stored, { state: 'pending', notification_stage: 'reminder', attempts: 0 });
   } finally { await db.close(); }
 });
 

@@ -17,6 +17,7 @@ export interface StepTimerState {
   running: boolean;
   started: boolean;
   done: boolean;
+  elapsed: number;
 }
 interface SavedTimer {
   target: StepTimerTarget;
@@ -26,6 +27,9 @@ interface SavedTimer {
   done: boolean;
   updatedAt: number;
 }
+
+const overdueLifetime = 60 * 60_000;
+const ringingLifetime = 30_000;
 
 /** One app clock. Timer definitions sync with recipes; countdowns stay on this device. */
 @Service()
@@ -48,6 +52,8 @@ export class StepTimerService {
   private readonly now = signal(Date.now());
   private ticker?: ReturnType<typeof setInterval>;
   private audio?: AudioContext;
+  private alarmTicker?: ReturnType<typeof setInterval>;
+  private readonly tones = new Set<OscillatorNode>();
 
   constructor() {
     this.loadScope();
@@ -66,6 +72,7 @@ export class StepTimerService {
     const refresh = () => {
       this.ensureScope();
       this.now.set(Date.now());
+      this.syncAlarm();
       void this.validateEntries(this.scope(), this.cookbook.revision());
     };
     const storage = (event: StorageEvent) => {
@@ -97,11 +104,15 @@ export class StepTimerService {
             saved.deadline === undefined
               ? saved.remaining
               : Math.max(0, Math.ceil((saved.deadline - this.now()) / 1000)),
-          running: saved.deadline !== undefined,
+          running: saved.deadline !== undefined && !saved.done,
           started: saved.started,
           done: saved.done,
+          elapsed:
+            saved.done && saved.deadline !== undefined
+              ? Math.max(0, Math.floor((this.now() - saved.deadline) / 1000))
+              : 0,
         }
-      : { remaining: target.seconds, running: false, started: false, done: false };
+      : { remaining: target.seconds, running: false, started: false, done: false, elapsed: 0 };
   }
   setDuration(target: StepTimerTarget, seconds: number): void {
     if (!isStepTimerSeconds(seconds)) return;
@@ -110,7 +121,8 @@ export class StepTimerService {
     this.put({
       target,
       remaining: seconds,
-      deadline: saved?.deadline === undefined ? undefined : Date.now() + seconds * 1000,
+      deadline:
+        saved?.deadline !== undefined && !saved.done ? Date.now() + seconds * 1000 : undefined,
       started: saved?.started ?? false,
       done: false,
       updatedAt: Date.now(),
@@ -119,9 +131,9 @@ export class StepTimerService {
   start(target: StepTimerTarget): void {
     this.ensureScope();
     const saved = this.entries().get(target.key);
-    if (saved?.deadline !== undefined) return;
+    if (saved?.deadline !== undefined && !saved.done) return;
     this.prepareSound();
-    const remaining = saved?.remaining || target.seconds;
+    const remaining = saved?.done ? target.seconds : saved?.remaining || target.seconds;
     this.put({
       target,
       remaining,
@@ -134,13 +146,18 @@ export class StepTimerService {
   pause(target: StepTimerTarget): void {
     this.ensureScope();
     const saved = this.entries().get(target.key);
-    if (saved?.deadline === undefined) return;
+    if (saved?.deadline === undefined || saved.done) return;
     const remaining = Math.max(0, Math.ceil((saved.deadline - Date.now()) / 1000));
+    if (remaining === 0) {
+      // A delayed Pause still completes against the original deadline and verified step.
+      this.tick();
+      return;
+    }
     this.put({
       ...saved,
       remaining,
       deadline: undefined,
-      done: remaining === 0,
+      done: false,
       updatedAt: Date.now(),
     });
   }
@@ -201,6 +218,7 @@ export class StepTimerService {
     }
     this.syncClock();
     this.syncPush();
+    this.syncAlarm();
   }
   private ensureScope(): void {
     if (this.loadedScope() !== this.scope()) {
@@ -237,6 +255,7 @@ export class StepTimerService {
     this.now.set(Date.now());
     this.syncClock();
     this.syncPush();
+    this.syncAlarm();
   }
   /** Only read recipes with active local countdowns; never scan the whole cookbook each tick. */
   private async validateEntries(scope: string, revision: number): Promise<void> {
@@ -298,7 +317,9 @@ export class StepTimerService {
       (raw['deadline'] !== undefined &&
         (typeof raw['deadline'] !== 'number' ||
           !Number.isFinite(raw['deadline']) ||
-          raw['deadline'] > Date.now() + maxStepTimerSeconds * 1000))
+          raw['deadline'] > Date.now() + maxStepTimerSeconds * 1000 ||
+          raw['deadline'] <= Date.now() - overdueLifetime)) ||
+      (raw['done'] === true && raw['deadline'] === undefined)
     )
       return;
     return {
@@ -321,9 +342,13 @@ export class StepTimerService {
       return;
     }
     this.now.set(Date.now());
+    this.removeWhere(
+      (saved) => saved.deadline !== undefined && saved.deadline <= Date.now() - overdueLifetime,
+    );
+    this.syncAlarm();
     if (this.validatedRevision !== this.cookbook.revision()) return;
     const finished = [...this.entries().values()].filter(
-      (saved) => saved.deadline !== undefined && saved.deadline <= Date.now(),
+      (saved) => !saved.done && saved.deadline !== undefined && saved.deadline <= Date.now(),
     );
     if (!finished.length) return;
     if (!verified) {
@@ -335,7 +360,6 @@ export class StepTimerService {
     for (const saved of finished)
       next.set(saved.target.key, {
         ...saved,
-        deadline: undefined,
         remaining: 0,
         done: true,
         updatedAt: Date.now(),
@@ -343,14 +367,9 @@ export class StepTimerService {
     this.commit(next);
     this.feedback.show(
       finished.length === 1
-        ? 'Timer finished — step ' + (finished[0].target.index + 1)
-        : finished.length + ' timers finished',
+        ? 'Step ' + (finished[0].target.index + 1) + ' is ready to check'
+        : finished.length + ' steps are ready to check',
     );
-    try {
-      this.chime();
-    } catch {
-      // An unavailable audio device must not interrupt the countdown or its visual alert.
-    }
   }
   private syncPush(): void {
     this.ensureScope();
@@ -375,6 +394,52 @@ export class StepTimerService {
       /* Visual completion remains available when audio is blocked. */
     }
   }
+  /** Alarm time is bounded by the original deadline, even after browser suspension. */
+  private syncAlarm(): void {
+    if (!this.shouldRing()) {
+      this.stopAlarm();
+      return;
+    }
+    if (this.alarmTicker !== undefined) return;
+    this.playChime();
+    this.alarmTicker = setInterval(() => {
+      if (!this.shouldRing()) this.stopAlarm();
+      else this.playChime();
+    }, 2000);
+  }
+  private shouldRing(): boolean {
+    return (
+      this.document.visibilityState === 'visible' &&
+      this.audio?.state === 'running' &&
+      [...this.entries().values()].some(
+        (saved) =>
+          saved.done &&
+          saved.deadline !== undefined &&
+          Date.now() >= saved.deadline &&
+          Date.now() - saved.deadline < ringingLifetime,
+      )
+    );
+  }
+  private playChime(): void {
+    try {
+      this.chime();
+    } catch {
+      this.stopAlarm();
+    }
+  }
+  private stopAlarm(): void {
+    clearInterval(this.alarmTicker);
+    this.alarmTicker = undefined;
+    for (const tone of this.tones) {
+      try {
+        tone.stop();
+      } catch {
+        /* The audio graph may already have ended. */
+      }
+      tone.disconnect();
+    }
+    this.tones.clear();
+  }
   private chime(): void {
     if (!this.audio || this.audio.state !== 'running') return;
     for (const [offset, frequency] of [
@@ -389,15 +454,18 @@ export class StepTimerService {
       gain.gain.linearRampToValueAtTime(0.1, at + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.001, at + 0.22);
       tone.connect(gain).connect(this.audio.destination);
+      this.tones.add(tone);
       tone.start(at);
       tone.stop(at + 0.25);
       tone.onended = () => {
+        this.tones.delete(tone);
         tone.disconnect();
         gain.disconnect();
       };
     }
   }
   private closeAudio(): void {
+    this.stopAlarm();
     void this.audio?.close().catch(() => undefined);
     this.audio = undefined;
   }

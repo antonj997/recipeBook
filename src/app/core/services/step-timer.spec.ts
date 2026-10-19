@@ -89,7 +89,7 @@ describe('deadline-based step countdowns', () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(timers.state(target).remaining).toBe(100);
   });
-  it('finishes once and stops ticking instead of counting below zero', async () => {
+  it('announces expiry once and counts overdue time from the original deadline', async () => {
     const timers = TestBed.inject(StepTimerService);
     const feedback = TestBed.inject(FeedbackService);
     const alert = vi.spyOn(feedback, 'show');
@@ -97,7 +97,12 @@ describe('deadline-based step countdowns', () => {
     TestBed.tick();
     await Promise.resolve();
     await vi.advanceTimersByTimeAsync(5000);
-    expect(timers.state(target)).toMatchObject({ remaining: 0, running: false, done: true });
+    expect(timers.state(target)).toMatchObject({
+      remaining: 0,
+      running: false,
+      done: true,
+      elapsed: 3,
+    });
     expect(alert).toHaveBeenCalledTimes(1);
     document.dispatchEvent(new Event('visibilitychange'));
     expect(alert).toHaveBeenCalledTimes(1);
@@ -113,6 +118,7 @@ describe('deadline-based step countdowns', () => {
       running: false,
       started: false,
       done: false,
+      elapsed: 0,
     });
     expect(timers.state(other).running).toBe(true);
   });
@@ -232,6 +238,22 @@ describe('deadline-based step countdowns', () => {
     timers.setDuration(target, 60);
     expect(timers.state(target)).toMatchObject({ remaining: 60, running: false, started: true });
   });
+  it('keeps an overdue timer stopped when its duration changes', async () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.start(target);
+    await vi.advanceTimersByTimeAsync(130_000);
+    expect(timers.state(target)).toMatchObject({ done: true, running: false });
+    timers.setDuration(target, 300);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(timers.state(target)).toMatchObject({
+      remaining: 300,
+      running: false,
+      started: true,
+      done: false,
+      elapsed: 0,
+    });
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([{ target, deadline: undefined }]);
+  });
   it('ignores invalid typed durations', () => {
     const timers = TestBed.inject(StepTimerService);
     for (const seconds of [0, -1, NaN, Infinity, 604801]) timers.setDuration(target, seconds);
@@ -289,5 +311,154 @@ describe('deadline-based step countdowns', () => {
     );
     await vi.advanceTimersByTimeAsync(0);
     expect(timers.state(target)).toMatchObject({ running: true, remaining: 120 });
+  });
+  it('keeps the original push deadline after expiry, then cancels it when reset', async () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.setDuration(target, 2);
+    timers.start(target);
+    const deadline = Date.now() + 2000;
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(timers.state(target)).toMatchObject({ done: true, elapsed: 3 });
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([{ target, deadline }]);
+    timers.reset(target);
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([]);
+  });
+  it('restarts an overdue timer from the recipe duration', async () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.setDuration(target, 1);
+    timers.start(target);
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(5000);
+    timers.start(target);
+    expect(timers.state(target)).toMatchObject({
+      remaining: 120,
+      running: true,
+      done: false,
+      elapsed: 0,
+    });
+  });
+  it('resets an unattended overdue timer after one hour and on later restoration', async () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.setDuration(target, 1);
+    timers.start(target);
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(0);
+    vi.setSystemTime(Date.now() + 3_602_000);
+    document.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(timers.state(target)).toMatchObject({
+      started: false,
+      done: false,
+      remaining: 120,
+      elapsed: 0,
+    });
+  });
+  it('completes an expired timer normally when Pause precedes the next clock callback', async () => {
+    const play = vi.fn();
+    class TestAudio {
+      state = 'running';
+      currentTime = 0;
+      destination = {};
+      resume = async () => {};
+      close = async () => {};
+      createOscillator = () => ({
+        frequency: { value: 0 },
+        connect: () => ({ connect: () => {} }),
+        start: play,
+        stop: () => {},
+        disconnect: () => {},
+        onended: null,
+      });
+      createGain = () => ({
+        gain: {
+          setValueAtTime: () => {},
+          linearRampToValueAtTime: () => {},
+          exponentialRampToValueAtTime: () => {},
+        },
+        disconnect: () => {},
+      });
+    }
+    vi.stubGlobal('AudioContext', TestAudio);
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    try {
+      const timers = TestBed.inject(StepTimerService);
+      const feedback = vi.spyOn(TestBed.inject(FeedbackService), 'show');
+      timers.setDuration(target, 1);
+      timers.start(target);
+      const deadline = Date.now() + 1000;
+      TestBed.tick();
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Browser suspension can advance wall time without running the app clock.
+      vi.setSystemTime(deadline + 2000);
+      timers.pause(target);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(timers.state(target)).toMatchObject({ done: true, running: false, elapsed: 2 });
+      expect(push.replaceTimers).toHaveBeenLastCalledWith([{ target, deadline }]);
+      expect(feedback).toHaveBeenCalledTimes(1);
+      expect(play).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(timers.state(target).elapsed).toBe(4);
+      expect(play).toHaveBeenCalledTimes(4);
+
+      vi.setSystemTime(deadline + 3_600_000);
+      document.dispatchEvent(new Event('visibilitychange'));
+      await vi.advanceTimersByTimeAsync(0);
+      expect(timers.state(target)).toMatchObject({ started: false, done: false, remaining: 120 });
+      expect(push.replaceTimers).toHaveBeenLastCalledWith([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('repeats a chime for at most 30 seconds and reset stops it immediately', async () => {
+    const play = vi.fn();
+    class TestAudio {
+      state = 'running';
+      currentTime = 0;
+      destination = {};
+      resume = async () => {};
+      close = async () => {};
+      createOscillator = () => ({
+        frequency: { value: 0 },
+        connect: () => ({ connect: () => {} }),
+        start: play,
+        stop: vi.fn(),
+        disconnect: () => {},
+        onended: null,
+      });
+      createGain = () => ({
+        gain: {
+          setValueAtTime: () => {},
+          linearRampToValueAtTime: () => {},
+          exponentialRampToValueAtTime: () => {},
+        },
+        connect: () => {},
+        disconnect: () => {},
+      });
+    }
+    vi.stubGlobal('AudioContext', TestAudio);
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    const timers = TestBed.inject(StepTimerService);
+    timers.setDuration(target, 1);
+    timers.start(target);
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(play).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(play.mock.calls.length).toBeGreaterThan(2);
+    timers.reset(target);
+    const stopped = play.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(play).toHaveBeenCalledTimes(stopped);
+    timers.setDuration(target, 1);
+    timers.start(target);
+    await vi.advanceTimersByTimeAsync(31_000);
+    const finished = play.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(play).toHaveBeenCalledTimes(finished);
+    vi.unstubAllGlobals();
   });
 });
