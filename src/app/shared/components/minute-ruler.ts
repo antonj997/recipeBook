@@ -77,7 +77,6 @@ export class MinuteRulerComponent {
     clientX: number;
     left: number;
     width: number;
-    lastOffset: number;
     active: boolean;
   };
   private hold?: ReturnType<typeof setTimeout>;
@@ -86,6 +85,9 @@ export class MinuteRulerComponent {
   private readonly moveListener = (event: PointerEvent) => this.move(event);
   private readonly upListener = (event: PointerEvent) => this.end(event);
   private readonly cancelListener = () => this.cancel();
+  private readonly preventScroll = (event: Event) => {
+    if (this.gesture && event.cancelable) event.preventDefault();
+  };
   private readonly visibilityListener = () => {
     if (this.document.hidden) this.cancel();
   };
@@ -104,8 +106,11 @@ export class MinuteRulerComponent {
   protected begin(event: PointerEvent): void {
     if (this.disabled() || event.button !== 0 || event.isPrimary === false) return;
     this.cancel();
+    event.preventDefault();
     const element = event.currentTarget as HTMLElement;
     const bounds = element.getBoundingClientRect();
+    if (bounds.width <= 0) return;
+    element.focus({ preventScroll: true });
     this.gesture = {
       id: event.pointerId,
       element,
@@ -114,10 +119,17 @@ export class MinuteRulerComponent {
       clientX: event.clientX,
       left: bounds.left,
       width: bounds.width,
-      lastOffset: 0,
       active: false,
     };
-    this.document.addEventListener('pointermove', this.moveListener);
+    // Capture from the first contact so a drag can begin anywhere, including the center.
+    try {
+      element.setPointerCapture(event.pointerId);
+    } catch {
+      /* Document listeners are the fallback. */
+    }
+    this.document.addEventListener('pointermove', this.moveListener, { passive: false });
+    this.document.addEventListener('touchmove', this.preventScroll, { passive: false });
+    this.document.addEventListener('wheel', this.preventScroll, { passive: false });
     this.document.addEventListener('pointerup', this.upListener);
     this.document.addEventListener('pointercancel', this.cancelListener);
     this.document.addEventListener('scroll', this.cancelListener, true);
@@ -128,16 +140,10 @@ export class MinuteRulerComponent {
 
   private activate(): void {
     const gesture = this.gesture;
-    if (!gesture || this.disabled() || this.document.hidden) return;
+    if (!gesture || gesture.active || this.disabled() || this.document.hidden) return;
     gesture.active = true;
     this.dragging.set(true);
     this.position.set(this.currentMinute());
-    try {
-      gesture.element.setPointerCapture(gesture.id);
-    } catch {
-      /* Document listeners cover capture support. */
-    }
-    this.point(gesture.clientX);
     this.lastFrame = 0;
     this.frame = requestAnimationFrame((time) => this.advance(time));
   }
@@ -145,25 +151,13 @@ export class MinuteRulerComponent {
   private move(event: PointerEvent): void {
     const gesture = this.gesture;
     if (!gesture || event.pointerId !== gesture.id) return;
-    const dx = Math.abs(event.clientX - gesture.x);
-    const dy = Math.abs(event.clientY - gesture.y);
-    if (!gesture.active && dy > 10 && dy > dx) {
-      this.cancel();
-      return;
-    }
+    event.preventDefault();
     gesture.clientX = event.clientX;
-    if (!gesture.active && dx > 6) {
+    // A drag controls speed, never jumps the value to the finger's starting tick.
+    if (!gesture.active && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 6) {
       clearTimeout(this.hold);
       this.activate();
-    } else if (gesture.active) this.point(event.clientX);
-  }
-
-  private point(clientX: number): void {
-    const gesture = this.gesture;
-    if (!gesture) return;
-    const offset = (clientX - gesture.left - gesture.width / 2) / pitch;
-    this.setPosition((this.position() ?? this.currentMinute()) + offset - gesture.lastOffset);
-    gesture.lastOffset = offset;
+    }
   }
 
   private advance(time: number): void {
@@ -171,18 +165,16 @@ export class MinuteRulerComponent {
     if (!gesture?.active) return;
     const dt = this.lastFrame ? Math.min(50, time - this.lastFrame) / 1000 : 0;
     this.lastFrame = time;
-    const normalized = (gesture.clientX - gesture.left) / gesture.width;
-    const edge =
-      normalized < 0.2
-        ? Math.max(-1, (normalized - 0.2) / 0.2)
-        : normalized > 0.8
-          ? Math.min(1, (normalized - 0.8) / 0.2)
-          : 0;
-    if (edge)
-      this.setPosition(
-        (this.position() ?? this.currentMinute()) + Math.sign(edge) * (1 + 23 * edge * edge) * dt,
-      );
-    this.frame = requestAnimationFrame((next) => this.advance(next));
+    const distance = Math.max(
+      -1,
+      Math.min(1, (gesture.clientX - gesture.left - gesture.width / 2) / (gesture.width / 2)),
+    );
+    // A small center rest area prevents drift. Everywhere else responds continuously;
+    // the edges reach 24 minutes per second, with a quadratic ramp for fine control.
+    const speed =
+      Math.abs(distance) < 0.04 ? 0 : Math.sign(distance) * (0.5 + 23.5 * distance * distance);
+    if (speed) this.setPosition((this.position() ?? this.currentMinute()) + speed * dt);
+    if (this.gesture === gesture) this.frame = requestAnimationFrame((next) => this.advance(next));
   }
 
   private end(event: PointerEvent): void {
@@ -206,6 +198,8 @@ export class MinuteRulerComponent {
     this.position.set(undefined);
     this.dragging.set(false);
     this.document.removeEventListener('pointermove', this.moveListener);
+    this.document.removeEventListener('touchmove', this.preventScroll);
+    this.document.removeEventListener('wheel', this.preventScroll);
     this.document.removeEventListener('pointerup', this.upListener);
     this.document.removeEventListener('pointercancel', this.cancelListener);
     this.document.removeEventListener('scroll', this.cancelListener, true);

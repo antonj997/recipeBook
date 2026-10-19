@@ -308,6 +308,17 @@ describe('editable step timer controls', () => {
     expect(f.timers.state(target)).toMatchObject({ remaining: 179, running: true });
   });
 
+  it('keeps the ruler geometry stable when the time crosses an hour', () => {
+    const f = fixture();
+    f.timers.setDuration(target, 3599);
+    f.view.detectChanges();
+    const before = getComputedStyle(field(f.root)).width;
+    f.timers.setDuration(target, 3600);
+    f.view.detectChanges();
+    expect(field(f.root).value).toBe('01:00:00');
+    expect(getComputedStyle(field(f.root)).width).toBe(before);
+  });
+
   it('retains the typed draft while the running countdown ticks', async () => {
     const f = fixture();
     f.timers.start(target);

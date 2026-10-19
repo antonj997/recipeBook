@@ -1,7 +1,7 @@
 :host {
   display: block;
-  width: min(100% - 44px, 22rem);
-  margin: 4px 0 20px 44px;
+  width: min(100%, 30rem);
+  margin: 4px 0 20px;
   font-family: Arial, Helvetica, sans-serif;
 }
 :host([hidden]) {
@@ -15,9 +15,10 @@
 .step-timer {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
-  padding: 5px 12px 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
   border: 1px solid var(--color-control-border);
   border-radius: 8px;
   background: var(--color-surface);
@@ -38,10 +39,11 @@ app-minute-ruler {
   min-width: 0;
 }
 input.timer-input {
-  width: 11ch;
+  // Reserve hours space so crossing 60 minutes cannot move the ruler during a drag.
+  width: 9ch;
   min-width: 0;
   min-height: 44px;
-  padding: 6px 0 0;
+  padding: 4px 0;
   border: 0;
   border-radius: 3px;
   background: transparent;
@@ -89,12 +91,6 @@ input.timer-input.is-overdue {
 @media (hover: hover) and (pointer: fine) {
   button:hover:not(:disabled) {
     text-shadow: 0.25px 0 currentColor;
-  }
-}
-@media (max-width: 360px) {
-  :host {
-    margin-left: 0;
-    width: 100%;
   }
 }
 @media (prefers-reduced-motion: reduce) {
