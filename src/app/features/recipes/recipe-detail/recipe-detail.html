@@ -170,13 +170,11 @@
                 </div>
               }
               @if (hasTimers()) {
-                <p class="timer-help">
-                  {{
-                    isDraft
-                      ? 'Save the recipe to start timers.'
-                      : 'Keep the app open for timer alerts.'
-                  }}
-                </p>
+                @if (isDraft) {
+                  <p class="timer-help">Save the recipe to start timers.</p>
+                } @else {
+                  <app-timer-alert-preferences />
+                }
               }
               <ol>
                 @for (step of selectedRecipe.instructions; track $index) {

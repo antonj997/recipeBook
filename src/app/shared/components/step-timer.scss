@@ -7,46 +7,68 @@
 :host([hidden]) {
   display: none;
 }
-.step-timer {
+.timer-controls,
+.timer-actions {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+.timer-controls {
   flex-wrap: wrap;
+}
+.timer-actions {
   gap: 2px;
-  width: fit-content;
+}
+.step-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   max-width: 100%;
   padding: 3px;
   border: 1px solid var(--color-control-border);
   border-radius: 8px;
   background: var(--color-surface);
-  transition:
-    border-color var(--motion-fast) var(--ease-out),
-    box-shadow var(--motion-fast) var(--ease-out);
+  transition: border-color var(--motion-fast) var(--ease-out);
 }
 .is-running,
 .is-done {
   border-color: var(--color-green);
-  box-shadow: inset 0 0 0 1px var(--color-green);
 }
 .timer-face {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  min-width: 0;
   min-height: 44px;
   padding-inline: 4px;
-  font-size: 0.95rem;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
   white-space: nowrap;
 }
-.timer-face [role='timer'] {
-  min-width: 5ch;
+input.timer-input {
+  width: 9ch;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  text-align: center;
+  caret-color: var(--color-ink);
+}
+input.timer-input[aria-invalid='true'] {
+  box-shadow: inset 0 -1px var(--color-danger);
 }
 .timer-face app-icon {
+  flex: 0 0 18px;
   width: 18px;
   height: 18px;
 }
 button {
+  flex-shrink: 0;
   min-height: 44px;
   padding: 8px;
   border: 0;
@@ -57,6 +79,9 @@ button {
 }
 .timer-adjust {
   width: 44px;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 .timer-action {
   min-width: 60px;
@@ -64,13 +89,17 @@ button {
   background: var(--color-ink);
   color: var(--color-surface);
 }
+.timer-hint,
 .timer-done {
   margin: 6px 0 0;
   color: var(--color-muted);
   font-size: 0.8125rem;
   line-height: 1.4;
 }
-@media (hover: hover) {
+.timer-hint[role='alert'] {
+  color: var(--color-danger);
+}
+@media (hover: hover) and (pointer: fine) {
   button:hover:not(:disabled) {
     --icon-stroke-width: 2.2;
     text-shadow: 0.25px 0 currentColor;
@@ -85,13 +114,9 @@ button {
     gap: 0;
     padding: 2px;
   }
-  .timer-action {
-    padding-inline: 8px;
-  }
   .timer-face {
     gap: 3px;
     padding-inline: 0;
-    font-size: 0.875rem;
   }
   :host {
     margin-left: 0;

@@ -1,6 +1,8 @@
 import { AppUpdateService } from '../../core/services/app-update.service';
 import { IconComponent } from '../../shared/components/icon';
 import { AccountAccessComponent } from './account-access';
+import { TimerAlertPreferencesComponent } from '../../shared/components/timer-alert-preferences';
+import { TimerPushService } from '../../core/services/timer-push.service';
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -10,7 +12,7 @@ import { CloudCookbookService } from '../../core/services/cloud-cookbook.service
 
 @Component({
   selector: 'app-settings',
-  imports: [IconComponent, RouterLink, AccountAccessComponent],
+  imports: [IconComponent, RouterLink, AccountAccessComponent, TimerAlertPreferencesComponent],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
@@ -19,6 +21,7 @@ export class SettingsComponent {
   readonly cloud = inject(CloudCookbookService);
   readonly auth = this.cloud.auth;
   readonly app = inject(AppUpdateService);
+  private readonly timerAlerts = inject(TimerPushService);
   readonly returnToImport =
     inject(ActivatedRoute).snapshot.queryParamMap.get('returnTo') === '/recipes/import';
   private active = true;
@@ -92,6 +95,8 @@ export class SettingsComponent {
         )
       )
         return;
+      await this.timerAlerts.disableForSignOut().catch(() => undefined);
+      if (!this.current(version)) return;
       await this.auth.signOut();
       if (this.active)
         this.message.set(

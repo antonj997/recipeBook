@@ -12,6 +12,7 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 - Group ingredients and instructions, choose default servings, and undo removed editor rows.
 - Scale explicit ingredient quantities for 2, 4, 6, 8 or 10 servings without changing the saved recipe. Written or ambiguous quantities are left unchanged.
 - Cook from ingredient and instruction tabs with remembered step progress and a keep-screen-on toggle where supported. Completed steps always collapse.
+- Use editable step timers with hold-to-adjust controls and optional background push alerts.
 - Choose a recipe color shared by its header, card and list marker.
 - Hold or right-click recipes to change categories, edit or delete; undo accidental deletion.
 - Paste ingredient and instruction lists into the editor to split them into rows.
@@ -48,7 +49,7 @@ npm run build
 npm run build -- --configuration production,pages --base-href /recipeBook/
 ```
 
-The `Publish Recipebook` GitHub Actions workflow deploys `main` to GitHub Pages. Configure Pages to use GitHub Actions and set the two Supabase repository variables described in [SUPABASE.md](SUPABASE.md). Pages serves the frontend; Supabase handles authentication, cloud storage and hosted imports. The Pages build uses hash routing.
+The `Publish Recipebook` GitHub Actions workflow deploys `main` to GitHub Pages. Configure Pages to use GitHub Actions and set the two Supabase repository variables described in [SUPABASE.md](SUPABASE.md). Pages serves the frontend; Supabase handles authentication, cloud storage and hosted imports and scheduled timer alerts. The Pages build uses hash routing.
 
 ## Project structure
 

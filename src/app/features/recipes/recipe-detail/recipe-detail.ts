@@ -1,3 +1,5 @@
+import { TimerAlertPreferencesComponent } from '../../../shared/components/timer-alert-preferences';
+import { StepTimerService } from '../../../core/services/step-timer.service';
 import { StepTimerComponent } from '../../../shared/components/step-timer';
 import { recipeStepTimers } from '../../../core/models/step-timer';
 import type { RecipePageData } from '../../../core/services/recipe-page-resolvers';
@@ -50,6 +52,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
   },
   imports: [
     StepTimerComponent,
+    TimerAlertPreferencesComponent,
     RecipeTitleComponent,
     RecipeTransitionPartDirective,
     SelectMenuComponent,
@@ -155,12 +158,22 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   tabIndicator = viewChild<ElementRef<HTMLElement>>('tabIndicator');
   private tabMotion?: Animation;
   private cookingSessions = inject(CookingSessionService);
+  private readonly timers = inject(StepTimerService);
   readonly stepTimers = computed(() => {
     const recipe = this.recipe();
     return recipe ? recipeStepTimers(recipe) : [];
   });
   readonly hasTimers = computed(() => this.stepTimers().some(Boolean));
   constructor() {
+    effect(() => {
+      if (this.accountChanged() || this.isDraft) return;
+      for (const index of this.completedSteps()) {
+        const target = this.stepTimers()[index];
+        if (!target) continue;
+        const state = this.timers.state(target);
+        if (state.started || state.remaining !== target.seconds) this.timers.reset(target);
+      }
+    });
     effect((onCleanup) => {
       const recipe = this.recipe();
       if (recipe && !this.accountChanged())

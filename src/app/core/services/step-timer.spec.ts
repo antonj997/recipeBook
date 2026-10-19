@@ -1,3 +1,4 @@
+import { TimerPushService } from './timer-push.service';
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +10,7 @@ import type { Recipe } from '../models/recipe.model';
 import { FeedbackService } from './feedback.service';
 
 describe('deadline-based step countdowns', () => {
+  const push = { enabled: signal(false), replaceTimers: vi.fn(), retry: vi.fn() };
   const user = signal<{ id: string } | null>(null);
   const version = signal(0);
   const recipe: Recipe = {
@@ -31,6 +33,9 @@ describe('deadline-based step countdowns', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-18T17:00:00Z'));
     localStorage.clear();
+    push.enabled.set(false);
+    push.replaceTimers.mockClear();
+    push.retry.mockClear();
     user.set(null);
     version.set(0);
     revision.set(0);
@@ -38,6 +43,7 @@ describe('deadline-based step countdowns', () => {
     recipes.set(recipe.id, recipe);
     TestBed.configureTestingModule({
       providers: [
+        { provide: TimerPushService, useValue: push },
         { provide: CloudCookbookService, useValue: cookbook },
         {
           provide: SupabaseService,
@@ -116,6 +122,7 @@ describe('deadline-based step countdowns', () => {
     vi.setSystemTime(new Date('2026-10-18T17:00:40Z'));
     TestBed.configureTestingModule({
       providers: [
+        { provide: TimerPushService, useValue: push },
         { provide: CloudCookbookService, useValue: cookbook },
         {
           provide: SupabaseService,
@@ -172,6 +179,7 @@ describe('deadline-based step countdowns', () => {
     vi.setSystemTime(new Date('2026-10-18T17:03:00Z'));
     TestBed.configureTestingModule({
       providers: [
+        { provide: TimerPushService, useValue: push },
         { provide: CloudCookbookService, useValue: cookbook },
         {
           provide: SupabaseService,
@@ -205,5 +213,81 @@ describe('deadline-based step countdowns', () => {
     await vi.advanceTimersByTimeAsync(121_000);
     expect(alert).not.toHaveBeenCalled();
     expect(timers.state(target).started).toBe(false);
+  });
+  it('sets a typed duration without changing the saved recipe preset', () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.setDuration(target, 90);
+    expect(timers.state(target)).toMatchObject({ remaining: 90, running: false, started: false });
+    timers.reset(target);
+    expect(timers.state(target).remaining).toBe(120);
+  });
+  it('preserves running or paused mode when the duration is typed', async () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.start(target);
+    await vi.advanceTimersByTimeAsync(30_000);
+    timers.setDuration(target, 300);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(timers.state(target)).toMatchObject({ remaining: 295, running: true });
+    timers.pause(target);
+    timers.setDuration(target, 60);
+    expect(timers.state(target)).toMatchObject({ remaining: 60, running: false, started: true });
+  });
+  it('ignores invalid typed durations', () => {
+    const timers = TestBed.inject(StepTimerService);
+    for (const seconds of [0, -1, NaN, Infinity, 604801]) timers.setDuration(target, seconds);
+    expect(timers.state(target).remaining).toBe(120);
+  });
+
+  it('forwards deadline changes and resets to the alert scheduler', () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.start(target);
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([
+      { target, deadline: Date.now() + 120_000 },
+    ]);
+    timers.pause(target);
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([{ target, deadline: undefined }]);
+    timers.reset(target);
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([]);
+  });
+
+  it('adopts another tab paused timer before changing its duration', async () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.start(target);
+    const key = 'recipebook:timers:v1:' + JSON.stringify(['timer-tests', 'device']);
+    const [saved] = JSON.parse(localStorage.getItem(key)!);
+    const value = JSON.stringify([{ ...saved, deadline: undefined, remaining: 90 }]);
+    localStorage.setItem(key, value);
+    window.dispatchEvent(
+      new StorageEvent('storage', { key, newValue: value, storageArea: localStorage }),
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(timers.state(target)).toMatchObject({ running: false, remaining: 90 });
+    timers.adjust(target, 1);
+    expect(timers.state(target)).toMatchObject({ running: false, remaining: 150 });
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([{ target, deadline: undefined }]);
+  });
+
+  it('reloads another tab reset on return before sending timers to push', async () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.start(target);
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(0);
+    const key = 'recipebook:timers:v1:' + JSON.stringify(['timer-tests', 'device']);
+    localStorage.setItem(key, '[]');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(timers.state(target)).toMatchObject({ running: false, started: false });
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([]);
+  });
+
+  it('ignores another account countdown storage events', async () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.start(target);
+    const key = 'recipebook:timers:v1:' + JSON.stringify(['timer-tests', 'other-account']);
+    window.dispatchEvent(
+      new StorageEvent('storage', { key, newValue: '[]', storageArea: localStorage }),
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(timers.state(target)).toMatchObject({ running: true, remaining: 120 });
   });
 });

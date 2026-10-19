@@ -1,3 +1,4 @@
+import { TimerPushService } from './timer-push.service';
 import { DOCUMENT } from '@angular/common';
 import { DestroyRef, Service, computed, effect, inject, signal, untracked } from '@angular/core';
 import {
@@ -30,6 +31,7 @@ interface SavedTimer {
 @Service()
 export class StepTimerService {
   private readonly auth = inject(SupabaseService);
+  private readonly push = inject(TimerPushService);
   private readonly cookbook = inject(CloudCookbookService);
   private validatedRevision = -1;
   private validationRequest = 0;
@@ -42,12 +44,16 @@ export class StepTimerService {
   );
   private readonly loadedScope = signal('');
   private readonly entries = signal(new Map<string, SavedTimer>());
+  private stored: string | null = null;
   private readonly now = signal(Date.now());
   private ticker?: ReturnType<typeof setInterval>;
   private audio?: AudioContext;
 
   constructor() {
     this.loadScope();
+    effect(() => {
+      if (this.push.enabled()) untracked(() => this.syncPush());
+    });
     effect(() => {
       this.auth.accountVersion();
       const scope = this.scope();
@@ -62,13 +68,23 @@ export class StepTimerService {
       this.now.set(Date.now());
       void this.validateEntries(this.scope(), this.cookbook.revision());
     };
+    const storage = (event: StorageEvent) => {
+      if (
+        (event.storageArea && event.storageArea !== localStorage) ||
+        (event.key !== null && event.key !== this.scope())
+      )
+        return;
+      refresh();
+    };
     this.document.addEventListener('visibilitychange', refresh);
     this.document.defaultView?.addEventListener('pageshow', refresh);
+    this.document.defaultView?.addEventListener('storage', storage);
     inject(DestroyRef).onDestroy(() => {
       this.validationRequest++;
       clearInterval(this.ticker);
       this.document.removeEventListener('visibilitychange', refresh);
       this.document.defaultView?.removeEventListener('pageshow', refresh);
+      this.document.defaultView?.removeEventListener('storage', storage);
       this.closeAudio();
     });
   }
@@ -86,6 +102,19 @@ export class StepTimerService {
           done: saved.done,
         }
       : { remaining: target.seconds, running: false, started: false, done: false };
+  }
+  setDuration(target: StepTimerTarget, seconds: number): void {
+    if (!isStepTimerSeconds(seconds)) return;
+    this.ensureScope();
+    const saved = this.entries().get(target.key);
+    this.put({
+      target,
+      remaining: seconds,
+      deadline: saved?.deadline === undefined ? undefined : Date.now() + seconds * 1000,
+      started: saved?.started ?? false,
+      done: false,
+      updatedAt: Date.now(),
+    });
   }
   start(target: StepTimerTarget): void {
     this.ensureScope();
@@ -164,17 +193,28 @@ export class StepTimerService {
     this.entries.set(entries);
     this.now.set(Date.now());
     try {
-      localStorage.setItem(this.loadedScope(), JSON.stringify([...entries.values()]));
+      const stored = JSON.stringify([...entries.values()]);
+      localStorage.setItem(this.loadedScope(), stored);
+      this.stored = stored;
     } catch {
       /* In-memory countdowns still survive ordinary page navigation. */
     }
     this.syncClock();
+    this.syncPush();
   }
   private ensureScope(): void {
-    if (this.loadedScope() !== this.scope()) this.loadScope();
+    if (this.loadedScope() !== this.scope()) {
+      this.loadScope();
+      return;
+    }
+    try {
+      if (localStorage.getItem(this.loadedScope()) !== this.stored) this.loadScope();
+    } catch {
+      // Keep in-memory countdowns usable when storage is unavailable.
+    }
   }
   private loadScope(): void {
-    this.closeAudio();
+    if (this.loadedScope() !== this.scope()) this.closeAudio();
     this.validatedRevision = -1;
     this.validationRequest++;
     clearInterval(this.ticker);
@@ -182,7 +222,8 @@ export class StepTimerService {
     const scope = this.scope();
     const entries = new Map<string, SavedTimer>();
     try {
-      const raw: unknown = JSON.parse(localStorage.getItem(scope) ?? '[]');
+      this.stored = localStorage.getItem(scope);
+      const raw: unknown = JSON.parse(this.stored ?? '[]');
       if (Array.isArray(raw) && raw.length <= 500)
         for (const value of raw) {
           const saved = this.readSaved(value);
@@ -195,6 +236,7 @@ export class StepTimerService {
     this.entries.set(entries);
     this.now.set(Date.now());
     this.syncClock();
+    this.syncPush();
   }
   /** Only read recipes with active local countdowns; never scan the whole cookbook each tick. */
   private async validateEntries(scope: string, revision: number): Promise<void> {
@@ -221,6 +263,8 @@ export class StepTimerService {
       );
       this.removeWhere((timer) => obsolete.has(timer.target.key));
       this.validatedRevision = revision;
+      this.syncPush();
+      this.push.retry();
       this.tick(true);
     } catch {
       // Keep countdowns recoverable, but don't announce unverified restored timers.
@@ -307,6 +351,12 @@ export class StepTimerService {
     } catch {
       // An unavailable audio device must not interrupt the countdown or its visual alert.
     }
+  }
+  private syncPush(): void {
+    this.ensureScope();
+    this.push.replaceTimers(
+      [...this.entries().values()].map(({ target, deadline }) => ({ target, deadline })),
+    );
   }
   private syncClock(): void {
     const running = [...this.entries().values()].some((saved) => saved.deadline !== undefined);

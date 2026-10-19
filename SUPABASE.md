@@ -48,4 +48,26 @@ Private files use content hashes to avoid duplicate uploads. Unreferenced photos
 
 ## Verification
 
-Run `npm.cmd run build`, the Pages build, and Deno's type check for `supabase/functions/import-recipe/index.ts`. Verify ownership with two users, offline edits/reconnect, sign-out/account switching, photos, and a real recipe import after deployment. No `.spec.ts` or automated tests were added.
+Run `npm.cmd run build`, the Pages build, and Deno's type check for `supabase/functions/import-recipe/index.ts`. Verify ownership with two users, offline edits/reconnect, sign-out/account switching, photos, and a real recipe import after deployment. Run `npm test -- --watch=false` for the app tests. The timer backend also includes validation, Deno runtime, and PostgreSQL migration tests.
+
+
+## Background timer alerts
+
+`timer-alerts` uses Web Push with a private per-account/device queue. Deploy migration `20261019110511_timer_push_alerts.sql`, then deploy the function with the tracked configuration (`verify_jwt = false`). This bypasses only the gateway verifier: the handler independently verifies every account token with Auth, checks its live session in SQL, and uses a separate secret for dispatch requests. Anonymous callers can only read readiness and the public VAPID key.
+
+Generate a P-256 VAPID key pair once using a reputable Web Push library. Store `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a contact HTTPS URL or mailto address), and a separate random 256-bit `TIMER_DISPATCH_SECRET` as **Edge Function secrets**. Keep the private key and dispatch secret out of the frontend, Git, SQL history and logs. Retain the VAPID pair across deploys; rotation requires devices to subscribe again.
+
+In Supabase Vault, create `recipebook_timer_dispatch_secret` with the same dispatch secret and `recipebook_timer_project_url` with the project HTTPS URL. The migration enables `pg_cron` and `pg_net` when available, then schedules `recipe-timer-alerts` every ten seconds. The database only invokes the worker when jobs are due. The public readiness action reports false until the extensions, active job, URL and matching secret are configured. Never put a service-role key in the cron command.
+
+The queue tables are private with RLS and no browser grants. Only service-role RPC wrappers are exposed. Revisions prevent delayed requests from resurrecting paused/reset timers; changed steps, deleted recipes and revoked sessions are checked again before delivery. Generic notifications include a step number and a link, not the recipe title or instruction. Subscription credentials are restricted to known browser push hosts. Dispatch has bounded claims, parallelism, leases, timeouts and retries. Expired subscriptions are disabled. Delivery is best effort and may be delayed by device or network conditions; a stable notification tag reduces duplicate presentation after ambiguous network retries.
+
+Alerts require sign-in, an online setup and explicit browser permission. On iPhone/iPad, use Add to Home Screen and open the installed app. Countdown state and unsent alert changes persist on the device; offline cancellation cannot reach the server until Recipebook reconnects. The UI shows pending changes rather than claiming delivery is armed. Signing out attempts to cancel this device's alerts and session revocation prevents later delivery.
+
+Backend checks (using Deno):
+
+```sh
+deno check --config supabase/functions/timer-alerts/deno.json supabase/functions/timer-alerts/index.ts
+deno test --allow-read --allow-env --allow-net --config supabase/functions/timer-alerts/deno.json --no-lock supabase/functions/timer-alerts/validation.test.mjs supabase/functions/timer-alerts/runtime.test.mjs supabase/functions/timer-alerts/migration.test.mjs
+```
+
+The migration tests use an isolated PostgreSQL WASM database and never touch hosted user data. Check a real installed device after deployment: enable alerts, start a short timer, close the app, and confirm notification arrival and recipe navigation. Also check pause/reset/completion cancellation before relying on alerts.
