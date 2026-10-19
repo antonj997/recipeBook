@@ -1,3 +1,5 @@
+import { StepTimerComponent } from '../../../shared/components/step-timer';
+import { recipeStepTimers } from '../../../core/models/step-timer';
 import type { RecipePageData } from '../../../core/services/recipe-page-resolvers';
 import { RecipeTitleComponent } from '../../../shared/components/recipe-title';
 import { RecipeTransitionPartDirective } from '../../../shared/components/recipe-transition-part';
@@ -47,6 +49,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
     '(window:beforeunload)': 'onBeforeUnload($event)',
   },
   imports: [
+    StepTimerComponent,
     RecipeTitleComponent,
     RecipeTransitionPartDirective,
     SelectMenuComponent,
@@ -152,6 +155,11 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   tabIndicator = viewChild<ElementRef<HTMLElement>>('tabIndicator');
   private tabMotion?: Animation;
   private cookingSessions = inject(CookingSessionService);
+  readonly stepTimers = computed(() => {
+    const recipe = this.recipe();
+    return recipe ? recipeStepTimers(recipe) : [];
+  });
+  readonly hasTimers = computed(() => this.stepTimers().some(Boolean));
   constructor() {
     effect((onCleanup) => {
       const recipe = this.recipe();

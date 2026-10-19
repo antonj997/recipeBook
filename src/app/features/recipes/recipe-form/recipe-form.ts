@@ -1,3 +1,4 @@
+import { createStepFields, stepMetadata } from './step-fields';
 import { RecipeColorPickerComponent } from '../../../shared/components/recipe-color-picker';
 import type { RecipeColor } from '../../../core/models/recipe-color';
 import { SelectMenuComponent } from '../../../shared/components/select-menu';
@@ -16,7 +17,6 @@ import {
 import {
   readRecipeMetadata,
   instructionText,
-  type RecipeStepDetail,
   type RecipeMetadata,
 } from '../../../core/models/recipe-metadata';
 import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
@@ -105,7 +105,9 @@ export class RecipeFormComponent implements OnInit {
       metadata.description.trim() ||
       metadata.totalTime !== null ||
       Object.values(metadata.nutrition).some((value) => value !== null) ||
-      this.stepDetails.getRawValue().some((step) => step.imageDataUrl || step.imageUrl)
+      this.stepDetails
+        .getRawValue()
+        .some((step) => step.imageDataUrl || step.imageUrl || step.timerMode !== 'auto')
     );
   }
   private groupEditors = viewChildren(RecipeGroupsComponent);
@@ -141,15 +143,8 @@ export class RecipeFormComponent implements OnInit {
 
   metadataForm = createMetadataForm(this.fb);
   ingredientSections = this.fb.array([this.fb.nonNullable.control('')]);
-  stepDetails = this.fb.array([this.createStepDetail()]);
+  stepDetails = this.fb.array([createStepFields()]);
 
-  private createStepDetail(detail: RecipeStepDetail = {}) {
-    return this.fb.nonNullable.group({
-      section: detail.section ?? '',
-      imageUrl: detail.imageUrl ?? '',
-      imageDataUrl: detail.imageDataUrl ?? '',
-    });
-  }
   private loadMetadata(recipe: RecipeMetadata): void {
     const metadata = readRecipeMetadata(recipe);
     this.color.set(metadata.color);
@@ -162,7 +157,7 @@ export class RecipeFormComponent implements OnInit {
     );
     this.stepDetails.clear();
     this.instructions.controls.forEach((_, i) =>
-      this.stepDetails.push(this.createStepDetail(metadata.stepDetails?.[i])),
+      this.stepDetails.push(createStepFields(metadata.stepDetails?.[i])),
     );
   }
   // Our reactive form.
@@ -215,7 +210,7 @@ export class RecipeFormComponent implements OnInit {
   // Add and remove instructions.
   addInstruction() {
     this.instructions.push(this.createTextControl());
-    this.stepDetails.push(this.createStepDetail());
+    this.stepDetails.push(createStepFields());
   }
 
   // Runs when the component initializes.
@@ -324,15 +319,20 @@ export class RecipeFormComponent implements OnInit {
       return;
     }
 
-    if (this.form.invalid || this.metadataForm.invalid) {
+    if (this.form.invalid || this.metadataForm.invalid || this.stepDetails.invalid) {
       this.metadataForm.markAllAsTouched();
       this.form.markAllAsTouched();
+      this.stepDetails.markAllAsTouched();
       const invalidId = this.form.controls.title.invalid
         ? 'title'
         : this.form.controls.servings.invalid
           ? 'servings'
           : null;
       if (invalidId) document.getElementById(invalidId)?.focus();
+      else if (this.stepDetails.invalid)
+        document
+          .querySelector<HTMLInputElement>('.step-timer-editor input[aria-invalid="true"]')
+          ?.focus();
       else
         document.querySelector<HTMLDetailsElement>('.optional-details')?.setAttribute('open', '');
       return;
@@ -346,11 +346,7 @@ export class RecipeFormComponent implements OnInit {
       color: this.color(),
       collectionIds: this.collectionIds.value,
       ingredientSections: this.ingredientSections.getRawValue().map((s) => s.trim()),
-      stepDetails: this.stepDetails.getRawValue().map((detail) => ({
-        section: detail.section.trim() || undefined,
-        imageUrl: detail.imageUrl || undefined,
-        imageDataUrl: detail.imageDataUrl || undefined,
-      })),
+      stepDetails: this.stepDetails.controls.map(stepMetadata),
       title: data.title.trim(),
 
       servings: data.servings,

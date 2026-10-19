@@ -69,6 +69,51 @@
                 placeholder="Describe this step"
                 [attr.aria-invalid]="control.touched && control.invalid"
               ></textarea>
+              @if (hasTimer(control)) {
+                <div class="step-timer-editor">
+                  <app-icon name="clock" />
+                  <label [for]="rowId(control) + '-timer'">Timer</label>
+                  <input
+                    [id]="rowId(control) + '-timer'"
+                    type="number"
+                    inputmode="decimal"
+                    min="0.016666666666666666"
+                    max="10080"
+                    step="any"
+                    [value]="timerMinutes(control)"
+                    [attr.aria-label]="'Timer minutes for step ' + number(control)"
+                    [attr.aria-invalid]="timerInvalid(control)"
+                    [attr.aria-describedby]="
+                      timerInvalid(control) ? rowId(control) + '-timer-error' : null
+                    "
+                    (input)="changeTimer(control, $event)"
+                  />
+                  <span>min</span>
+                  <button
+                    type="button"
+                    class="timer-remove"
+                    [attr.aria-label]="'Remove timer from step ' + number(control)"
+                    (click)="removeTimer(control)"
+                  >
+                    <app-icon name="minus" />
+                  </button>
+                </div>
+                @if (timerInvalid(control)) {
+                  <p class="timer-error" [id]="rowId(control) + '-timer-error'" role="alert">
+                    Enter a time between 1 second and 7 days.
+                  </p>
+                }
+              } @else {
+                <button
+                  type="button"
+                  class="timer-add"
+                  [id]="rowId(control) + '-timer-add'"
+                  [attr.aria-label]="'Add timer to step ' + number(control)"
+                  (click)="addTimer(control)"
+                >
+                  <app-icon name="clock" />Add timer
+                </button>
+              }
               @if (photo(control); as photo) {
                 <details class="step-photo">
                   <summary class="disclosure">Photo<app-icon name="chevron" /></summary>

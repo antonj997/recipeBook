@@ -13,6 +13,9 @@ import { Component, input } from '@angular/core';
     stroke-linejoin="round"
   >
     @switch (name()) {
+      @case ('reset') {
+        <path d="M4 10a8 8 0 1 1 0 5M4 4v6h6" />
+      }
       @case ('clock') {
         <path d="M12 4c-11-1-11 17 0 17s11-17 0-17Z M12 8v5l4 2" />
       }
@@ -99,6 +102,7 @@ import { Component, input } from '@angular/core';
 })
 export class IconComponent {
   name = input.required<
+    | 'reset'
     | 'clock'
     | 'settings'
     | 'search'

@@ -1,14 +1,10 @@
+import { createStepFields, stepTimerDuration, type StepFields } from './step-fields';
 import { Component, ElementRef, inject, input, OnInit, OnDestroy, signal } from '@angular/core';
-import { FormArray, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormArray, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark';
 import { AutoGrowTextareaDirective } from '../../../shared/directives/auto-grow-textarea';
 import { IconComponent } from '../../../shared/components/icon';
 
-export type StepFields = FormGroup<{
-  section: FormControl<string>;
-  imageUrl: FormControl<string>;
-  imageDataUrl: FormControl<string>;
-}>;
 interface Group {
   id: number;
   ungrouped: boolean;
@@ -132,15 +128,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     const control = new FormControl('', {
       nonNullable: true,
     });
-    if (this.stepDetails())
-      this.details.set(
-        control,
-        new FormGroup({
-          section: new FormControl('', { nonNullable: true }),
-          imageUrl: new FormControl('', { nonNullable: true }),
-          imageDataUrl: new FormControl('', { nonNullable: true }),
-        }),
-      );
+    if (this.stepDetails()) this.details.set(control, createStepFields());
     this.groups.update((groups) =>
       groups.map((g) => {
         if (g.id !== id) return g;
@@ -232,16 +220,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     control.setValue(lines[0]);
     control.markAsDirty();
     const extra = lines.slice(1).map((text) => new FormControl(text, { nonNullable: true }));
-    if (this.stepDetails())
-      for (const item of extra)
-        this.details.set(
-          item,
-          new FormGroup({
-            section: new FormControl('', { nonNullable: true }),
-            imageUrl: new FormControl('', { nonNullable: true }),
-            imageDataUrl: new FormControl('', { nonNullable: true }),
-          }),
-        );
+    if (this.stepDetails()) for (const item of extra) this.details.set(item, createStepFields());
     this.groups.update((groups) =>
       groups.map((group) => {
         if (group.id !== groupId) return group;
@@ -308,6 +287,48 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
   }
   number(control: FormControl<string>) {
     return this.items().controls.indexOf(control) + 1;
+  }
+  hasTimer(control: FormControl<string>): boolean {
+    const fields = this.details.get(control);
+    return (
+      fields?.controls.timerMode.value === 'custom' || !!stepTimerDuration(control.value, fields)
+    );
+  }
+  timerMinutes(control: FormControl<string>): number | null {
+    const fields = this.details.get(control);
+    if (fields?.controls.timerMode.value === 'custom') return fields.controls.timerMinutes.value;
+    const seconds = stepTimerDuration(control.value, fields);
+    return seconds ? Math.round((seconds / 60) * 1000) / 1000 : null;
+  }
+  timerInvalid(control: FormControl<string>): boolean {
+    const fields = this.details.get(control);
+    return !!fields?.hasError('timer') && (fields.touched || fields.dirty);
+  }
+  addTimer(control: FormControl<string>): void {
+    const fields = this.details.get(control);
+    fields?.patchValue({
+      timerMode: 'custom',
+      timerMinutes: (stepTimerDuration(control.value) ?? 300) / 60,
+    });
+    fields?.markAsDirty();
+    requestAnimationFrame(() => document.getElementById(this.rowId(control) + '-timer')?.focus());
+  }
+  removeTimer(control: FormControl<string>): void {
+    const fields = this.details.get(control);
+    fields?.patchValue({ timerMode: 'off', timerMinutes: null });
+    fields?.markAsDirty();
+    requestAnimationFrame(() =>
+      document.getElementById(this.rowId(control) + '-timer-add')?.focus(),
+    );
+  }
+  changeTimer(control: FormControl<string>, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const fields = this.details.get(control);
+    fields?.patchValue({
+      timerMode: 'custom',
+      timerMinutes: input.value === '' ? null : input.valueAsNumber,
+    });
+    fields?.markAsDirty();
   }
   photo(control: FormControl<string>) {
     const detail = this.details.get(control)?.getRawValue();

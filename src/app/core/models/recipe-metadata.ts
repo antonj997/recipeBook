@@ -10,6 +10,8 @@ export type RecipeNutrition = Partial<Record<(typeof nutritionFields)[number]['k
   servingSize?: string;
 };
 export interface RecipeStepDetail {
+  // Missing: detect from text. Null: the user removed this step's timer.
+  timerSeconds?: number | null;
   section?: string;
   title?: string;
   imageUrl?: string;
@@ -121,6 +123,11 @@ export function readRecipeMetadata(value: unknown, strict = false): RecipeMetada
           if (isRecipeImage(step['imageDataUrl'])) detail.imageDataUrl = step['imageDataUrl'];
           else invalid();
         }
+        if (step['timerSeconds'] !== undefined) {
+          if (step['timerSeconds'] === null || isStepTimerSeconds(step['timerSeconds']))
+            detail.timerSeconds = step['timerSeconds'];
+          else invalid();
+        }
         return detail;
       });
     } else invalid();
@@ -183,4 +190,15 @@ export function instructionText(text: string, detail?: RecipeStepDetail): string
   return title && !text.toLocaleLowerCase().startsWith(title.toLocaleLowerCase())
     ? title + ': ' + text
     : text;
+}
+
+export const maxStepTimerSeconds = 7 * 24 * 60 * 60;
+
+export function isStepTimerSeconds(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isSafeInteger(value) &&
+    value > 0 &&
+    value <= maxStepTimerSeconds
+  );
 }

@@ -1,3 +1,4 @@
+import { StepTimerService } from './step-timer.service';
 import type { RecipeCollection } from '../models/recipe-collection.model';
 import { readRecipeMetadata, isHttpsUrl } from '../models/recipe-metadata';
 import { Injectable, inject } from '@angular/core';
@@ -32,6 +33,7 @@ function isNonEmptyString(value: unknown): value is string {
 })
 export class RecipeService {
   private cloud = inject(CloudCookbookService);
+  private readonly timers = inject(StepTimerService);
   readonly revision = this.cloud.revision;
   readonly accountVersion = this.cloud.auth.accountVersion;
 
@@ -150,6 +152,7 @@ export class RecipeService {
     if (version !== this.accountVersion()) throw new Error('Account changed. Try again.');
     const snapshot = structuredClone(recipe);
     await this.cloud.remove('recipes', id, database);
+    if (version === this.accountVersion()) this.timers.removeRecipe(id);
     return async () => {
       if (version !== this.accountVersion()) throw new Error('Account changed.');
       const existing = await database.recipes.get(id);

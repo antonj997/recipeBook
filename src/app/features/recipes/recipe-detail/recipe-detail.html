@@ -169,6 +169,15 @@
                   </button>
                 </div>
               }
+              @if (hasTimers()) {
+                <p class="timer-help">
+                  {{
+                    isDraft
+                      ? 'Save the recipe to start timers.'
+                      : 'Keep the app open for timer alerts.'
+                  }}
+                </p>
+              }
               <ol>
                 @for (step of selectedRecipe.instructions; track $index) {
                   <li class="cooking-step" [class.completed]="completedSteps().has($index)">
@@ -219,6 +228,13 @@
                           {{ loadingStepPhotos().has($index) ? 'Loading photo…' : 'Load photo' }}
                         </button>
                       }
+                    }
+                    @if (stepTimers()[$index]; as timer) {
+                      <app-step-timer
+                        [target]="timer"
+                        [completed]="completedSteps().has($index)"
+                        [disabled]="isDraft"
+                      />
                     }
                   </li>
                 }

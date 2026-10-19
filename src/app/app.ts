@@ -1,3 +1,4 @@
+import { StepTimerService } from './core/services/step-timer.service';
 import {
   captureSnapshotNavigation,
   recoverSnapshotNavigation,
@@ -83,6 +84,7 @@ export class App {
   readonly accountChanging = signal(false);
 
   constructor() {
+    inject(StepTimerService); // Restore countdowns even when the app opens on the library.
     this.destroyRef.onDestroy(() => {
       this.stopSnapshotGesture?.();
       cancelAnimationFrame(this.snapshotFocusFrame);
