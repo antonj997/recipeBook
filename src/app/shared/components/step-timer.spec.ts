@@ -201,8 +201,12 @@ describe('editable step timer controls', () => {
   it('locks time entry, minute buttons and ruler while running, then unlocks on Stop', async () => {
     const f = fixture();
     const start = f.root.querySelector<HTMLButtonElement>('[aria-label="Start timer for step 1"]')!;
+    expect(f.root.querySelector('[aria-label="Stop timer for step 1"]')).toBeNull();
     start.click();
     f.view.detectChanges();
+    expect(f.root.querySelector('[aria-label="Start timer for step 1"]')).toBeNull();
+    expect(f.root.querySelector('[aria-label="Stop timer for step 1"]')).toBe(start);
+    expect(start.textContent?.trim()).toBe('Stop');
     const input = field(f.root),
       slider = f.root.querySelector<HTMLElement>('[role=slider]')!;
     expect(input.disabled).toBe(true);
@@ -215,6 +219,9 @@ describe('editable step timer controls', () => {
     f.root.querySelector<HTMLButtonElement>('[aria-label="Stop timer for step 1"]')!.click();
     f.view.detectChanges();
     expect(input.disabled).toBe(false);
+    expect(f.root.querySelector('[aria-label="Start timer for step 1"]')).toBe(start);
+    expect(f.root.querySelector('[aria-label="Stop timer for step 1"]')).toBeNull();
+    expect(start.textContent?.trim()).toBe('Start');
     expect(slider.getAttribute('aria-disabled')).toBe('false');
     expect(f.timers.state(target)).toMatchObject({ remaining: 117, running: false });
     f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]')!.click();

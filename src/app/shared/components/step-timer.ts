@@ -30,7 +30,28 @@ import { IconComponent } from './icon';
       role="group"
       [attr.aria-label]="'Timer for step ' + (target().index + 1)"
     >
-      <div class="step-timer" [class.is-running]="state().running" [class.is-done]="state().done">
+      <div class="timer-actions">
+        <button
+          type="button"
+          class="timer-minute"
+          [disabled]="locked() || state().remaining <= 0"
+          [attr.aria-label]="'Subtract one minute from step ' + (target().index + 1) + ' timer'"
+          title="Subtract one minute"
+          (click)="adjust(-1)"
+        >
+          <app-icon name="minus" />
+        </button>
+        <button
+          type="button"
+          class="timer-action timer-toggle"
+          [disabled]="disabled() || (!active() && state().remaining === 0)"
+          [attr.aria-label]="
+            (active() ? 'Stop' : 'Start') + ' timer for step ' + (target().index + 1)
+          "
+          (click)="active() ? stop() : start()"
+        >
+          {{ active() ? 'Stop' : 'Start' }}
+        </button>
         <span class="timer-face" role="timer" aria-live="off">
           <input
             type="text"
@@ -60,47 +81,6 @@ import { IconComponent } from './icon';
             (keydown.escape)="cancelEdit($event)"
           />
         </span>
-        <app-minute-ruler
-          [seconds]="state().done ? target().seconds : state().remaining"
-          [disabled]="locked()"
-          [timeline]="state().running || state().done"
-          [totalSeconds]="state().duration"
-          [elapsedSeconds]="passed()"
-          [overdue]="state().done"
-          [identity]="target().key"
-          [label]="'Timer duration for step ' + (target().index + 1)"
-          (durationChange)="setDuration($event)"
-        />
-      </div>
-      <div class="timer-actions">
-        <button
-          type="button"
-          class="timer-minute"
-          [disabled]="locked() || state().remaining <= 0"
-          [attr.aria-label]="'Subtract one minute from step ' + (target().index + 1) + ' timer'"
-          title="Subtract one minute"
-          (click)="adjust(-1)"
-        >
-          <app-icon name="minus" />
-        </button>
-        <button
-          type="button"
-          class="timer-action timer-start"
-          [disabled]="disabled() || state().running || (!state().done && state().remaining === 0)"
-          [attr.aria-label]="'Start timer for step ' + (target().index + 1)"
-          (click)="start()"
-        >
-          Start
-        </button>
-        <button
-          type="button"
-          class="timer-action"
-          [disabled]="disabled() || (!state().running && !state().done)"
-          [attr.aria-label]="'Stop timer for step ' + (target().index + 1)"
-          (click)="stop()"
-        >
-          Stop
-        </button>
         <button
           type="button"
           class="timer-action"
@@ -120,6 +100,19 @@ import { IconComponent } from './icon';
         >
           <app-icon name="plus" />
         </button>
+      </div>
+      <div class="step-timer" [class.is-running]="state().running" [class.is-done]="state().done">
+        <app-minute-ruler
+          [seconds]="state().done ? target().seconds : state().remaining"
+          [disabled]="locked()"
+          [timeline]="state().running || state().done"
+          [totalSeconds]="state().duration"
+          [elapsedSeconds]="passed()"
+          [overdue]="state().done"
+          [identity]="target().key"
+          [label]="'Timer duration for step ' + (target().index + 1)"
+          (durationChange)="setDuration($event)"
+        />
       </div>
     </div>
     @if (editing()) {
@@ -146,6 +139,7 @@ export class StepTimerComponent {
   private readonly document = inject(DOCUMENT);
   private readonly ruler = viewChild(MinuteRulerComponent);
   protected readonly state = computed(() => this.timers.state(this.target()));
+  protected readonly active = computed(() => this.state().running || this.state().done);
   protected readonly display = computed(() => {
     const state = this.state();
     return formatCountdown(state.done ? state.elapsed : state.remaining);
