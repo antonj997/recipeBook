@@ -22,7 +22,7 @@ import { IconComponent } from './icon';
 @Component({
   selector: 'app-step-timer',
   imports: [MinuteRulerComponent, IconComponent],
-  host: { '[hidden]': 'completed()' },
+  host: { '[hidden]': 'completed()', '[class.is-timing]': 'state().started' },
   styleUrl: './step-timer.scss',
   template: `
     <div
@@ -101,16 +101,19 @@ import { IconComponent } from './icon';
           <app-icon name="plus" />
         </button>
       </div>
-      <div class="step-timer" [class.is-running]="state().running" [class.is-done]="state().done">
+      <div class="step-timer" [class.is-timeline]="state().started">
         <app-minute-ruler
           [seconds]="state().done ? target().seconds : state().remaining"
           [disabled]="locked()"
           [timeline]="state().started"
           [totalSeconds]="state().duration"
           [elapsedSeconds]="passed()"
-          [overdue]="state().done"
           [identity]="target().key"
-          [label]="'Timer duration for step ' + (target().index + 1)"
+          [label]="
+            (state().started ? 'Time remaining' : 'Timer duration') +
+            ' for step ' +
+            (target().index + 1)
+          "
           (durationChange)="setDuration($event)"
         />
       </div>

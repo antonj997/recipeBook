@@ -26,12 +26,6 @@
 app-minute-ruler {
   width: 100%;
 }
-.is-running {
-  border-color: var(--color-green);
-}
-.is-done {
-  border-color: var(--color-danger);
-}
 .timer-face {
   display: flex;
   justify-content: center;
@@ -110,4 +104,16 @@ input.timer-input.is-overdue {
 input.timer-input:disabled {
   opacity: 1;
   -webkit-text-fill-color: currentColor;
+}
+
+:host(.is-timing) {
+  margin-top: -8px;
+}
+:host(.is-timing) .timer-controls {
+  gap: 0;
+}
+.step-timer.is-timeline {
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
