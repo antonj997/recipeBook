@@ -40,7 +40,13 @@
     <span>Update available</span><button type="button" (click)="updates.reload()">Reload</button>
   </aside>
 }
-<div class="toast-region" [class.editing]="hideSettings()" role="status" aria-live="polite">
+<div
+  class="toast-region"
+  [class.editing]="hideSettings()"
+  [class.has-action]="feedback.action()"
+  role="status"
+  aria-live="polite"
+>
   @if (feedback.message()) {
     <div class="toast">
       <app-icon name="check" /><span>{{ feedback.message() }}</span>
@@ -54,7 +60,12 @@
           {{ feedback.busy() ? (action.pendingLabel ?? 'Working…') : action.label }}
         </button>
       }
-      <button type="button" aria-label="Dismiss notification" (click)="feedback.dismiss()">
+      <button
+        type="button"
+        class="toast-dismiss"
+        aria-label="Dismiss notification"
+        (click)="feedback.dismiss()"
+      >
         <app-icon name="close" />
       </button>
     </div>
