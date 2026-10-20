@@ -70,6 +70,56 @@ describe('minute ruler gestures', () => {
     await vi.advanceTimersByTimeAsync(milliseconds);
     return trackOffset(f) - before;
   }
+  it.each([0, 60, 1800, 3600])('keeps swipe selection centered at %i seconds', (seconds) => {
+    const f = setup(seconds);
+    expect(markerX(f)).toBeCloseTo(180, 1);
+  });
+  it.each([-54, 54])(
+    'slides the scale with the finger and coasts in that direction (%i px)',
+    async (distance) => {
+      const f = setup();
+      const before = trackOffset(f);
+      pointer(f.slider, 'pointerdown', 100);
+      f.view.detectChanges();
+      expect(trackOffset(f)).toBe(before);
+      expect(markerX(f)).toBeCloseTo(180, 1);
+      await vi.advanceTimersByTimeAsync(40);
+      pointer(document, 'pointermove', 100 + distance);
+      f.view.detectChanges();
+      expect(trackOffset(f) - before).toBeCloseTo(distance, 1);
+      expect(markerX(f)).toBeCloseTo(180, 1);
+      expect(f.changes.at(-1)).toBe((30 - distance / 18) * 60);
+      await vi.advanceTimersByTimeAsync(20);
+      pointer(document, 'pointerup', 100 + distance);
+      expect((await coastDistance(f)) * Math.sign(distance)).toBeGreaterThan(0);
+      expect(markerX(f)).toBeCloseTo(180, 1);
+      await vi.advanceTimersByTimeAsync(4000);
+      f.view.detectChanges();
+      const selected = f.slider.getAttribute('aria-valuenow');
+      const tick = (f.view.nativeElement as HTMLElement).querySelector<HTMLElement>(
+        '[data-minute="' + selected + '"]',
+      )!;
+      expect(Number.parseFloat(tick.style.left) + trackOffset(f)).toBeCloseTo(180, 1);
+      expect(markerX(f)).toBeCloseTo(180, 1);
+    },
+  );
+  it('wraps a swipe through zero without moving the center selection marker', async () => {
+    const f = setup(0);
+    pointer(f.slider, 'pointerdown', 180);
+    await vi.advanceTimersByTimeAsync(500);
+    pointer(document, 'pointermove', 216);
+    pointer(document, 'pointerup', 216);
+    f.view.detectChanges();
+    expect(f.changes.at(-1)).toBe(59 * 60);
+    expect(markerX(f)).toBeCloseTo(180, 1);
+    pointer(f.slider, 'pointerdown', 200);
+    await vi.advanceTimersByTimeAsync(500);
+    pointer(document, 'pointermove', 146);
+    pointer(document, 'pointerup', 146);
+    f.view.detectChanges();
+    expect(f.changes.at(-1)).toBe(60);
+    expect(markerX(f)).toBeCloseTo(180, 1);
+  });
   it('coasts longer with progressively smaller movement and settles on a whole minute', async () => {
     const f = setup(600);
     await fling(f);
@@ -176,7 +226,7 @@ describe('minute ruler gestures', () => {
       const f = setup();
       await fling(f);
       await vi.advanceTimersByTimeAsync(100);
-      expect(f.changes.at(-1)).toBeGreaterThan(1800);
+      expect(f.changes.at(-1)).toBeLessThan(1800);
       if (reason === 'control') f.view.componentInstance.stopMotion();
       else if (reason === 'destroy') f.view.destroy();
       else if (reason === 'identity') {
@@ -228,8 +278,8 @@ describe('minute ruler gestures', () => {
     await vi.advanceTimersByTimeAsync(1500);
     expect(f.changes).toHaveLength(1);
   });
-  it('keeps the one-minute marker near the left instead of centering the start', () => {
-    const f = setup(60);
+  it('keeps the one-minute marker near the left in edge mode', () => {
+    const f = setup(60, 'edge');
     const marker = (f.view.nativeElement as HTMLElement).querySelector<HTMLElement>(
       '.ruler-marker',
     )!;
@@ -240,7 +290,7 @@ describe('minute ruler gestures', () => {
     pointer(document, 'pointerup', 70);
     expect(f.changes.at(-1)).toBe(180);
   });
-  it('lets a mouse scrub directly without needing a hold', () => {
+  it('lets a mouse slide the scale beneath the fixed marker without needing a hold', () => {
     const f = setup();
     for (const [type, x] of [
       ['pointerdown', 180],
@@ -261,7 +311,7 @@ describe('minute ruler gestures', () => {
       });
       (type === 'pointerdown' ? f.slider : document).dispatchEvent(event);
     }
-    expect(f.changes.at(-1)).toBe(33 * 60);
+    expect(f.changes.at(-1)).toBe(27 * 60);
   });
   it('uses the mouse wheel only when focused and leaves browser zoom alone', () => {
     const f = setup();
@@ -394,7 +444,7 @@ describe('minute ruler gestures', () => {
       expect(scroll.defaultPrevented).toBe(true);
     }
     await vi.advanceTimersByTimeAsync(1100);
-    expect(f.changes.at(-1)).toBeGreaterThan(30 * 60);
+    expect(f.changes.at(-1)).toBeLessThan(30 * 60);
     pointer(document, 'pointerup', 220, 70);
     for (const type of ['touchmove', 'wheel']) {
       const scroll = new Event(type, { cancelable: true });
@@ -547,8 +597,8 @@ describe('minute ruler gestures', () => {
     f.slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     expect(f.changes.at(-1)).toBe(0);
   });
-  it('retains a continuous mouse drag after wrapping through zero', () => {
-    const f = setup(3540);
+  it('retains a continuous edge-mode mouse drag after wrapping through zero', () => {
+    const f = setup(3540, 'edge');
     const mouse = (type: string, x: number) => {
       const event = new MouseEvent(type, {
         bubbles: true,
@@ -623,7 +673,7 @@ describe('minute ruler gestures', () => {
     pointer(document, 'pointermove', 234);
     pointer(document, 'pointerup', 234);
     f.view.detectChanges();
-    expect(markerX(f)).toBeCloseTo(234, 1);
+    expect(markerX(f)).toBeCloseTo(180, 1);
     const offset = root.querySelector<HTMLElement>('.ruler-ticks')!.style.transform,
       count = f.changes.length;
     f.view.componentRef.setInput('timeline', true);
