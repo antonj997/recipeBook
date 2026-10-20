@@ -173,6 +173,7 @@ export class MinuteRulerComponent {
     left: number;
     width: number;
     active: boolean;
+    interruptedCoast: boolean;
     mode: TimerRulerMode;
     mouse: boolean;
     sampleX: number;
@@ -196,8 +197,12 @@ export class MinuteRulerComponent {
   };
   private readonly interruptListener = (event: PointerEvent) => {
     if (!this.coasting) return;
-    // A ruler touch arrests motion in begin(), which retains speed only for a new fast swipe.
-    if (event.pointerType === 'touch' && this.host.nativeElement.contains(event.target as Node))
+    // Let begin() distinguish stopping the coast from picking a new tick or starting a drag.
+    if (
+      event.button === 0 &&
+      event.isPrimary !== false &&
+      this.host.nativeElement.contains(event.target as Node)
+    )
       return;
     this.cancel();
   };
@@ -274,6 +279,7 @@ export class MinuteRulerComponent {
     const now = performance.now();
     const mode = this.preferences.mode();
     const from = this.position() ?? this.idlePosition();
+    const interruptedCoast = this.coasting;
     const carry =
       mode === 'swipe' && event.pointerType === 'touch'
         ? this.coastSpeed * Math.exp(-(now - this.coastAt) / coastFriction)
@@ -295,6 +301,7 @@ export class MinuteRulerComponent {
       left: bounds.left,
       width: bounds.width,
       active: false,
+      interruptedCoast,
       mode,
       mouse: event.pointerType === 'mouse',
       sampleX: event.clientX,
@@ -411,9 +418,14 @@ export class MinuteRulerComponent {
     const gesture = this.gesture;
     if (!gesture || event.pointerId !== gesture.id) return;
     if (gesture.mode === 'swipe' && !gesture.active) {
-      // A tap brings that tick to the center; touching down never jumps the scale.
-      const x = Math.max(inset, Math.min(gesture.width - inset, event.clientX - gesture.left));
-      this.setPosition(gesture.position + (x - gesture.width / 2) / pitch);
+      if (gesture.interruptedCoast) {
+        // A stop touch keeps the centered value, regardless of where the finger lands.
+        this.setPosition(Math.round(gesture.position));
+      } else {
+        // A tap on a stationary scale brings the touched tick to the center.
+        const x = Math.max(inset, Math.min(gesture.width - inset, event.clientX - gesture.left));
+        this.setPosition(gesture.position + (x - gesture.width / 2) / pitch);
+      }
     } else this.pointAt(event.clientX, true);
     const velocity =
       gesture.active && !gesture.mouse && performance.now() - gesture.sampleAt < 120

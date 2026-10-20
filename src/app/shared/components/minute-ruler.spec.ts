@@ -37,7 +37,14 @@ describe('minute ruler gestures', () => {
     });
     return { view, slider, changes };
   }
-  function pointer(element: HTMLElement | Document, type: string, x: number, y = 20, id = 1) {
+  function pointer(
+    element: HTMLElement | Document,
+    type: string,
+    x: number,
+    y = 20,
+    id = 1,
+    pointerType = 'touch',
+  ) {
     const event = new MouseEvent(type, {
       bubbles: true,
       cancelable: true,
@@ -48,7 +55,7 @@ describe('minute ruler gestures', () => {
     Object.defineProperties(event, {
       pointerId: { value: id },
       isPrimary: { value: true },
-      pointerType: { value: 'touch' },
+      pointerType: { value: pointerType },
     });
     element.dispatchEvent(event);
     return event;
@@ -179,6 +186,48 @@ describe('minute ruler gestures', () => {
     expect(f.changes).toHaveLength(count);
     await fling(f, 60);
     expect(Math.abs(Math.abs(await coastDistance(f)) - freshReverse)).toBeLessThan(18);
+  });
+  it.each([
+    [1800, 300, 90],
+    [1800, 300, 270],
+    [1800, 60, 90],
+    [1800, 60, 270],
+    [60, 300, 270],
+    [3540, 60, 90],
+  ])(
+    'stops on the centered tick when tapped mid-coast (%i s, swipe %i, tap %i)',
+    async (seconds, end, tap) => {
+      const f = setup(seconds);
+      await fling(f, end);
+      await vi.advanceTimersByTimeAsync(130);
+      const before = trackOffset(f);
+      const selected = f.slider.getAttribute('aria-valuenow');
+      pointer(f.slider, 'pointerdown', tap);
+      expect(trackOffset(f)).toBeCloseTo(before, 2);
+      await vi.advanceTimersByTimeAsync(50);
+      pointer(document, 'pointerup', tap);
+      expect(f.changes.at(-1)).toBe(Number(selected) * 60);
+      expect(Math.abs(trackOffset(f) - before)).toBeLessThanOrEqual(9.001);
+      expect(markerX(f)).toBeCloseTo(180, 1);
+      const settled = trackOffset(f),
+        count = f.changes.length;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(trackOffset(f)).toBe(settled);
+      expect(f.changes).toHaveLength(count);
+    },
+  );
+  it('lets a mouse stop the coast without selecting the clicked side tick', async () => {
+    const f = setup();
+    await fling(f);
+    await vi.advanceTimersByTimeAsync(130);
+    trackOffset(f);
+    const selected = f.slider.getAttribute('aria-valuenow');
+    pointer(f.slider, 'pointerdown', 270, 20, 2, 'mouse');
+    pointer(document, 'pointerup', 270, 20, 2, 'mouse');
+    expect(f.changes.at(-1)).toBe(Number(selected) * 60);
+    const count = f.changes.length;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(f.changes).toHaveLength(count);
   });
   it('never starts edge scrolling in swipe mode, even when held at the edge', async () => {
     const f = setup();
