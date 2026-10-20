@@ -149,6 +149,30 @@
 
   <section class="settings-section" id="app-settings" aria-labelledby="app-heading">
     <h2 id="app-heading">App</h2>
+    <div class="ruler-test">
+      <h3>Timer ruler</h3>
+      <p class="hint">Temporary test: choose one scrolling behavior.</p>
+      <button
+        type="button"
+        role="switch"
+        class="ruler-mode-switch"
+        [attr.aria-checked]="rulerPreferences.mode() === 'swipe'"
+        aria-describedby="timer-ruler-mode-help"
+        (click)="rulerPreferences.setMode(rulerPreferences.mode() === 'swipe' ? 'edge' : 'swipe')"
+      >
+        <span class="ruler-switch-track" aria-hidden="true"
+          ><span class="ruler-switch-thumb"></span
+        ></span>
+        Use swipe momentum
+      </button>
+      <p class="hint" id="timer-ruler-mode-help" aria-live="polite">
+        {{
+          rulerPreferences.mode() === 'swipe'
+            ? 'Swipe momentum: drag and flick to coast. Holding near an edge does not scroll.'
+            : 'Edge hold: hold near an edge to scroll. Releasing stops immediately.'
+        }}
+      </p>
+    </div>
     <app-timer-alert-preferences />
     @if (app.available()) {
       <div class="app-update">

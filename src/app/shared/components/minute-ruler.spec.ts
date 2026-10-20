@@ -1,6 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MinuteRulerComponent } from './minute-ruler';
+import {
+  TimerRulerPreferencesService,
+  type TimerRulerMode,
+} from '../../core/services/timer-ruler-preferences.service';
 
 describe('minute ruler gestures', () => {
   beforeEach(() => {
@@ -17,8 +21,10 @@ describe('minute ruler gestures', () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    localStorage.removeItem('recipebook:timer-ruler-mode:v1');
   });
-  function setup(seconds = 1800) {
+  function setup(seconds = 1800, mode: TimerRulerMode = 'swipe') {
+    TestBed.inject(TimerRulerPreferencesService).setMode(mode);
     const view = TestBed.createComponent(MinuteRulerComponent);
     view.componentRef.setInput('seconds', seconds);
     view.detectChanges();
@@ -123,6 +129,46 @@ describe('minute ruler gestures', () => {
     expect(f.changes).toHaveLength(count);
     await fling(f, 60);
     expect(Math.abs(Math.abs(await coastDistance(f)) - freshReverse)).toBeLessThan(18);
+  });
+  it('never starts edge scrolling in swipe mode, even when held at the edge', async () => {
+    const f = setup();
+    pointer(f.slider, 'pointerdown', 180);
+    pointer(document, 'pointermove', 350);
+    const offset = trackOffset(f),
+      count = f.changes.length;
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(trackOffset(f)).toBe(offset);
+    expect(f.changes).toHaveLength(count);
+    pointer(document, 'pointerup', 350);
+  });
+  it('stops immediately on release in edge mode without adding swipe momentum', async () => {
+    const f = setup(1800, 'edge');
+    await fling(f);
+    const offset = trackOffset(f),
+      count = f.changes.length;
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(trackOffset(f)).toBe(offset);
+    expect(f.changes).toHaveLength(count);
+  });
+  it('cancels both kinds of motion immediately when the test mode changes', async () => {
+    const f = setup(),
+      preferences = TestBed.inject(TimerRulerPreferencesService);
+    await fling(f);
+    await vi.advanceTimersByTimeAsync(100);
+    preferences.setMode('edge');
+    f.view.detectChanges();
+    let count = f.changes.length;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(f.changes).toHaveLength(count);
+    pointer(f.slider, 'pointerdown', 180);
+    pointer(document, 'pointermove', 350);
+    await vi.advanceTimersByTimeAsync(400);
+    preferences.setMode('swipe');
+    f.view.detectChanges();
+    count = f.changes.length;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(f.changes).toHaveLength(count);
+    pointer(document, 'pointerup', 350);
   });
   it.each(['control', 'pointerdown', 'scroll', 'blur', 'hidden', 'destroy', 'identity'])(
     'interrupts momentum on %s',
@@ -372,7 +418,7 @@ describe('minute ruler gestures', () => {
     );
   }
   it('follows the thumb while the scale stays still throughout the middle area', async () => {
-    const f = setup();
+    const f = setup(1800, 'edge');
     f.view.detectChanges();
     const initial = rulerWindow(f);
     pointer(f.slider, 'pointerdown', 126);
@@ -396,7 +442,7 @@ describe('minute ruler gestures', () => {
   it.each([90, 180, 270])(
     'starts anywhere and scrolls only in the edge zone (start %i)',
     async (start) => {
-      const f = setup();
+      const f = setup(1800, 'edge');
       pointer(f.slider, 'pointerdown', start);
       pointer(document, 'pointermove', 330);
       await vi.advanceTimersByTimeAsync(400);
@@ -422,7 +468,7 @@ describe('minute ruler gestures', () => {
     },
   );
   it('selects the tick under a dragged thumb instead of keeping a fixed center marker', () => {
-    const f = setup();
+    const f = setup(1800, 'edge');
     pointer(f.slider, 'pointerdown', 90);
     pointer(document, 'pointermove', 100);
     f.view.detectChanges();
@@ -433,7 +479,7 @@ describe('minute ruler gestures', () => {
     expect(markerX(f)).toBeCloseTo(108, 1);
   });
   it('accelerates toward the edge and stops drifting when held in the middle', async () => {
-    const f = setup();
+    const f = setup(1800, 'edge');
     pointer(f.slider, 'pointerdown', 300);
     await vi.advanceTimersByTimeAsync(400);
     const first = f.changes.at(-1)!;
@@ -454,7 +500,7 @@ describe('minute ruler gestures', () => {
     expect(f.changes).toHaveLength(count);
   });
   it.each(['pointercancel', 'scroll', 'blur'])('cancels a held gesture on %s', async (event) => {
-    const f = setup();
+    const f = setup(1800, 'edge');
     pointer(f.slider, 'pointerdown', 350);
     await vi.advanceTimersByTimeAsync(500);
     (event === 'blur' ? window : document).dispatchEvent(new Event(event));
@@ -463,7 +509,7 @@ describe('minute ruler gestures', () => {
     expect(f.changes).toHaveLength(count);
   });
   it('stops on an account/step identity change, disabled state and destruction', async () => {
-    const f = setup();
+    const f = setup(1800, 'edge');
     for (const input of ['identity', 'disabled']) {
       pointer(f.slider, 'pointerdown', 350);
       await vi.advanceTimersByTimeAsync(500);

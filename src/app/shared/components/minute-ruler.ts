@@ -14,6 +14,10 @@ import {
   untracked,
 } from '@angular/core';
 import { formatCountdown, maxClockSeconds } from '../../core/models/step-timer';
+import {
+  TimerRulerPreferencesService,
+  type TimerRulerMode,
+} from '../../core/services/timer-ruler-preferences.service';
 
 const pitch = 18;
 const secondPitch = pitch / 5;
@@ -96,6 +100,7 @@ export class MinuteRulerComponent {
   readonly durationChange = output<number>();
   protected readonly maximum = maximum;
   private readonly document = inject(DOCUMENT);
+  private readonly preferences = inject(TimerRulerPreferencesService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly width = signal(360);
   private readonly position = signal<number | undefined>(undefined);
@@ -165,6 +170,7 @@ export class MinuteRulerComponent {
     left: number;
     width: number;
     active: boolean;
+    mode: TimerRulerMode;
     mouse: boolean;
     sampleX: number;
     sampleAt: number;
@@ -177,6 +183,7 @@ export class MinuteRulerComponent {
   private lastFrame = 0;
   private lastIdentity?: string;
   private lastTimeline?: boolean;
+  private lastMode?: TimerRulerMode;
   private coasting = false;
   private coastSpeed = 0;
   private coastAt = 0;
@@ -206,6 +213,7 @@ export class MinuteRulerComponent {
       const identity = this.identity();
       const unavailable = this.disabled();
       const timeline = this.timeline();
+      const mode = this.preferences.mode();
       untracked(() => {
         const changed = this.lastIdentity !== identity;
         const starting = !changed && this.lastTimeline === false && timeline;
@@ -214,6 +222,7 @@ export class MinuteRulerComponent {
           changed ||
           unavailable ||
           timeline !== this.lastTimeline ||
+          mode !== this.lastMode ||
           this.gesture ||
           this.coasting
         )
@@ -224,6 +233,7 @@ export class MinuteRulerComponent {
         }
         this.lastIdentity = identity;
         this.lastTimeline = timeline;
+        this.lastMode = mode;
         if (starting) this.rewind(from);
       });
     });
@@ -259,8 +269,9 @@ export class MinuteRulerComponent {
   protected begin(event: PointerEvent): void {
     if (this.locked() || event.button !== 0 || event.isPrimary === false) return;
     const now = performance.now();
+    const mode = this.preferences.mode();
     const carry =
-      event.pointerType === 'touch'
+      mode === 'swipe' && event.pointerType === 'touch'
         ? this.coastSpeed * Math.exp(-(now - this.coastAt) / coastFriction)
         : 0;
     this.cancel();
@@ -279,6 +290,7 @@ export class MinuteRulerComponent {
       left: bounds.left,
       width: bounds.width,
       active: false,
+      mode,
       mouse: event.pointerType === 'mouse',
       sampleX: event.clientX,
       sampleAt: now,
@@ -299,7 +311,7 @@ export class MinuteRulerComponent {
     this.document.addEventListener('pointerup', this.upListener);
     this.document.addEventListener('pointercancel', this.cancelListener);
     this.watchInterruption();
-    if (!this.gesture.mouse) this.hold = setTimeout(() => this.activate(), 350);
+    if (mode === 'edge' && !this.gesture.mouse) this.hold = setTimeout(() => this.activate(), 350);
   }
 
   private activate(): void {
@@ -345,7 +357,7 @@ export class MinuteRulerComponent {
 
   private edgeSpeed(): number {
     const gesture = this.gesture;
-    if (!gesture || gesture.mouse) return 0;
+    if (!gesture || gesture.mouse || gesture.mode !== 'edge') return 0;
     const x = gesture.clientX - gesture.left;
     const edge = gesture.width * 0.2;
     const amount =
@@ -393,7 +405,7 @@ export class MinuteRulerComponent {
     const reducedMotion = this.document.defaultView?.matchMedia?.(
       '(prefers-reduced-motion: reduce)',
     ).matches;
-    const coast = Math.abs(velocity) >= 0.35 && !reducedMotion;
+    const coast = gesture.mode === 'swipe' && Math.abs(velocity) >= 0.35 && !reducedMotion;
     if (!coast) this.anchor.set(this.x(Math.round(from)));
     const now = performance.now();
     const carry =
