@@ -197,8 +197,7 @@ describe('minute ruler gestures', () => {
     expect(tick(5).classList.contains('is-fine')).toBe(false);
     expect(tick(5).classList.contains('is-major')).toBe(false);
     expect(tick(10).classList.contains('is-major')).toBe(true);
-    expect(tick(10).querySelector('.ruler-number')?.textContent?.trim()).toBe('10');
-    expect(tick(60).querySelector('.ruler-number')?.textContent?.trim()).toBe('00');
+    expect(tick(10).querySelector('.ruler-number')?.textContent?.trim()).toBe('00:10');
     expect(
       Number.parseFloat(tick(5).style.left) - Number.parseFloat(tick(0).style.left),
     ).toBeCloseTo(18);

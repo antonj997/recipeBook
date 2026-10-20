@@ -529,7 +529,7 @@ export class MinuteRulerComponent {
     return this.secondsScale() ? tick % 10 === 0 : this.tickMinute(tick) % 5 === 0;
   }
   protected tickLabel(tick: number): string {
-    return this.secondsScale() ? String(tick % 60).padStart(2, '0') : String(this.tickMinute(tick));
+    return this.secondsScale() ? formatCountdown(tick) : String(this.tickMinute(tick));
   }
   protected tickMinute(tick: number): number {
     return ((tick % cycleLength) + cycleLength) % cycleLength;
