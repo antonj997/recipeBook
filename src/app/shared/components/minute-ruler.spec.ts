@@ -106,7 +106,7 @@ describe('minute ruler gestures', () => {
       const tick = (f.view.nativeElement as HTMLElement).querySelector<HTMLElement>(
         '[data-minute="' + selected + '"]',
       )!;
-      expect(Number.parseFloat(tick.style.left) + trackOffset(f)).toBeCloseTo(180, 1);
+      expect(Number(tick.style.transform.match(/translate\(([\d.-]+)px/)?.[1])).toBeCloseTo(180, 1);
       expect(markerX(f)).toBeCloseTo(180, 1);
     },
   );
@@ -427,7 +427,7 @@ describe('minute ruler gestures', () => {
     const marker = (view.nativeElement as HTMLElement).querySelector<HTMLElement>('.ruler-marker')!;
     expect(marker.style.transform).toBe('translateX(228px)');
   });
-  it('keeps both visual layers stable while reversing modes and exposes only the current control', () => {
+  it('keeps the control surfaces stable while reversing modes and exposes only the current control', () => {
     const f = setup(),
       root = f.view.nativeElement as HTMLElement;
     const picker = root.querySelector('.minute-ruler');
@@ -451,6 +451,33 @@ describe('minute ruler gestures', () => {
       }
       expect(f.changes).toEqual([]);
     }
+  });
+  it('carries the actual edit ticks into the countdown strip and back without replacing them', () => {
+    const f = setup(300),
+      root = f.view.nativeElement as HTMLElement;
+    const editTicks = Array.from(root.querySelectorAll<HTMLElement>('.ruler-tick[data-minute]'));
+    const before = editTicks.map((tick) => tick.style.transform);
+    expect(editTicks.length).toBeGreaterThan(12);
+    f.view.componentRef.setInput('timeline', true);
+    f.view.componentRef.setInput('totalSeconds', 300);
+    f.view.detectChanges();
+    const progressTicks = Array.from(root.querySelectorAll('.progress-tick'));
+    expect(editTicks.every((tick) => progressTicks.includes(tick))).toBe(true);
+    expect(editTicks.every((tick, i) => tick.style.transform !== before[i])).toBe(true);
+    const runningPositions = progressTicks.map((tick) => (tick as HTMLElement).style.transform);
+    f.view.componentRef.setInput('seconds', 120);
+    f.view.componentRef.setInput('elapsedSeconds', 180);
+    f.view.detectChanges();
+    expect(
+      Array.from(root.querySelectorAll<HTMLElement>('.progress-tick')).map(
+        (tick) => tick.style.transform,
+      ),
+    ).toEqual(runningPositions);
+    f.view.componentRef.setInput('seconds', 300);
+    f.view.componentRef.setInput('timeline', false);
+    f.view.detectChanges();
+    expect(Array.from(root.querySelectorAll('.ruler-tick[data-minute]'))).toEqual(editTicks);
+    expect(editTicks.map((tick) => tick.style.transform)).toEqual(before);
   });
   it('drains the orange ticks from right to left and reuses the full timeline', () => {
     const f = setup(1800),
@@ -701,7 +728,7 @@ describe('minute ruler gestures', () => {
   it('shows a small label every five minutes, including sixty followed by zero', () => {
     const f = setup(3600),
       root = f.view.nativeElement as HTMLElement;
-    const ticks = Array.from(root.querySelectorAll<HTMLElement>('.ruler-tick'));
+    const ticks = Array.from(root.querySelectorAll<HTMLElement>('.ruler-tick[data-minute]'));
     const labels = Array.from(root.querySelectorAll('.ruler-number')).map((e) =>
       e.textContent?.trim(),
     );

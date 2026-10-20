@@ -1,7 +1,7 @@
 :host {
   display: block;
   width: min(100%, 30rem);
-  margin: 4px 0 20px;
+  margin: -4px 0 20px;
   font-family: Arial, Helvetica, sans-serif;
   transition: margin-top 240ms var(--ease-out);
 }
@@ -11,8 +11,7 @@
 .timer-controls {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 4px;
-  transition: gap 240ms var(--ease-out);
+  gap: 0;
 }
 .step-timer {
   display: grid;
@@ -122,9 +121,6 @@ input.timer-input:disabled {
 
 :host(.is-timing) {
   margin-top: -8px;
-}
-:host(.is-timing) .timer-controls {
-  gap: 0;
 }
 .step-timer.is-timeline {
   padding: 0;

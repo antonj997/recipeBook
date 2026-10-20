@@ -45,13 +45,7 @@ const flywheelWindow = 300;
         [attr.aria-valuemax]="totalSeconds()"
         [attr.aria-valuenow]="progressRemaining()"
         [attr.aria-valuetext]="progressText()"
-      >
-        <div class="progress-ticks" aria-hidden="true">
-          @for (tick of progressTicks(); track tick) {
-            <span class="progress-tick" [class.is-remaining]="tick < remainingTicks()"></span>
-          }
-        </div>
-      </div>
+      ></div>
       <div
         class="minute-ruler"
         [attr.role]="timeline() ? null : 'slider'"
@@ -73,19 +67,26 @@ const flywheelWindow = 300;
         (blur)="wheelRemainder = 0"
         title="Drag to adjust; tap to stop. Use arrow keys for one minute, Page Up/Down for ten. Scroll when focused."
       >
+        <div class="shared-ticks" aria-hidden="true">
+          @for (tick of visualTicks(); track tick.id) {
+            <span
+              class="ruler-tick progress-tick"
+              [class.is-edit-tick]="tick.editTick !== undefined"
+              [class.is-major]="tick.major"
+              [class.is-remaining]="tick.id < remainingTicks()"
+              [attr.data-minute]="tick.editTick === undefined ? null : tickMinute(tick.editTick)"
+              [style.transform]="tick.transform"
+            ></span>
+          }
+        </div>
         <div class="ruler-viewport" aria-hidden="true">
           <div class="ruler-ticks" [style.transform]="offset()">
             @for (tick of ticks(); track tick) {
-              <span
-                class="ruler-tick"
-                [class.is-major]="tickMinute(tick) % 5 === 0"
-                [attr.data-minute]="tickMinute(tick)"
-                [style.left.px]="tick * pitch"
-              >
-                @if (tickMinute(tick) % 5 === 0) {
+              @if (tickMinute(tick) % 5 === 0) {
+                <span class="ruler-label" [style.left.px]="tick * pitch">
                   <span class="ruler-number">{{ tickMinute(tick) }}</span>
-                }
-              </span>
+                </span>
+              }
             }
           </div>
         </div>
@@ -159,6 +160,26 @@ export class MinuteRulerComponent {
   protected readonly markerTransform = computed(
     () => 'translateX(' + this.x(this.visiblePosition()) + 'px)',
   );
+  // A fixed pool preserves the same tick nodes across Start/Reset. Edit ticks occupy
+  // evenly spread slots; the remaining slots unfold from their nearest edit tick.
+  protected readonly visualTicks = computed(() => {
+    const edit = this.ticks();
+    const count = this.progressTicks().length;
+    const editCount = Math.min(edit.length, count);
+    const timeline = this.timeline();
+    return this.progressTicks().map((id) => {
+      const editIndex = Math.round((id * (editCount - 1)) / (count - 1));
+      const shared = id === Math.round((editIndex * (count - 1)) / (editCount - 1));
+      const editTick = edit[editIndex];
+      const x = timeline ? -10 + ((this.progressWidth() - 4) * id) / (count - 1) : this.x(editTick);
+      return {
+        id,
+        editTick: shared ? editTick : undefined,
+        major: shared && this.tickMinute(editTick) % 5 === 0,
+        transform: 'translate(' + Math.round(x * 1000) / 1000 + 'px, ' + (timeline ? 0 : 7) + 'px)',
+      };
+    });
+  });
   private gesture?: {
     id: number;
     element: HTMLElement;
