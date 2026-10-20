@@ -130,6 +130,7 @@ describe('deadline-based step countdowns', () => {
       remaining: 120,
       duration: 120,
       running: false,
+      paused: false,
       started: false,
       done: false,
       elapsed: 0,
@@ -244,6 +245,7 @@ describe('deadline-based step countdowns', () => {
       remaining: 90,
       duration: 90,
       running: false,
+      paused: false,
       started: false,
     });
     timers.reset(target);
@@ -313,6 +315,7 @@ describe('deadline-based step countdowns', () => {
       remaining: 0,
       duration: 0,
       running: false,
+      paused: false,
       started: false,
       done: false,
       elapsed: 0,
@@ -429,6 +432,7 @@ describe('deadline-based step countdowns', () => {
       remaining: 0,
       duration: 0,
       running: false,
+      paused: false,
       started: false,
     });
     timers.pause(target);
@@ -565,6 +569,29 @@ describe('deadline-based step countdowns', () => {
     });
   });
 
+  it.each([-1, 1.5, '5', null])('rejects an invalid saved overdue pause: %s', (elapsed) => {
+    const key = 'recipebook:timers:v1:' + JSON.stringify(['timer-tests', 'device']);
+    localStorage.setItem(
+      key,
+      JSON.stringify([
+        {
+          target,
+          remaining: 0,
+          duration: 120,
+          started: true,
+          done: true,
+          elapsed,
+          updatedAt: Date.now(),
+        },
+      ]),
+    );
+    expect(TestBed.inject(StepTimerService).state(target)).toMatchObject({
+      remaining: 120,
+      started: false,
+      done: false,
+      paused: false,
+    });
+  });
   it('forwards deadline changes and resets to the alert scheduler', () => {
     const timers = TestBed.inject(StepTimerService);
     timers.start(target);
@@ -629,6 +656,40 @@ describe('deadline-based step countdowns', () => {
     timers.reset(target);
     expect(push.replaceTimers).toHaveBeenLastCalledWith([]);
   });
+  it('freezes overdue time on Stop, restores it after reload and resumes from there', async () => {
+    let timers = TestBed.inject(StepTimerService);
+    timers.setDuration(target, 2);
+    timers.start(target);
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(7000);
+    timers.pause(target);
+    expect(timers.state(target)).toMatchObject({
+      remaining: 0,
+      duration: 2,
+      started: true,
+      done: true,
+      paused: true,
+      elapsed: 5,
+    });
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([{ target, deadline: undefined }]);
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(timers.state(target).elapsed).toBe(5);
+    timers = reloadTimers();
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(timers.state(target)).toMatchObject({ done: true, paused: true, elapsed: 5 });
+    timers.start(target);
+    expect(timers.state(target)).toMatchObject({
+      duration: 2,
+      done: true,
+      paused: false,
+      elapsed: 5,
+    });
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(timers.state(target).elapsed).toBe(8);
+    timers.reset(target);
+    expect(timers.state(target)).toMatchObject({ started: false, done: false, remaining: 120 });
+  });
   it('restarts an overdue timer from the recipe duration', async () => {
     const timers = TestBed.inject(StepTimerService);
     timers.setDuration(target, 1);
@@ -660,7 +721,7 @@ describe('deadline-based step countdowns', () => {
       elapsed: 0,
     });
   });
-  it('completes an expired timer normally when Pause precedes the next clock callback', async () => {
+  it('silently freezes an expired timer when Stop precedes the next clock callback', async () => {
     const play = vi.fn();
     class TestAudio {
       state = 'running';
@@ -700,26 +761,36 @@ describe('deadline-based step countdowns', () => {
       vi.setSystemTime(deadline + 2000);
       timers.pause(target);
       await vi.advanceTimersByTimeAsync(0);
-      expect(timers.state(target)).toMatchObject({ done: true, running: false, elapsed: 2 });
-      expect(push.replaceTimers).toHaveBeenLastCalledWith([{ target, deadline }]);
-      expect(feedback).toHaveBeenCalledTimes(1);
-      expect(play).toHaveBeenCalledTimes(2);
+      expect(timers.state(target)).toMatchObject({
+        done: true,
+        running: false,
+        paused: true,
+        elapsed: 2,
+      });
+      expect(push.replaceTimers).toHaveBeenLastCalledWith([{ target, deadline: undefined }]);
+      expect(feedback).not.toHaveBeenCalled();
+      expect(play).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(2000);
-      expect(timers.state(target).elapsed).toBe(4);
-      expect(play).toHaveBeenCalledTimes(4);
+      expect(timers.state(target).elapsed).toBe(2);
+      expect(play).not.toHaveBeenCalled();
 
       vi.setSystemTime(deadline + 3_600_000);
       document.dispatchEvent(new Event('visibilitychange'));
       await vi.advanceTimersByTimeAsync(0);
-      expect(timers.state(target)).toMatchObject({ started: false, done: false, remaining: 120 });
-      expect(push.replaceTimers).toHaveBeenLastCalledWith([]);
+      expect(timers.state(target)).toMatchObject({
+        started: true,
+        done: true,
+        paused: true,
+        elapsed: 2,
+      });
+      expect(push.replaceTimers).toHaveBeenLastCalledWith([{ target, deadline: undefined }]);
     } finally {
       vi.unstubAllGlobals();
     }
   });
 
-  it('repeats a chime for at most 30 seconds and reset stops it immediately', async () => {
+  it('repeats a chime for at most 30 seconds and Stop or Reset silences it immediately', async () => {
     const play = vi.fn();
     class TestAudio {
       state = 'running';
@@ -755,10 +826,13 @@ describe('deadline-based step countdowns', () => {
     expect(play).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync(5000);
     expect(play.mock.calls.length).toBeGreaterThan(2);
-    timers.reset(target);
+    timers.pause(target);
     const stopped = play.mock.calls.length;
+    const elapsed = timers.state(target).elapsed;
     await vi.advanceTimersByTimeAsync(5000);
     expect(play).toHaveBeenCalledTimes(stopped);
+    expect(timers.state(target).elapsed).toBe(elapsed);
+    timers.reset(target);
     timers.setDuration(target, 1);
     timers.start(target);
     await vi.advanceTimersByTimeAsync(1000);

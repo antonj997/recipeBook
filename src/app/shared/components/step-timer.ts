@@ -44,7 +44,7 @@ import { IconComponent } from './icon';
         <button
           type="button"
           class="timer-action timer-toggle"
-          [disabled]="disabled() || (!active() && state().remaining === 0)"
+          [disabled]="disabled() || (!active() && !state().done && state().remaining === 0)"
           [attr.aria-label]="
             (active() ? 'Stop' : 'Start') + ' timer for step ' + (target().index + 1)
           "
@@ -105,7 +105,7 @@ import { IconComponent } from './icon';
         <app-minute-ruler
           [seconds]="state().done ? target().seconds : state().remaining"
           [disabled]="locked()"
-          [timeline]="state().running || state().done"
+          [timeline]="state().started"
           [totalSeconds]="state().duration"
           [elapsedSeconds]="passed()"
           [overdue]="state().done"
@@ -139,15 +139,15 @@ export class StepTimerComponent {
   private readonly document = inject(DOCUMENT);
   private readonly ruler = viewChild(MinuteRulerComponent);
   protected readonly state = computed(() => this.timers.state(this.target()));
-  protected readonly active = computed(() => this.state().running || this.state().done);
+  protected readonly active = computed(
+    () => this.state().running || (this.state().done && !this.state().paused),
+  );
   protected readonly display = computed(() => {
     const state = this.state();
     return formatCountdown(state.done ? state.elapsed : state.remaining);
   });
   protected readonly maximum = maxClockSeconds;
-  protected readonly locked = computed(
-    () => this.disabled() || this.completed() || this.state().running || this.state().done,
-  );
+  protected readonly locked = computed(() => this.disabled() || this.completed() || this.active());
   protected readonly passed = computed(() => {
     const state = this.state();
     return state.started ? Math.max(0, state.duration - state.remaining) + state.elapsed : 0;
@@ -326,7 +326,7 @@ export class StepTimerComponent {
     this.ruler()?.stopMotion();
     if (this.disabled() || this.completed()) return;
     this.cancelEdit();
-    this.state().done ? this.timers.reset(this.target()) : this.timers.pause(this.target());
+    this.timers.pause(this.target());
   }
 
   protected reset(): void {

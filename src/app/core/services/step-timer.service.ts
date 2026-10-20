@@ -17,6 +17,7 @@ export interface StepTimerState {
   remaining: number;
   duration: number;
   running: boolean;
+  paused: boolean;
   started: boolean;
   done: boolean;
   elapsed: number;
@@ -26,6 +27,7 @@ interface SavedTimer {
   remaining: number;
   duration: number;
   deadline?: number;
+  elapsed?: number;
   started: boolean;
   done: boolean;
   updatedAt: number;
@@ -109,17 +111,20 @@ export class StepTimerService {
               ? saved.remaining
               : Math.max(0, Math.ceil((saved.deadline - this.now()) / 1000)),
           running: saved.deadline !== undefined && !saved.done,
+          paused: saved.started && saved.deadline === undefined,
           started: saved.started,
           done: saved.done,
-          elapsed:
-            saved.done && saved.deadline !== undefined
+          elapsed: saved.done
+            ? saved.deadline !== undefined
               ? Math.max(0, Math.floor((this.now() - saved.deadline) / 1000))
-              : 0,
+              : (saved.elapsed ?? 0)
+            : 0,
         }
       : {
           remaining: Math.min(target.seconds, maxClockSeconds),
           duration: Math.min(target.seconds, maxClockSeconds),
           running: false,
+          paused: false,
           started: false,
           done: false,
           elapsed: 0,
@@ -139,6 +144,16 @@ export class StepTimerService {
     this.ensureScope();
     const saved = this.entries().get(target.key);
     if (saved?.deadline !== undefined && !saved.done) return;
+    if (saved?.done && saved.deadline === undefined) {
+      this.prepareSound();
+      this.put({
+        ...saved,
+        deadline: Date.now() - (saved.elapsed ?? 0) * 1000,
+        elapsed: undefined,
+        updatedAt: Date.now(),
+      });
+      return;
+    }
     const remaining = Math.min(
       maxClockSeconds,
       saved?.done ? target.seconds : (saved?.remaining ?? target.seconds),
@@ -158,21 +173,19 @@ export class StepTimerService {
   pause(target: StepTimerTarget): void {
     this.ensureScope();
     const saved = this.entries().get(target.key);
-    if (saved?.deadline === undefined || saved.done) return;
-    const remaining = Math.max(0, Math.ceil((saved.deadline - Date.now()) / 1000));
-    if (remaining === 0) {
-      // A delayed Pause still completes against the original deadline and verified step.
-      this.tick();
-      return;
-    }
+    if (saved?.deadline === undefined) return;
+    const now = Date.now();
+    const remaining = Math.max(0, Math.ceil((saved.deadline - now) / 1000));
     this.put({
       ...saved,
       remaining,
       deadline: undefined,
-      done: false,
-      updatedAt: Date.now(),
+      done: remaining === 0,
+      elapsed: remaining === 0 ? Math.max(0, Math.floor((now - saved.deadline) / 1000)) : undefined,
+      updatedAt: now,
     });
   }
+
   adjust(target: StepTimerTarget, minutes: -1 | 1): void {
     this.ensureScope();
     const saved = this.entries().get(target.key);
@@ -367,7 +380,14 @@ export class StepTimerService {
           !Number.isFinite(raw['deadline']) ||
           raw['deadline'] > Date.now() + maxStepTimerSeconds * 1000 ||
           raw['deadline'] <= Date.now() - overdueLifetime)) ||
-      (raw['done'] === true && raw['deadline'] === undefined)
+      (raw['elapsed'] !== undefined &&
+        (typeof raw['elapsed'] !== 'number' ||
+          !Number.isSafeInteger(raw['elapsed']) ||
+          raw['elapsed'] < 0 ||
+          raw['elapsed'] > maxStepTimerSeconds)) ||
+      (raw['done'] === true &&
+        raw['deadline'] === undefined &&
+        (raw['started'] !== true || raw['remaining'] !== 0 || raw['elapsed'] === undefined))
     )
       return;
     const deadline = raw['deadline'] as number | undefined;
@@ -395,6 +415,7 @@ export class StepTimerService {
           : Math.min(deadline, Date.now() + maxClockSeconds * 1000),
       started: raw['started'],
       done: raw['done'],
+      elapsed: raw['elapsed'] as number | undefined,
       updatedAt: raw['updatedAt'],
     };
   }

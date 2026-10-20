@@ -209,7 +209,7 @@ describe('minute ruler gestures', () => {
     expect(root.querySelectorAll('.is-elapsed')).toHaveLength(12);
     expect(f.changes).toEqual([]);
   });
-  it('removes selection and end markers while timing and restores the minute scale on Stop', async () => {
+  it('removes selection and end markers in elapsed view and restores the minute scale when it ends', async () => {
     const f = setup(),
       root = f.view.nativeElement as HTMLElement;
     f.view.componentRef.setInput('timeline', true);
