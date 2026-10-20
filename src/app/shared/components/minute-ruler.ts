@@ -34,10 +34,12 @@ const flywheelWindow = 300;
   selector: 'app-minute-ruler',
   styleUrl: './minute-ruler.scss',
   template: `
-    @if (timeline()) {
+    <div class="ruler-stage" [class.is-timeline]="timeline()">
       <div
         class="timer-progress"
-        role="progressbar"
+        [attr.role]="timeline() ? 'progressbar' : null"
+        [attr.aria-hidden]="timeline() ? null : true"
+        [inert]="!timeline()"
         [attr.aria-label]="label()"
         aria-valuemin="0"
         [attr.aria-valuemax]="totalSeconds()"
@@ -50,10 +52,11 @@ const flywheelWindow = 300;
           }
         </div>
       </div>
-    } @else {
       <div
         class="minute-ruler"
-        role="slider"
+        [attr.role]="timeline() ? null : 'slider'"
+        [attr.aria-hidden]="timeline() ? true : null"
+        [inert]="timeline()"
         [tabIndex]="locked() ? -1 : 0"
         [attr.aria-label]="label()"
         aria-valuemin="0"
@@ -88,7 +91,7 @@ const flywheelWindow = 300;
         </div>
         <span class="ruler-marker" [style.transform]="markerTransform()" aria-hidden="true"></span>
       </div>
-    }
+    </div>
   `,
 })
 export class MinuteRulerComponent {
@@ -106,6 +109,7 @@ export class MinuteRulerComponent {
   private readonly preferences = inject(TimerRulerPreferencesService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly width = signal(360);
+  private readonly progressWidth = signal(360);
   private readonly position = signal<number | undefined>(undefined);
   private readonly cycle = signal(0);
   private readonly anchor = signal<number | undefined>(undefined);
@@ -113,7 +117,7 @@ export class MinuteRulerComponent {
   // Geometry depends only on width; each tick covers an equal share of the full duration.
   protected readonly progressTicks = computed(() =>
     Array.from(
-      { length: Math.max(12, Math.min(80, Math.floor((this.width() - 4) / 6))) },
+      { length: Math.max(12, Math.min(80, Math.floor((this.progressWidth() - 4) / 6))) },
       (_, i) => i,
     ),
   );
@@ -237,15 +241,23 @@ export class MinuteRulerComponent {
     let observer: ResizeObserver | undefined;
     afterNextRender(() => {
       const element = this.host.nativeElement;
-      this.width.set(element.getBoundingClientRect().width || 360);
+      const measure = () => {
+        const fullWidth = element.getBoundingClientRect().width || 360;
+        const pickerWidth =
+          element.querySelector<HTMLElement>('.minute-ruler')?.clientWidth || fullWidth;
+        this.progressWidth.set(fullWidth);
+        if (pickerWidth !== this.width()) {
+          this.cancel();
+          this.anchor.set(undefined);
+          this.width.set(pickerWidth);
+        }
+      };
+      measure();
       if (typeof ResizeObserver !== 'undefined') {
         observer = new ResizeObserver((entries) => {
+          // The stage animates vertically; only a real width change affects ruler geometry.
           const width = entries[0]?.contentRect.width;
-          if (width && width !== this.width()) {
-            this.cancel();
-            this.anchor.set(undefined);
-            this.width.set(width);
-          }
+          if (width && width !== this.progressWidth()) measure();
         });
         observer.observe(element);
       }

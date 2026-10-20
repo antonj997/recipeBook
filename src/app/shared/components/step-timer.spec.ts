@@ -222,7 +222,7 @@ describe('editable step timer controls', () => {
     f.view.detectChanges();
     expect(f.timers.state(target)).toMatchObject({ remaining: 177, duration: 180, running: true });
     expect(input.value).toBe('02:57');
-    expect(f.root.querySelector('.timer-progress')).not.toBeNull();
+    expect(f.root.querySelector('[role=progressbar]')).not.toBeNull();
     f.root.querySelector<HTMLButtonElement>('[aria-label^="Subtract one minute"]')!.click();
     f.view.detectChanges();
     expect(f.timers.state(target)).toMatchObject({ remaining: 117, duration: 120, running: true });
@@ -235,8 +235,8 @@ describe('editable step timer controls', () => {
     expect(f.root.querySelector('[aria-label="Stop timer for step 1"]')).toBeNull();
     expect(start.textContent?.trim()).toBe('Start');
     expect(slider.getAttribute('aria-valuenow')).toBe(String(f.timers.state(target).remaining));
-    expect(f.root.querySelector('.timer-progress')).not.toBeNull();
-    expect(f.root.querySelector('.ruler-marker')).toBeNull();
+    expect(f.root.querySelector('[role=progressbar]')).not.toBeNull();
+    expect(f.root.querySelector('.minute-ruler')?.getAttribute('aria-hidden')).toBe('true');
     expect(f.timers.state(target)).toMatchObject({ remaining: 117, running: false });
     f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]')!.click();
     expect(f.timers.state(target).remaining).toBe(177);
@@ -276,14 +276,14 @@ describe('editable step timer controls', () => {
     expect(field(f.root).disabled).toBe(false);
     expect(field(f.root).value).toBe('00:10');
     expect(f.root.querySelector('[aria-label="Start timer for step 1"]')).not.toBeNull();
-    expect(f.root.querySelector('.timer-progress')).not.toBeNull();
+    expect(f.root.querySelector('[role=progressbar]')).not.toBeNull();
     await vi.advanceTimersByTimeAsync(5000);
     f.view.detectChanges();
     expect(field(f.root).value).toBe('00:10');
     f.root.querySelector<HTMLButtonElement>('[aria-label="Reset timer for step 1"]')!.click();
     f.view.detectChanges();
     expect(field(f.root).value).toBe('02:00');
-    expect(f.root.querySelector('.timer-progress')).toBeNull();
+    expect(f.root.querySelector('[role=progressbar]')).toBeNull();
     expect(f.root.querySelector('.ruler-marker')).not.toBeNull();
   });
   it('discards an open draft if the timer starts elsewhere before blur', () => {

@@ -3,9 +3,19 @@
   min-width: 0;
   width: 100%;
 }
-.minute-ruler {
+.ruler-stage {
   position: relative;
-  width: 100%;
+  height: 66px;
+  overflow: hidden;
+  transition: height 240ms var(--ease-out);
+}
+.ruler-stage.is-timeline {
+  height: 16px;
+}
+.minute-ruler {
+  position: absolute;
+  top: 50%;
+  inset-inline: 12px;
   height: 56px;
   overflow: hidden;
   border-radius: 5px;
@@ -13,6 +23,9 @@
   touch-action: none;
   user-select: none;
   -webkit-touch-callout: none;
+  transform: translateY(-50%);
+  opacity: 1;
+  transition: opacity 160ms var(--ease-out);
 }
 .ruler-viewport {
   overflow: hidden;
@@ -85,7 +98,24 @@
 }
 
 .timer-progress {
+  position: absolute;
+  top: 50%;
+  width: 100%;
   height: 16px;
+  transform: translateY(-50%) scaleX(0.96);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 240ms var(--ease-out);
+}
+.is-timeline .timer-progress {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
+}
+.is-timeline .minute-ruler {
+  opacity: 0;
+  pointer-events: none;
 }
 .progress-ticks {
   display: flex;
@@ -106,6 +136,14 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .progress-tick {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ruler-stage,
+  .minute-ruler,
+  .timer-progress {
     transition: none;
   }
 }

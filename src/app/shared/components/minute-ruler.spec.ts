@@ -402,12 +402,56 @@ describe('minute ruler gestures', () => {
       expect(ticks.length).toBeGreaterThanOrEqual(40);
       expect(ticks.length).toBeLessThanOrEqual(80);
       expect(root.querySelectorAll('.is-remaining')).toHaveLength(ticks.length);
-      expect(root.querySelector('.ruler-number')).toBeNull();
-      expect(root.querySelector('.ruler-marker')).toBeNull();
+      expect(root.querySelector('.minute-ruler')?.getAttribute('aria-hidden')).toBe('true');
       expect(root.querySelector('[role=slider]')).toBeNull();
       expect(f.changes).toEqual([]);
     },
   );
+  it('centers the picker after opening on an active timer without measuring animation transforms', () => {
+    vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) {
+      return this.classList.contains('minute-ruler') ? 456 : 480;
+    });
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      return { left: 0, width: this.classList.contains('minute-ruler') ? 437.76 : 480 } as DOMRect;
+    });
+    TestBed.inject(TimerRulerPreferencesService).setMode('swipe');
+    const view = TestBed.createComponent(MinuteRulerComponent);
+    view.componentRef.setInput('seconds', 1800);
+    view.componentRef.setInput('timeline', true);
+    view.componentRef.setInput('totalSeconds', 1800);
+    view.detectChanges();
+    view.componentRef.setInput('timeline', false);
+    view.detectChanges();
+    const marker = (view.nativeElement as HTMLElement).querySelector<HTMLElement>('.ruler-marker')!;
+    expect(marker.style.transform).toBe('translateX(228px)');
+  });
+  it('keeps both visual layers stable while reversing modes and exposes only the current control', () => {
+    const f = setup(),
+      root = f.view.nativeElement as HTMLElement;
+    const picker = root.querySelector('.minute-ruler');
+    const progress = root.querySelector('.timer-progress');
+    expect(progress).not.toBeNull();
+    for (const timeline of [true, false, true, false]) {
+      f.view.componentRef.setInput('timeline', timeline);
+      f.view.componentRef.setInput('totalSeconds', 1800);
+      f.view.detectChanges();
+      expect(root.querySelector('.minute-ruler')).toBe(picker);
+      expect(root.querySelector('.timer-progress')).toBe(progress);
+      expect(root.querySelectorAll('[role=slider]')).toHaveLength(timeline ? 0 : 1);
+      expect(root.querySelectorAll('[role=progressbar]')).toHaveLength(timeline ? 1 : 0);
+      expect(picker?.getAttribute('aria-hidden')).toBe(timeline ? 'true' : null);
+      expect(progress?.getAttribute('aria-hidden')).toBe(timeline ? null : 'true');
+      expect((picker as HTMLElement).tabIndex).toBe(timeline ? -1 : 0);
+      if (timeline) {
+        pointer(f.slider, 'pointerdown', 180);
+        pointer(document, 'pointermove', 234);
+        pointer(document, 'pointerup', 234);
+      }
+      expect(f.changes).toEqual([]);
+    }
+  });
   it('drains the orange ticks from right to left and reuses the full timeline', () => {
     const f = setup(1800),
       root = f.view.nativeElement as HTMLElement;

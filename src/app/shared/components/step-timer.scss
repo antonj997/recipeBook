@@ -3,6 +3,7 @@
   width: min(100%, 30rem);
   margin: 4px 0 20px;
   font-family: Arial, Helvetica, sans-serif;
+  transition: margin-top 240ms var(--ease-out);
 }
 :host([hidden]) {
   display: none;
@@ -11,17 +12,30 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 4px;
+  transition: gap 240ms var(--ease-out);
 }
 .step-timer {
   display: grid;
   min-width: 0;
   align-items: center;
   width: 100%;
-  padding: 4px 10px 4px 11px;
-  border: 1px solid var(--color-control-border);
+  position: relative;
+  padding: 0;
+  border: 0;
   border-radius: 8px;
-  background: var(--color-surface);
-  transition: border-color var(--motion-fast) var(--ease-out);
+}
+.step-timer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--color-control-border);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 200ms var(--ease-out);
+}
+.step-timer.is-timeline::before {
+  opacity: 0;
 }
 app-minute-ruler {
   width: 100%;
@@ -116,4 +130,12 @@ input.timer-input:disabled {
   padding: 0;
   border: 0;
   background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host,
+  .timer-controls,
+  .step-timer::before {
+    transition: none;
+  }
 }
