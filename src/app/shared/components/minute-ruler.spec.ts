@@ -54,20 +54,75 @@ describe('minute ruler gestures', () => {
     await vi.advanceTimersByTimeAsync(20);
     pointer(document, 'pointerup', end);
   }
-  it('coasts after a fast swipe and settles within twenty additional ticks', async () => {
-    const f = setup();
+  function trackOffset(f: ReturnType<typeof setup>): number {
+    f.view.detectChanges();
+    const track = (f.view.nativeElement as HTMLElement).querySelector<HTMLElement>('.ruler-ticks')!;
+    return Number(track.style.transform.match(/translateX\(([\d.-]+)px\)/)?.[1]);
+  }
+  async function coastDistance(f: ReturnType<typeof setup>, milliseconds = 160): Promise<number> {
+    const before = trackOffset(f);
+    await vi.advanceTimersByTimeAsync(milliseconds);
+    return trackOffset(f) - before;
+  }
+  it('coasts longer with progressively smaller movement and settles on a whole minute', async () => {
+    const f = setup(600);
     await fling(f);
-    const released = f.changes.at(-1) ?? 1800;
-    await vi.advanceTimersByTimeAsync(160);
-    expect(f.changes.at(-1)).toBeGreaterThan(released);
-    await vi.advanceTimersByTimeAsync(1500);
-    expect(f.changes.at(-1)! - released).toBeLessThanOrEqual(20 * 60);
+    const early = Math.abs(await coastDistance(f));
+    await vi.advanceTimersByTimeAsync(1000);
+    const later = Math.abs(await coastDistance(f));
+    expect(early).toBeGreaterThan(0);
+    expect(later).toBeGreaterThan(0);
+    expect(later).toBeLessThan(early);
+    await vi.advanceTimersByTimeAsync(2500);
     const count = f.changes.length;
     await vi.advanceTimersByTimeAsync(1500);
     expect(f.changes).toHaveLength(count);
+    expect(f.changes.every((value) => value >= 0 && value <= 3600 && value % 60 === 0)).toBe(true);
     const scroll = new Event('touchmove', { cancelable: true });
     document.dispatchEvent(scroll);
     expect(scroll.defaultPrevented).toBe(false);
+  });
+  it('builds speed with successive fast swipes in the same direction', async () => {
+    const f = setup();
+    await fling(f);
+    const first = Math.abs(await coastDistance(f));
+    await fling(f);
+    const boosted = Math.abs(await coastDistance(f));
+    expect(boosted).toBeGreaterThan(first * 1.15);
+  });
+  it('caps repeated swipe speed and always comes to rest', async () => {
+    const f = setup();
+    for (let i = 0; i < 8; i++) {
+      await fling(f);
+      await vi.advanceTimersByTimeAsync(40);
+    }
+    const distance = Math.abs(await coastDistance(f, 160));
+    // At most 48 minute ticks/second, regardless of how many swipes are combined.
+    expect(distance).toBeLessThanOrEqual(48 * 18 * 0.16 + 1);
+    expect(distance).toBeGreaterThan(0);
+    await vi.advanceTimersByTimeAsync(4000);
+    const count = f.changes.length;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(f.changes).toHaveLength(count);
+  });
+  it('discards carried momentum on a reverse swipe or a tap to stop', async () => {
+    const f = setup();
+    await fling(f, 60);
+    const freshReverse = Math.abs(await coastDistance(f));
+    f.view.componentInstance.stopMotion();
+    await fling(f);
+    await vi.advanceTimersByTimeAsync(100);
+    await fling(f, 60);
+    const reversed = Math.abs(await coastDistance(f));
+    expect(Math.abs(reversed - freshReverse)).toBeLessThan(18);
+    pointer(f.slider, 'pointerdown', 180);
+    await vi.advanceTimersByTimeAsync(50);
+    pointer(document, 'pointerup', 180);
+    const count = f.changes.length;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(f.changes).toHaveLength(count);
+    await fling(f, 60);
+    expect(Math.abs(Math.abs(await coastDistance(f)) - freshReverse)).toBeLessThan(18);
   });
   it.each(['control', 'pointerdown', 'scroll', 'blur', 'hidden', 'destroy', 'identity'])(
     'interrupts momentum on %s',

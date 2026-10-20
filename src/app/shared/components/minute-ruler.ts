@@ -20,6 +20,12 @@ const secondPitch = pitch / 5;
 const maximum = maxClockSeconds / 60;
 const cycleLength = maximum + 1;
 const inset = 16;
+// Ruler-specific tuning: one swipe stays precise; rapid same-direction swipes build speed.
+const flingImpulseLimit = 32; // minute ticks per second
+const coastSpeedLimit = 48;
+const coastFriction = 700; // milliseconds for velocity to decay by a factor of e
+const coastSettleSpeed = 0.65;
+const flywheelWindow = 300;
 
 /** A cyclic minute ruler. Gestures and the bounded start swipe share one frame owner. */
 @Component({
@@ -163,6 +169,8 @@ export class MinuteRulerComponent {
     sampleX: number;
     sampleAt: number;
     velocity: number;
+    carry: number;
+    carryAt: number;
   };
   private hold?: ReturnType<typeof setTimeout>;
   private frame?: number;
@@ -170,12 +178,18 @@ export class MinuteRulerComponent {
   private lastIdentity?: string;
   private lastTimeline?: boolean;
   private coasting = false;
+  private coastSpeed = 0;
+  private coastAt = 0;
   private motionPreference?: MediaQueryList;
   private readonly motionListener = () => {
     if (this.motionPreference?.matches) this.cancel();
   };
-  private readonly interruptListener = () => {
-    if (this.coasting) this.cancel();
+  private readonly interruptListener = (event: PointerEvent) => {
+    if (!this.coasting) return;
+    // A ruler touch arrests motion in begin(), which retains speed only for a new fast swipe.
+    if (event.pointerType === 'touch' && this.host.nativeElement.contains(event.target as Node))
+      return;
+    this.cancel();
   };
   private readonly moveListener = (event: PointerEvent) => this.move(event);
   private readonly upListener = (event: PointerEvent) => this.end(event);
@@ -244,6 +258,11 @@ export class MinuteRulerComponent {
 
   protected begin(event: PointerEvent): void {
     if (this.locked() || event.button !== 0 || event.isPrimary === false) return;
+    const now = performance.now();
+    const carry =
+      event.pointerType === 'touch'
+        ? this.coastSpeed * Math.exp(-(now - this.coastAt) / coastFriction)
+        : 0;
     this.cancel();
     event.preventDefault();
     const element = event.currentTarget as HTMLElement;
@@ -262,8 +281,10 @@ export class MinuteRulerComponent {
       active: false,
       mouse: event.pointerType === 'mouse',
       sampleX: event.clientX,
-      sampleAt: performance.now(),
+      sampleAt: now,
       velocity: 0,
+      carry,
+      carryAt: now,
     };
     this.pointAt(event.clientX, false);
     // Capture from the first contact so a drag can begin anywhere, including the center.
@@ -297,6 +318,8 @@ export class MinuteRulerComponent {
     const now = performance.now();
     const elapsed = now - gesture.sampleAt;
     if (elapsed > 0) gesture.velocity = (event.clientX - gesture.sampleX) / elapsed;
+    if (gesture.velocity && Math.sign(gesture.velocity) !== Math.sign(gesture.carry))
+      gesture.carry = 0;
     gesture.sampleX = event.clientX;
     gesture.sampleAt = now;
     gesture.clientX = event.clientX;
@@ -372,8 +395,15 @@ export class MinuteRulerComponent {
     ).matches;
     const coast = Math.abs(velocity) >= 0.35 && !reducedMotion;
     if (!coast) this.anchor.set(this.x(Math.round(from)));
+    const now = performance.now();
+    const carry =
+      now - gesture.carryAt <= flywheelWindow && Math.sign(velocity) === Math.sign(gesture.carry)
+        ? gesture.carry * Math.exp(-(now - gesture.carryAt) / coastFriction)
+        : 0;
+    const speed =
+      Math.sign(velocity) * Math.min(flingImpulseLimit, (Math.abs(velocity) * 1000) / pitch);
     this.cancel();
-    if (coast) this.coast(from, velocity);
+    if (coast) this.coast(from, speed + carry);
   }
 
   protected captureLost(): void {
@@ -382,24 +412,26 @@ export class MinuteRulerComponent {
   }
 
   private coast(from: number, velocity: number): void {
-    const speed = (Math.abs(velocity) * 1000) / pitch;
-    const ticks = Math.min(20, Math.max(1, Math.round((speed * speed) / 60)));
-    const target = Math.round(from) + Math.sign(velocity) * ticks;
-    if (target === Math.round(from)) return;
-    const duration = Math.min(1100, Math.max(650, ((2 * ticks) / speed) * 1000));
+    const speed = Math.max(-coastSpeedLimit, Math.min(coastSpeedLimit, velocity));
+    const duration = Math.min(3200, Math.log(Math.abs(speed) / coastSettleSpeed) * coastFriction);
     const started = performance.now();
     this.watchMotion();
     this.coasting = true;
+    this.coastSpeed = speed;
+    this.coastAt = started;
     this.dragging.set(true);
     this.position.set(from);
     this.document.addEventListener('pointerdown', this.interruptListener, true);
     this.watchInterruption();
     const advance = (time: number) => {
       if (!this.coasting) return;
-      const progress = Math.min(1, Math.max(0, (time - started) / duration));
-      this.setPosition(from + (target - from) * (1 - (1 - progress) ** 2));
+      // Solve friction from wall time, so 60/120 Hz displays and dropped frames agree.
+      const elapsed = Math.min(duration, Math.max(0, time - started));
+      const position =
+        from + ((speed * coastFriction) / 1000) * (1 - Math.exp(-elapsed / coastFriction));
+      this.setPosition(elapsed === duration ? Math.round(position) : position);
       if (!this.coasting) return;
-      if (progress === 1) this.cancel();
+      if (elapsed === duration) this.cancel();
       else this.frame = requestAnimationFrame(advance);
     };
     this.frame = requestAnimationFrame(advance);
@@ -449,6 +481,8 @@ export class MinuteRulerComponent {
     const gesture = this.gesture;
     this.gesture = undefined;
     this.coasting = false;
+    this.coastSpeed = 0;
+    this.coastAt = 0;
     this.motionPreference?.removeEventListener('change', this.motionListener);
     this.motionPreference = undefined;
     this.document.removeEventListener('pointerdown', this.interruptListener, true);
