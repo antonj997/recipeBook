@@ -182,7 +182,7 @@ export class StepTimerComponent {
 
   protected beginEdit(event: Event): void {
     if (this.locked()) return;
-    this.ruler()?.stopMotion();
+    this.ruler()?.stopMotion(true);
     if (!this.editing()) {
       this.nativeEdit = undefined;
       this.editTarget = this.target().key;
@@ -336,14 +336,14 @@ export class StepTimerComponent {
   }
 
   protected reset(): void {
-    this.ruler()?.stopMotion();
+    this.ruler()?.stopMotion(true);
     if (this.disabled() || this.completed()) return;
     this.cancelEdit();
     this.timers.reset(this.target());
   }
 
   protected adjust(minutes: -1 | 1): void {
-    this.ruler()?.stopMotion();
+    this.ruler()?.stopMotion(true);
     if (this.locked() || !this.commitEdit()) return;
     this.timers.adjust(this.target(), minutes);
   }

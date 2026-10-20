@@ -222,55 +222,100 @@ describe('minute ruler gestures', () => {
       expect(scroll.defaultPrevented).toBe(false);
     }
   });
+  function markerX(f: ReturnType<typeof setup>): number {
+    return Number(
+      (f.view.nativeElement as HTMLElement)
+        .querySelector<HTMLElement>('.ruler-marker')!
+        .style.transform.match(/translateX\(([\d.-]+)px\)/)?.[1],
+    );
+  }
+  function rulerWindow(f: ReturnType<typeof setup>): string {
+    const root = f.view.nativeElement as HTMLElement;
+    return (
+      root.querySelector<HTMLElement>('.ruler-ticks')!.style.transform +
+      ':' +
+      root.querySelector<HTMLElement>('.ruler-tick')!.dataset['minute']
+    );
+  }
+  it('follows the thumb while the scale stays still throughout the middle area', async () => {
+    const f = setup();
+    f.view.detectChanges();
+    const initial = rulerWindow(f);
+    pointer(f.slider, 'pointerdown', 126);
+    await vi.advanceTimersByTimeAsync(400);
+    f.view.detectChanges();
+    expect(markerX(f)).toBeCloseTo(126, 1);
+    expect(rulerWindow(f)).toBe(initial);
+    for (const x of [180, 234]) {
+      pointer(document, 'pointermove', x);
+      f.view.detectChanges();
+      expect(markerX(f)).toBeCloseTo(x, 1);
+      expect(rulerWindow(f)).toBe(initial);
+      const count = f.changes.length;
+      await vi.advanceTimersByTimeAsync(1000);
+      f.view.detectChanges();
+      expect(f.changes).toHaveLength(count);
+      expect(rulerWindow(f)).toBe(initial);
+    }
+    expect(f.changes.at(-1)).toBe(33 * 60);
+  });
   it.each([90, 180, 270])(
-    'can begin anywhere, then hold near either side at the same speed (start %i)',
+    'starts anywhere and scrolls only in the edge zone (start %i)',
     async (start) => {
       const f = setup();
       pointer(f.slider, 'pointerdown', start);
-      pointer(document, 'pointermove', 252);
-      await vi.advanceTimersByTimeAsync(350);
-      const before = f.changes.at(-1) ?? 1800;
+      pointer(document, 'pointermove', 330);
+      await vi.advanceTimersByTimeAsync(400);
+      f.view.detectChanges();
+      const before = f.changes.at(-1)!;
+      const window = rulerWindow(f);
       await vi.advanceTimersByTimeAsync(1000);
-      const delta = f.changes.at(-1)! - before;
-      // 40% from center remains a useful continuous rate, not the old inert middle 60%.
-      expect(delta).toBeGreaterThanOrEqual(3 * 60);
-      expect(delta).toBeLessThanOrEqual(6 * 60);
+      f.view.detectChanges();
+      const delta = (f.changes.at(-1)! - before + 3660) % 3660;
+      expect(delta).toBeGreaterThanOrEqual(7 * 60);
+      expect(delta).toBeLessThanOrEqual(9 * 60);
+      expect(markerX(f)).toBeCloseTo(330, 1);
+      expect(rulerWindow(f)).not.toBe(window);
+      pointer(document, 'pointermove', 180);
+      f.view.detectChanges();
+      const middle = rulerWindow(f),
+        count = f.changes.length;
+      await vi.advanceTimersByTimeAsync(1000);
+      f.view.detectChanges();
+      expect(f.changes).toHaveLength(count);
+      expect(rulerWindow(f)).toBe(middle);
+      expect(markerX(f)).toBeCloseTo(180, 1);
     },
   );
-  it('does not jump to the touched tick when starting a drag', () => {
+  it('selects the tick under a dragged thumb instead of keeping a fixed center marker', () => {
     const f = setup();
     pointer(f.slider, 'pointerdown', 90);
     pointer(document, 'pointermove', 100);
-    expect(f.changes).toEqual([]);
+    f.view.detectChanges();
+    expect(f.changes.at(-1)).toBe(26 * 60);
+    expect(markerX(f)).toBeCloseTo(100, 1);
     pointer(document, 'pointerup', 100);
+    f.view.detectChanges();
+    expect(markerX(f)).toBeCloseTo(108, 1);
   });
-  it('can reverse through the center without a jump', async () => {
-    const f = setup();
-    pointer(f.slider, 'pointerdown', 180);
-    pointer(document, 'pointermove', 360);
-    await vi.advanceTimersByTimeAsync(900);
-    const increased = f.changes.at(-1)!;
-    pointer(document, 'pointermove', 180);
-    expect(f.changes.at(-1)).toBe(increased);
-    await vi.advanceTimersByTimeAsync(500);
-    expect(f.changes.at(-1)).toBe(increased);
-    pointer(document, 'pointermove', 0);
-    await vi.advanceTimersByTimeAsync(600);
-    expect(f.changes.at(-1)).toBeLessThan(increased);
-  });
-  it('holds and accelerates more near the edge, then stops on release', async () => {
+  it('accelerates toward the edge and stops drifting when held in the middle', async () => {
     const f = setup();
     pointer(f.slider, 'pointerdown', 300);
-    await vi.advanceTimersByTimeAsync(1350);
+    await vi.advanceTimersByTimeAsync(400);
     const first = f.changes.at(-1)!;
-    pointer(document, 'pointermove', 358);
-    const afterMove = f.changes.at(-1)!;
     await vi.advanceTimersByTimeAsync(1000);
-    const second = f.changes.at(-1)!;
-    expect(first).toBeGreaterThan(30 * 60);
-    expect((second - afterMove + 3660) % 3660).toBeGreaterThan(first - 30 * 60);
-    pointer(document, 'pointerup', 358);
+    const slow = (f.changes.at(-1)! - first + 3660) % 3660;
+    pointer(document, 'pointermove', 358);
+    const next = f.changes.at(-1)!;
+    await vi.advanceTimersByTimeAsync(1000);
+    const fast = (f.changes.at(-1)! - next + 3660) % 3660;
+    expect(fast).toBeGreaterThan(slow);
+    pointer(document, 'pointermove', 180);
+    f.view.detectChanges();
     const count = f.changes.length;
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(f.changes).toHaveLength(count);
+    pointer(document, 'pointerup', 180);
     await vi.advanceTimersByTimeAsync(1500);
     expect(f.changes).toHaveLength(count);
   });
@@ -343,13 +388,13 @@ describe('minute ruler gestures', () => {
     mouse('pointermove', 216);
     mouse('pointerup', 216);
     expect(f.changes.at(-1)).toBe(0);
-    mouse('pointerdown', 180);
+    mouse('pointerdown', 216);
+    mouse('pointermove', 234);
+    mouse('pointerup', 234);
+    expect(f.changes.at(-1)).toBe(60);
+    mouse('pointerdown', 234);
     mouse('pointermove', 198);
     mouse('pointerup', 198);
-    expect(f.changes.at(-1)).toBe(60);
-    mouse('pointerdown', 180);
-    mouse('pointermove', 144);
-    mouse('pointerup', 144);
     expect(f.changes.at(-1)).toBe(3600);
   });
   it('shows a small label every five minutes, including sixty followed by zero', () => {
@@ -388,6 +433,23 @@ describe('minute ruler gestures', () => {
     pointer(document, 'pointerup', 230);
     f.slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(f.changes).toEqual([]);
+  });
+  it('starts the clock from the thumb anchor without a marker jump', async () => {
+    const f = setup();
+    pointer(f.slider, 'pointerdown', 180);
+    pointer(document, 'pointermove', 234);
+    pointer(document, 'pointerup', 234);
+    f.view.detectChanges();
+    expect(markerX(f)).toBeCloseTo(234, 1);
+    const count = f.changes.length;
+    f.view.componentRef.setInput('timeline', true);
+    f.view.componentRef.setInput('disabled', true);
+    f.view.detectChanges();
+    expect(markerX(f)).toBeCloseTo(234, 1);
+    await vi.advanceTimersByTimeAsync(600);
+    f.view.detectChanges();
+    expect(markerX(f)).toBeCloseTo(16, 1);
+    expect(f.changes).toHaveLength(count);
   });
   it('skips the start swipe with reduced motion and cancels it on reset', async () => {
     const f = setup();
