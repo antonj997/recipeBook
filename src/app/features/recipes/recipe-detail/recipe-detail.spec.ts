@@ -1,3 +1,5 @@
+import { CloudCookbookService } from '../../../core/services/cloud-cookbook.service';
+import { TimerPushService } from '../../../core/services/timer-push.service';
 import { BehaviorSubject } from 'rxjs';
 import { PageTransitionService } from '../../../core/services/page-transition.service';
 import { recipeStepTimers, type StepTimerTarget } from '../../../core/models/step-timer';
@@ -78,6 +80,7 @@ describe('recipe detail', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
     localStorage.clear();
   });
   async function fixture() {
@@ -90,6 +93,192 @@ describe('recipe detail', () => {
     const instructions = host.nativeElement.querySelector('#instructions-panel') as HTMLElement;
     return { host, tabs, ingredients, instructions };
   }
+
+  async function timerFixture(
+    instructions = [
+      'Cook for 2 minutes.',
+      'Rest for 3 minutes.',
+      'Bake for 4 minutes.',
+      'Wait for 1 second.',
+      'Serve.',
+    ],
+  ) {
+    const recipe = {
+      id: 'tab-test',
+      title: 'Recipe section test',
+      servings: 4,
+      ingredients: ['Salt'],
+      instructions,
+    };
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        data: routeData,
+        snapshot: {
+          paramMap: convertToParamMap({ id: recipe.id }),
+          data: {
+            recipePage: { accountVersion: 0, revision: 0, recipe, collections: [] },
+          },
+        },
+      },
+    });
+    const other = { ...recipe, id: 'another-recipe' };
+    const push = {
+      enabled: signal(false),
+      replaceTimers: vi.fn(),
+      retry: vi.fn(),
+      status: signal('off'),
+      message: signal(''),
+      busy: signal(false),
+      canEnable: signal(false),
+    };
+    TestBed.overrideProvider(StepTimerService, { useFactory: () => new StepTimerService() });
+    TestBed.overrideProvider(FeedbackService, { useFactory: () => new FeedbackService() });
+    TestBed.overrideProvider(TimerPushService, { useValue: push });
+    TestBed.overrideProvider(CloudCookbookService, {
+      useValue: {
+        revision: signal(0),
+        database: {
+          recipes: {
+            bulkGet: async (ids: string[]) => ids.map((id) => (id === recipe.id ? recipe : other)),
+          },
+        },
+      },
+    });
+    const f = await fixture();
+    return {
+      ...f,
+      recipe,
+      other,
+      push,
+      timers: TestBed.inject(StepTimerService),
+      targets: recipeStepTimers(recipe),
+    };
+  }
+
+  it('allows the instructions reset when only a timer has changed, then restores its preset', async () => {
+    const f = await timerFixture();
+    const reset = f.host.nativeElement.querySelector('.reset-instructions') as HTMLButtonElement;
+    expect(reset.disabled).toBe(true);
+    f.timers.start(f.targets[0]!);
+    f.host.detectChanges();
+    expect(f.host.componentInstance.completedSteps().size).toBe(0);
+    expect(reset.disabled).toBe(false);
+    reset.click();
+    f.host.detectChanges();
+    expect(f.timers.state(f.targets[0]!)).toMatchObject({ remaining: 120, started: false });
+    expect(reset.disabled).toBe(true);
+    f.timers.setDuration(f.targets[1]!, 0);
+    f.host.detectChanges();
+    expect(reset.disabled).toBe(false);
+    reset.click();
+    f.host.detectChanges();
+    expect(f.timers.state(f.targets[1]!).remaining).toBe(180);
+    expect(reset.disabled).toBe(true);
+  });
+
+  it('resets checked steps and all recipe clocks together without clearing another recipe', async () => {
+    const f = await timerFixture();
+    vi.useFakeTimers();
+    const other = recipeStepTimers(f.other)[0]!;
+    f.timers.start(f.targets[0]!);
+    f.timers.start(f.targets[1]!);
+    f.timers.pause(f.targets[1]!);
+    f.timers.adjust(f.targets[1]!, -1);
+    f.timers.setDuration(f.targets[2]!, 300);
+    f.timers.start(f.targets[3]!);
+    f.timers.start(other);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(f.timers.state(f.targets[3]!).done).toBe(true);
+    const otherBefore = f.timers.state(other);
+    const component = f.host.componentInstance;
+    component.changeServings('6');
+    component.switchSection('instructions');
+    component.toggleStep(4);
+    f.host.detectChanges();
+    (f.host.nativeElement.querySelector('.reset-instructions') as HTMLButtonElement).click();
+    f.host.detectChanges();
+    expect(component.completedSteps().size).toBe(0);
+    for (const target of f.targets) {
+      if (target)
+        expect(f.timers.state(target)).toMatchObject({
+          remaining: target.seconds,
+          duration: target.seconds,
+          started: false,
+          running: false,
+          paused: false,
+          done: false,
+          elapsed: 0,
+        });
+    }
+    expect(f.timers.state(other)).toEqual(otherBefore);
+    expect(f.push.replaceTimers).toHaveBeenLastCalledWith([
+      { target: other, deadline: expect.any(Number) },
+    ]);
+    expect(TestBed.inject(CookingSessionService).read(f.recipe.id)).toMatchObject({
+      completed: [],
+      section: 'instructions',
+      servings: 6,
+    });
+  });
+
+  it('stops ruler momentum when the instructions reset is activated without a pointer press', async () => {
+    const f = await timerFixture();
+    vi.useFakeTimers();
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) =>
+      setTimeout(() => callback(performance.now()), 16),
+    );
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => clearTimeout(id));
+    const slider = f.host.nativeElement.querySelector('.minute-ruler') as HTMLElement;
+    vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 360 } as DOMRect);
+    const pointer = (type: string, x: number) => {
+      const event = new MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        clientX: x,
+        clientY: 20,
+      });
+      Object.defineProperties(event, {
+        pointerId: { value: 1 },
+        pointerType: { value: 'touch' },
+        isPrimary: { value: true },
+      });
+      (type === 'pointerdown' ? slider : document).dispatchEvent(event);
+    };
+    pointer('pointerdown', 180);
+    await vi.advanceTimersByTimeAsync(40);
+    pointer('pointermove', 60);
+    await vi.advanceTimersByTimeAsync(20);
+    pointer('pointerup', 60);
+    await vi.advanceTimersByTimeAsync(100);
+    f.host.detectChanges();
+    expect(f.timers.state(f.targets[0]!).remaining).not.toBe(120);
+    const reset = f.host.nativeElement.querySelector('.reset-instructions') as HTMLButtonElement;
+    expect(reset.disabled).toBe(false);
+    reset.focus();
+    reset.click();
+    f.host.detectChanges();
+    await vi.advanceTimersByTimeAsync(1200);
+    f.host.detectChanges();
+    expect(f.timers.state(f.targets[0]!)).toMatchObject({ remaining: 120, started: false });
+    expect(reset.disabled).toBe(true);
+  });
+
+  it('treats a capped long timer as pristine and does not offer reset until it changes', async () => {
+    const f = await timerFixture(['Cook for 120 minutes.']);
+    const reset = f.host.nativeElement.querySelector('.reset-instructions') as HTMLButtonElement;
+    expect(reset.disabled).toBe(true);
+    f.timers.setDuration(f.targets[0]!, 300);
+    f.host.detectChanges();
+    expect(reset.disabled).toBe(false);
+    reset.click();
+    f.host.detectChanges();
+    expect(f.timers.state(f.targets[0]!).remaining).toBe(3600);
+    expect(reset.disabled).toBe(true);
+    f.host.componentInstance.toggleStep(0);
+    f.host.detectChanges();
+    expect(f.host.componentInstance.completedSteps().has(0)).toBe(true);
+  });
 
   it('keeps tab selection independent of an unavailable JavaScript animation engine', async () => {
     const f = await fixture();

@@ -1,7 +1,11 @@
 import { TimerAlertPreferencesComponent } from '../../../shared/components/timer-alert-preferences';
 import { StepTimerService } from '../../../core/services/step-timer.service';
 import { StepTimerComponent } from '../../../shared/components/step-timer';
-import { recipeStepTimers } from '../../../core/models/step-timer';
+import {
+  maxClockSeconds,
+  recipeStepTimers,
+  type StepTimerTarget,
+} from '../../../core/models/step-timer';
 import type { RecipePageData } from '../../../core/services/recipe-page-resolvers';
 import { RecipeTitleComponent } from '../../../shared/components/recipe-title';
 import { RecipeTransitionPartDirective } from '../../../shared/components/recipe-transition-part';
@@ -38,6 +42,7 @@ import {
   OnDestroy,
   signal,
   untracked,
+  viewChildren,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PageTransitionService } from '../../../core/services/page-transition.service';
@@ -169,6 +174,19 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     return recipe ? recipeStepTimers(recipe) : [];
   });
   readonly hasTimers = computed(() => this.stepTimers().some(Boolean));
+  private readonly timerControls = viewChildren(StepTimerComponent);
+  readonly canResetInstructions = computed(
+    () =>
+      !this.accountChanged() &&
+      (this.completedSteps().size > 0 ||
+        (!this.isDraft &&
+          this.stepTimers().some((target) => !!target && this.timerNeedsReset(target)))),
+  );
+  private timerNeedsReset(target: StepTimerTarget): boolean {
+    const state = this.timers.state(target);
+    return state.started || state.remaining !== Math.min(target.seconds, maxClockSeconds);
+  }
+
   private readonly requestedStep = computed(() => {
     const target = this.timers.stepToReveal();
     if (
@@ -204,8 +222,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       for (const index of this.completedSteps()) {
         const target = this.stepTimers()[index];
         if (!target) continue;
-        const state = this.timers.state(target);
-        if (state.started || state.remaining !== target.seconds) this.timers.reset(target);
+        if (this.timerNeedsReset(target)) this.timers.reset(target);
       }
     });
     effect((onCleanup) => {
@@ -248,6 +265,11 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   }
   resetInstructions(): void {
     if (this.accountChanged()) return;
+    const recipe = this.recipe();
+    if (recipe && !this.isDraft) {
+      for (const control of this.timerControls()) control.resetInteraction();
+      this.timers.removeRecipe(recipe.id);
+    }
     this.completedSteps.set(new Set());
     this.saveCookingSession();
   }

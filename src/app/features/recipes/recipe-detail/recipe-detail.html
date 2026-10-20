@@ -172,7 +172,7 @@
                     type="button"
                     class="reset-instructions"
                     aria-label="Reset instructions"
-                    [disabled]="!completedSteps().size"
+                    [disabled]="!canResetInstructions()"
                     (click)="resetInstructions()"
                   >
                     Reset

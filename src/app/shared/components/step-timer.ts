@@ -339,10 +339,15 @@ export class StepTimerComponent {
     this.timers.pause(this.target());
   }
 
-  protected reset(): void {
+  // Recipe-wide reset also clears a pending text edit or an ongoing ruler fling.
+  resetInteraction(): void {
     this.ruler()?.stopMotion(true);
-    if (this.disabled() || this.completed()) return;
     this.cancelEdit();
+  }
+
+  protected reset(): void {
+    if (this.disabled() || this.completed()) return;
+    this.resetInteraction();
     this.timers.reset(this.target());
   }
 
