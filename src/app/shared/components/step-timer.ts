@@ -34,7 +34,7 @@ import { IconComponent } from './icon';
         <button
           type="button"
           class="timer-minute"
-          [disabled]="locked() || state().remaining <= 0"
+          [disabled]="minuteLocked() || state().remaining <= 0"
           [attr.aria-label]="'Subtract one minute from step ' + (target().index + 1) + ' timer'"
           title="Subtract one minute"
           (click)="adjust(-1)"
@@ -93,7 +93,7 @@ import { IconComponent } from './icon';
         <button
           type="button"
           class="timer-minute"
-          [disabled]="locked() || state().remaining >= maximum"
+          [disabled]="minuteLocked() || state().remaining >= maximum"
           [attr.aria-label]="'Add one minute to step ' + (target().index + 1) + ' timer'"
           title="Add one minute"
           (click)="adjust(1)"
@@ -148,6 +148,13 @@ export class StepTimerComponent {
   });
   protected readonly maximum = maxClockSeconds;
   protected readonly locked = computed(() => this.disabled() || this.completed() || this.active());
+  protected readonly minuteLocked = computed(
+    () =>
+      this.disabled() ||
+      this.completed() ||
+      (this.state().done && !this.state().paused) ||
+      (this.state().running && this.state().remaining === 0),
+  );
   protected readonly passed = computed(() => {
     const state = this.state();
     return state.started ? Math.max(0, state.duration - state.remaining) + state.elapsed : 0;
@@ -338,7 +345,7 @@ export class StepTimerComponent {
 
   protected adjust(minutes: -1 | 1): void {
     this.ruler()?.stopMotion(true);
-    if (this.locked() || !this.commitEdit()) return;
+    if (this.minuteLocked() || !this.commitEdit()) return;
     this.timers.adjust(this.target(), minutes);
   }
 

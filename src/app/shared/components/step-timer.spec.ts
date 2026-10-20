@@ -198,7 +198,7 @@ describe('editable step timer controls', () => {
     ).toBe(true);
     expect(f.timers.state(target).running).toBe(false);
   });
-  it('locks adjustments while running and keeps the elapsed ruler frozen on Stop', async () => {
+  it('adjusts whole minutes during a countdown and keeps the elapsed ruler on Stop', async () => {
     const f = fixture();
     const start = f.root.querySelector<HTMLButtonElement>('[aria-label="Start timer for step 1"]')!;
     expect(f.root.querySelector('[aria-label="Stop timer for step 1"]')).toBeNull();
@@ -212,10 +212,20 @@ describe('editable step timer controls', () => {
     expect(input.disabled).toBe(true);
     expect(slider.getAttribute('aria-disabled')).toBe('true');
     for (const button of f.root.querySelectorAll<HTMLButtonElement>('.timer-minute'))
-      expect(button.disabled).toBe(true);
+      expect(button.disabled).toBe(false);
     slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(f.timers.state(target).remaining).toBe(120);
     await vi.advanceTimersByTimeAsync(3000);
+    f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]')!.click();
+    f.view.detectChanges();
+    expect(f.timers.state(target)).toMatchObject({ remaining: 177, duration: 180, running: true });
+    expect(input.value).toBe('02:57');
+    expect(f.root.querySelector('.is-seconds')).not.toBeNull();
+    f.root.querySelector<HTMLButtonElement>('[aria-label^="Subtract one minute"]')!.click();
+    f.view.detectChanges();
+    expect(f.timers.state(target)).toMatchObject({ remaining: 117, duration: 120, running: true });
+    expect(input.value).toBe('01:57');
+    expect(input.disabled).toBe(true);
     f.root.querySelector<HTMLButtonElement>('[aria-label="Stop timer for step 1"]')!.click();
     f.view.detectChanges();
     expect(input.disabled).toBe(false);
@@ -228,6 +238,29 @@ describe('editable step timer controls', () => {
     expect(f.timers.state(target)).toMatchObject({ remaining: 117, running: false });
     f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]')!.click();
     expect(f.timers.state(target).remaining).toBe(177);
+  });
+  it('blocks minute buttons while expiry validation is pending at zero', () => {
+    const adjust = vi.fn();
+    TestBed.overrideProvider(StepTimerService, {
+      useValue: {
+        state: () => ({
+          duration: 120,
+          remaining: 0,
+          running: true,
+          paused: false,
+          started: true,
+          done: false,
+          elapsed: 0,
+        }),
+        adjust,
+      },
+    });
+    const f = fixture();
+    for (const button of f.root.querySelectorAll<HTMLButtonElement>('.timer-minute')) {
+      expect(button.disabled).toBe(true);
+      button.click();
+    }
+    expect(adjust).not.toHaveBeenCalled();
   });
   it('stops an overdue timer without resetting its time or detailed ruler', async () => {
     const f = fixture();
@@ -288,6 +321,16 @@ describe('editable step timer controls', () => {
     expect(
       f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]')!.disabled,
     ).toBe(true);
+    f.timers.start(target);
+    f.view.detectChanges();
+    expect(
+      f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]')!.disabled,
+    ).toBe(true);
+    expect(
+      f.root.querySelector<HTMLButtonElement>('[aria-label^="Subtract one minute"]')!.disabled,
+    ).toBe(false);
+    f.root.querySelector<HTMLButtonElement>('[aria-label^="Subtract one minute"]')!.click();
+    expect(f.timers.state(target)).toMatchObject({ remaining: 3540, running: true });
     f.timers.setDuration(target, 0);
     f.view.detectChanges();
     expect(
