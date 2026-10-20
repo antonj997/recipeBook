@@ -1,5 +1,6 @@
 import { TimerPushService } from './timer-push.service';
 import { DOCUMENT } from '@angular/common';
+import { Router } from '@angular/router';
 import { DestroyRef, Service, computed, effect, inject, signal, untracked } from '@angular/core';
 import {
   isStepTimerSeconds,
@@ -39,6 +40,8 @@ const ringingLifetime = 30_000;
 /** One app clock. Timer definitions sync with recipes; countdowns stay on this device. */
 @Service()
 export class StepTimerService {
+  readonly stepToReveal = signal<StepTimerTarget | null>(null);
+  private readonly router = inject(Router);
   private readonly auth = inject(SupabaseService);
   private readonly push = inject(TimerPushService);
   private readonly cookbook = inject(CloudCookbookService);
@@ -276,7 +279,10 @@ export class StepTimerService {
     }
   }
   private loadScope(): void {
-    if (this.loadedScope() !== this.scope()) this.closeAudio();
+    if (this.loadedScope() !== this.scope()) {
+      this.closeAudio();
+      this.stepToReveal.set(null);
+    }
     this.validatedRevision = -1;
     this.validationRequest++;
     clearInterval(this.ticker);
@@ -448,10 +454,33 @@ export class StepTimerService {
         updatedAt: Date.now(),
       });
     this.commit(next);
+    const timer = finished[0];
+    const minutes = Math.floor(timer.duration / 60),
+      seconds = timer.duration % 60;
+    const elapsed = [minutes && minutes + ' min', seconds && seconds + ' sec']
+      .filter(Boolean)
+      .join(' ');
+    const scope = this.scope(),
+      version = this.auth.accountVersion();
     this.feedback.show(
       finished.length === 1
-        ? 'Step ' + (finished[0].target.index + 1) + ' is ready to check'
-        : finished.length + ' steps are ready to check',
+        ? 'Step ' + (timer.target.index + 1) + ' timer finished · ' + elapsed + ' elapsed'
+        : finished.length + ' step timers finished',
+      {
+        label: 'View step',
+        pendingLabel: 'Opening…',
+        errorMessage: 'Could not open this step. Try again.',
+        run: async () => {
+          const current = () => scope === this.scope() && version === this.auth.accountVersion();
+          if (!current() || !this.entries().has(timer.target.key)) throw new Error('Timer changed');
+          const opened = await this.router.navigate(['/recipes', timer.target.recipeId], {
+            onSameUrlNavigation: 'reload',
+            scroll: 'manual',
+          });
+          if (!opened || !current()) throw new Error('Step navigation cancelled');
+          this.stepToReveal.set({ ...timer.target });
+        },
+      },
     );
   }
   private syncPush(): void {

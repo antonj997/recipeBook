@@ -27,7 +27,20 @@ import {
 import { RecipeSummaryDetailsComponent, RecipeExtraDetailsComponent } from './recipe-metadata-view';
 import { IconComponent } from '../../../shared/components/icon';
 import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark';
-import { Component, computed, effect, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  OnInit,
+  OnDestroy,
+  signal,
+  untracked,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { PageTransitionService } from '../../../core/services/page-transition.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { Recipe } from '../../../core/models/recipe.model';
 import { RecipeService } from '../../../core/services/recipe.service';
@@ -61,6 +74,9 @@ import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
 })
 export class RecipeDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly pageMotion = inject(PageTransitionService);
+  private loadRequest = 0;
   readonly drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
   readonly isDraft = !!this.route.snapshot.data['draft'];
@@ -153,7 +169,36 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     return recipe ? recipeStepTimers(recipe) : [];
   });
   readonly hasTimers = computed(() => this.stepTimers().some(Boolean));
+  private readonly requestedStep = computed(() => {
+    const target = this.timers.stepToReveal();
+    if (
+      !target ||
+      this.loading() ||
+      this.isDraft ||
+      this.accountChanged() ||
+      target.recipeId !== this.recipe()?.id ||
+      this.stepTimers()[target.index]?.key !== target.key
+    )
+      return null;
+    return target;
+  });
   constructor() {
+    effect(() => {
+      if (this.requestedStep()) untracked(() => this.switchSection('instructions'));
+    });
+    afterRenderEffect(() => {
+      const target = this.requestedStep();
+      if (!target || this.activeSection() !== 'instructions' || this.pageMotion.phase() !== 'idle')
+        return;
+      const step = document.getElementById('recipe-step-' + (target.index + 1));
+      if (!step) return;
+      step.scrollIntoView({
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        block: 'start',
+      });
+      step.focus({ preventScroll: true });
+      this.timers.stepToReveal.set(null);
+    });
     effect(() => {
       if (this.accountChanged() || this.isDraft) return;
       for (const index of this.completedSteps()) {
@@ -214,6 +259,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.loadRequest++;
     this.readingMedia?.removeEventListener('change', this.syncReadingLayout);
     if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
   }
@@ -258,6 +304,8 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     return isSupportedRecipePhotoUrl(this.recipe()?.stepDetails?.[index]?.imageUrl);
   }
   async loadStepPhoto(index: number): Promise<void> {
+    const recipeId = this.recipe()?.id;
+    const current = () => !this.accountChanged() && recipeId === this.recipe()?.id;
     const url = this.recipe()?.stepDetails?.[index]?.imageUrl;
     if (
       this.accountChanged() ||
@@ -275,12 +323,12 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
           ? (url) => this.auth.invokeImporter({ url, action: 'photo' })
           : undefined,
       );
-      if (!this.accountChanged())
-        this.loadedStepPhotos.update((items) => ({ ...items, [index]: photo }));
+      if (current()) this.loadedStepPhotos.update((items) => ({ ...items, [index]: photo }));
     } catch {
-      if (!this.accountChanged())
+      if (current())
         this.stepPhotoNotice.set('Could not load the photo. Sign in to load imported photos.');
     } finally {
+      if (!current()) return;
       this.loadingStepPhotos.update((items) => {
         const next = new Set(items);
         next.delete(index);
@@ -329,11 +377,25 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     this.readingMedia = window.matchMedia('(min-width: 40rem)');
     this.syncReadingLayout();
     this.readingMedia.addEventListener('change', this.syncReadingLayout);
-    void this.loadRecipe();
+    this.route.data
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => void this.loadRecipe());
   }
 
   private async loadRecipe(useResolved = true): Promise<void> {
+    const request = ++this.loadRequest;
+    const current = () => request === this.loadRequest && !this.accountChanged();
     const id = this.route.snapshot.paramMap.get('id');
+    if (!this.isDraft && this.recipe()?.id !== id) {
+      this.recipe.set(undefined);
+      this.loading.set(true);
+      this.completedSteps.set(new Set());
+      this.activeSection.set('ingredients');
+      this.loadedStepPhotos.set({});
+      this.loadingStepPhotos.set(new Set());
+      this.failedStepPhotos.set(new Set());
+      this.stepPhotoNotice.set('');
+    }
 
     if (this.isDraft) {
       const draft = this.drafts.getOrCreate();
@@ -372,18 +434,21 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
           instructionText(step, result.stepDetails?.[index]),
         );
       }
-      if (this.accountChanged()) return;
+      if (!current()) return;
       this.recipe.set(result);
       this.error.set(result ? '' : 'This recipe is no longer available.');
       this.selectedServings.set(this.baseServings());
       const collections = ready ? ready.collections : await this.recipeService.getCollections();
+      if (!current()) return;
       this.collectionNames.set(
         collections.filter((c) => result?.collectionIds?.includes(c.id)).map((c) => c.name),
       );
     } catch (error) {
+      if (!current()) return;
       console.error('Failed to load recipe:', error);
       this.error.set('Could not load this recipe.');
     } finally {
+      if (!current()) return;
       this.loading.set(false);
       const recipe = this.recipe();
       if (recipe && !this.accountChanged()) this.restoreCookingSession(recipe);

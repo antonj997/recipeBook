@@ -1,6 +1,9 @@
 import { Injectable, signal } from '@angular/core';
 export interface FeedbackAction {
   label: string;
+  pendingLabel?: string;
+  successMessage?: string;
+  errorMessage?: string;
   run: () => Promise<void>;
 }
 // Ephemeral feedback; data restoration belongs to the caller's account-bound action.
@@ -24,10 +27,13 @@ export class FeedbackService {
     this.busy.set(true);
     try {
       await action.run();
-      if (this.action() === action) this.show('Recipe restored');
+      if (this.action() === action) {
+        if (action.successMessage) this.show(action.successMessage);
+        else this.dismiss();
+      }
     } catch {
       if (this.action() === action)
-        this.show('Could not restore the recipe. Try Undo again.', action);
+        this.show(action.errorMessage ?? 'Could not complete that action. Try again.', action);
     } finally {
       if (this.action() === action) this.busy.set(false);
     }

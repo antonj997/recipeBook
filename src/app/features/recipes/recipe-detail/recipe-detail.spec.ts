@@ -1,3 +1,6 @@
+import { BehaviorSubject } from 'rxjs';
+import { PageTransitionService } from '../../../core/services/page-transition.service';
+import { recipeStepTimers, type StepTimerTarget } from '../../../core/models/step-timer';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
@@ -10,8 +13,12 @@ import { FeedbackService } from '../../../core/services/feedback.service';
 import { CookingSessionService } from '../../../core/services/cooking-session.service';
 
 describe('recipe detail', () => {
+  const stepToReveal = signal<StepTimerTarget | null>(null);
+  let routeData = new BehaviorSubject({});
   beforeEach(() => {
     localStorage.clear();
+    stepToReveal.set(null);
+    routeData = new BehaviorSubject({});
     vi.stubGlobal('matchMedia', () => ({
       matches: false,
       addEventListener() {},
@@ -24,6 +31,7 @@ describe('recipe detail', () => {
         {
           provide: ActivatedRoute,
           useValue: {
+            data: routeData,
             snapshot: {
               paramMap: convertToParamMap({ id: 'tab-test' }),
               data: {
@@ -48,7 +56,21 @@ describe('recipe detail', () => {
           provide: SupabaseService,
           useValue: { cacheScope: 'section-tests', user: signal(null), accountVersion: signal(0) },
         },
-        { provide: StepTimerService, useValue: {} },
+        {
+          provide: StepTimerService,
+          useValue: {
+            stepToReveal,
+            state: (target: StepTimerTarget) => ({
+              remaining: target.seconds,
+              duration: target.seconds,
+              running: false,
+              paused: false,
+              started: false,
+              done: false,
+              elapsed: 0,
+            }),
+          },
+        },
         { provide: FeedbackService, useValue: {} },
       ],
     });
@@ -118,6 +140,118 @@ describe('recipe detail', () => {
     expect(f.ingredients.getAttribute('aria-hidden')).toBe(null);
   });
 
+  it('opens Instructions and reveals the timed step after page motion finishes', async () => {
+    const route = TestBed.inject(ActivatedRoute);
+    route.snapshot.data['recipePage'].recipe.instructions = ['Rest for 1 minute.'];
+    const target = recipeStepTimers(route.snapshot.data['recipePage'].recipe)[0]!;
+    const f = await fixture();
+    const step = f.host.nativeElement.querySelector('.cooking-step') as HTMLElement;
+    step.scrollIntoView = vi.fn();
+    const motion = TestBed.inject(PageTransitionService);
+    motion.phase.set('opening');
+    stepToReveal.set(target);
+    f.host.detectChanges();
+    await f.host.whenStable();
+    expect(f.host.componentInstance.activeSection()).toBe('instructions');
+    expect(step.scrollIntoView).not.toHaveBeenCalled();
+    motion.phase.set('idle');
+    f.host.detectChanges();
+    await f.host.whenStable();
+    expect(step.id).toBe('recipe-step-1');
+    expect(step.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    expect(document.activeElement).toBe(step);
+    expect(stepToReveal()).toBeNull();
+  });
+  it('loads the target recipe when the router reuses the recipe screen', async () => {
+    const f = await fixture();
+    const route = TestBed.inject(ActivatedRoute);
+    const next = {
+      id: 'other-recipe',
+      title: 'Another recipe',
+      servings: 2,
+      ingredients: ['Pepper'],
+      instructions: ['Season with pepper.'],
+    };
+    Object.defineProperty(route.snapshot, 'paramMap', {
+      value: convertToParamMap({ id: next.id }),
+    });
+    route.snapshot.data['recipePage'] = {
+      accountVersion: 0,
+      revision: 0,
+      recipe: next,
+      collections: [],
+    };
+    routeData.next(route.snapshot.data);
+    await f.host.whenStable();
+    f.host.detectChanges();
+    expect(f.host.componentInstance.recipe()?.id).toBe(next.id);
+    expect(f.host.nativeElement.textContent).toContain('Season with pepper.');
+  });
+  it('does not overwrite the destination categories with a late previous-recipe read', async () => {
+    let finishCollections!: (value: { id: string; name: string }[]) => void;
+    const route = TestBed.inject(ActivatedRoute);
+    const oldRecipe = {
+      ...route.snapshot.data['recipePage'].recipe,
+      collectionIds: ['old-category'],
+    };
+    const getCollections = vi.fn(
+      () =>
+        new Promise<{ id: string; name: string }[]>((resolve) => {
+          finishCollections = resolve;
+        }),
+    );
+    Object.assign(TestBed.inject(RecipeService), {
+      getRecipe: async () => oldRecipe,
+      getCollections,
+    });
+    const f = await fixture();
+    route.snapshot.data['recipePage'] = undefined;
+    routeData.next({});
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(getCollections).toHaveBeenCalled();
+    const next = { ...oldRecipe, id: 'new-recipe', collectionIds: ['new-category'] };
+    Object.defineProperty(route.snapshot, 'paramMap', {
+      value: convertToParamMap({ id: next.id }),
+    });
+    route.snapshot.data['recipePage'] = {
+      accountVersion: 0,
+      revision: 0,
+      recipe: next,
+      collections: [{ id: 'new-category', name: 'New category' }],
+    };
+    routeData.next(route.snapshot.data);
+    finishCollections([{ id: 'old-category', name: 'Old category' }]);
+    await f.host.whenStable();
+    expect(f.host.componentInstance.recipe()?.id).toBe('new-recipe');
+    expect(f.host.componentInstance.collectionNames()).toEqual(['New category']);
+  });
+  it('does not leave the previous recipe visible if the target recipe fails to load', async () => {
+    const f = await fixture(),
+      route = TestBed.inject(ActivatedRoute);
+    Object.defineProperty(route.snapshot, 'paramMap', {
+      value: convertToParamMap({ id: 'unavailable' }),
+    });
+    route.snapshot.data['recipePage'] = {
+      accountVersion: 0,
+      revision: 0,
+      error: 'Could not load this recipe.',
+      collections: [],
+    };
+    routeData.next(route.snapshot.data);
+    await f.host.whenStable();
+    f.host.detectChanges();
+    expect(f.host.componentInstance.recipe()).toBeUndefined();
+    expect(f.host.nativeElement.textContent).toContain('Could not load this recipe.');
+    expect(f.host.nativeElement.textContent).not.toContain('Season and serve.');
+  });
+  it('ignores a reveal request for a step that has since changed', async () => {
+    const f = await fixture();
+    stepToReveal.set({ recipeId: 'tab-test', key: 'old-step', index: 0, seconds: 60 });
+    await f.host.whenStable();
+    f.host.detectChanges();
+    expect(f.host.componentInstance.activeSection()).toBe('ingredients');
+  });
   it('gives an unavailable recipe a heading and a way back to the library', async () => {
     const route = TestBed.inject(ActivatedRoute);
     route.snapshot.data['recipePage'].recipe = undefined;

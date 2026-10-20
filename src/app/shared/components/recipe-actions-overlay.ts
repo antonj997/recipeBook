@@ -478,6 +478,9 @@ export class RecipeActionsOverlayComponent {
       if (version !== this.recipes.accountVersion()) return;
       this.feedback.show('Recipe deleted', {
         label: 'Undo',
+        pendingLabel: 'Restoring…',
+        successMessage: 'Recipe restored',
+        errorMessage: 'Could not restore the recipe. Try Undo again.',
         run: async () => {
           await restore();
           if (progress && version === this.recipes.accountVersion())

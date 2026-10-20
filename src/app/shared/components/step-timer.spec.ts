@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StepTimerComponent } from './step-timer';
 import { StepTimerService } from '../../core/services/step-timer.service';
@@ -24,6 +25,7 @@ describe('editable step timer controls', () => {
     TestBed.configureTestingModule({
       imports: [StepTimerComponent],
       providers: [
+        provideRouter([]),
         {
           provide: SupabaseService,
           useValue: {

@@ -1,5 +1,6 @@
 import { TimerPushService } from './timer-push.service';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StepTimerService, type StepTimerTarget } from './step-timer.service';
@@ -10,6 +11,7 @@ import type { Recipe } from '../models/recipe.model';
 import { FeedbackService } from './feedback.service';
 
 describe('deadline-based step countdowns', () => {
+  const navigate = vi.fn(async () => true);
   const push = { enabled: signal(false), replaceTimers: vi.fn(), retry: vi.fn() };
   const user = signal<{ id: string } | null>(null);
   const version = signal(0);
@@ -33,6 +35,7 @@ describe('deadline-based step countdowns', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
+        { provide: Router, useValue: { navigate } },
         { provide: TimerPushService, useValue: push },
         { provide: CloudCookbookService, useValue: cookbook },
         {
@@ -44,6 +47,7 @@ describe('deadline-based step countdowns', () => {
     return TestBed.inject(StepTimerService);
   }
   beforeEach(() => {
+    navigate.mockReset().mockResolvedValue(true);
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-18T17:00:00Z'));
     localStorage.clear();
@@ -57,6 +61,7 @@ describe('deadline-based step countdowns', () => {
     recipes.set(recipe.id, recipe);
     TestBed.configureTestingModule({
       providers: [
+        { provide: Router, useValue: { navigate } },
         { provide: TimerPushService, useValue: push },
         { provide: CloudCookbookService, useValue: cookbook },
         {
@@ -117,8 +122,54 @@ describe('deadline-based step countdowns', () => {
       elapsed: 3,
     });
     expect(alert).toHaveBeenCalledTimes(1);
+    expect(feedback.message()).toBe('Step 1 timer finished · 2 sec elapsed');
     document.dispatchEvent(new Event('visibilitychange'));
     expect(alert).toHaveBeenCalledTimes(1);
+  });
+  it('gives the finished step and elapsed duration with an action to open its recipe', async () => {
+    const fourth = {
+      ...recipe,
+      id: 'fourth',
+      instructions: ['Prepare.', 'Mix.', 'Season.', 'Cook for 2 minutes.'],
+    };
+    recipes.set(fourth.id, fourth);
+    const timer = recipeStepTimers(fourth)[3]!;
+    const timers = TestBed.inject(StepTimerService),
+      feedback = TestBed.inject(FeedbackService);
+    timers.setDuration(timer, 300);
+    timers.start(timer);
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(300_000);
+    expect(feedback.message()).toBe('Step 4 timer finished · 5 min elapsed');
+    expect(feedback.action()?.label).toBe('View step');
+    await feedback.runAction();
+    expect(navigate).toHaveBeenCalledWith(['/recipes', 'fourth'], {
+      onSameUrlNavigation: 'reload',
+      scroll: 'manual',
+    });
+    expect(feedback.message()).toBe('');
+  });
+  it('keeps a failed timer navigation available to retry', async () => {
+    const timers = TestBed.inject(StepTimerService),
+      feedback = TestBed.inject(FeedbackService);
+    timers.start({ ...target, seconds: 2 });
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(2000);
+    navigate.mockResolvedValue(false);
+    await feedback.runAction();
+    expect(feedback.message()).toBe('Could not open this step. Try again.');
+    expect(feedback.action()?.label).toBe('View step');
+  });
+  it('does not open an expired timer action after the account changes', async () => {
+    const timers = TestBed.inject(StepTimerService),
+      feedback = TestBed.inject(FeedbackService);
+    timers.start({ ...target, seconds: 2 });
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(2000);
+    user.set({ id: 'friend' });
+    version.update((value) => value + 1);
+    await feedback.runAction();
+    expect(navigate).not.toHaveBeenCalled();
   });
   it('reset returns to the recipe preset without modifying another step', () => {
     const timers = TestBed.inject(StepTimerService);
@@ -143,6 +194,7 @@ describe('deadline-based step countdowns', () => {
     vi.setSystemTime(new Date('2026-10-18T17:00:40Z'));
     TestBed.configureTestingModule({
       providers: [
+        { provide: Router, useValue: { navigate } },
         { provide: TimerPushService, useValue: push },
         { provide: CloudCookbookService, useValue: cookbook },
         {
@@ -203,6 +255,7 @@ describe('deadline-based step countdowns', () => {
     vi.setSystemTime(new Date('2026-10-18T17:03:00Z'));
     TestBed.configureTestingModule({
       providers: [
+        { provide: Router, useValue: { navigate } },
         { provide: TimerPushService, useValue: push },
         { provide: CloudCookbookService, useValue: cookbook },
         {
@@ -394,6 +447,7 @@ describe('deadline-based step countdowns', () => {
     vi.setSystemTime(new Date('2026-10-18T17:05:00Z'));
     TestBed.configureTestingModule({
       providers: [
+        { provide: Router, useValue: { navigate } },
         { provide: TimerPushService, useValue: push },
         { provide: CloudCookbookService, useValue: cookbook },
         {

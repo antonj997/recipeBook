@@ -442,3 +442,13 @@ li::marker {
   font-size: 0.8125rem;
   line-height: 1.5;
 }
+
+// Keep a timer destination below the header, sticky tabs and their reading fade.
+.cooking-step {
+  scroll-margin-top: calc(var(--app-header-height) + 104px);
+}
+@media (min-width: 40rem) {
+  .cooking-step {
+    scroll-margin-top: calc(var(--app-header-height) + 24px);
+  }
+}

@@ -188,7 +188,12 @@
               }
               <ol>
                 @for (step of selectedRecipe.instructions; track $index) {
-                  <li class="cooking-step" [class.completed]="completedSteps().has($index)">
+                  <li
+                    class="cooking-step"
+                    [id]="'recipe-step-' + ($index + 1)"
+                    tabindex="-1"
+                    [class.completed]="completedSteps().has($index)"
+                  >
                     @if (selectedRecipe.stepDetails?.[$index]?.section; as section) {
                       @if (
                         $index === 0 ||

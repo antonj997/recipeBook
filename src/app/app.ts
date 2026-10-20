@@ -194,10 +194,12 @@ export class App {
       this.onSettings.set(settings);
       this.settingsTarget.set(settings ? this.settingsReturn : '/settings');
       if (!settings) this.lastPage = event.urlAfterRedirects;
-      requestAnimationFrame(() => {
-        if (!this.guestRecipes.required())
-          document.getElementById('main-content')?.focus({ preventScroll: true });
-      });
+      // A navigation with its own scroll destination also owns focus (for example View step).
+      if (this.router.currentNavigation()?.extras.scroll !== 'manual')
+        requestAnimationFrame(() => {
+          if (!this.guestRecipes.required())
+            document.getElementById('main-content')?.focus({ preventScroll: true });
+        });
     });
   }
   protected readonly touchInput = signal(false);
