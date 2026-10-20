@@ -13,12 +13,11 @@
   touch-action: none;
   user-select: none;
   -webkit-touch-callout: none;
-  --ruler-passed: var(--color-green);
-}
-.minute-ruler.is-overdue {
-  --ruler-passed: var(--color-danger);
+  --ruler-passed: var(--color-timer-progress);
 }
 .ruler-viewport {
+  overflow: hidden;
+  contain: paint;
   position: absolute;
   inset: 0;
   mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
@@ -48,8 +47,7 @@
 .ruler-tick.is-after-end {
   opacity: 0.35;
 }
-.ruler-marker,
-.ruler-end {
+.ruler-marker {
   position: absolute;
   top: 28px;
   left: -1.5px;
@@ -60,19 +58,8 @@
   pointer-events: none;
   transition: transform 100ms var(--ease-out);
 }
-.ruler-marker.is-timeline {
-  background: var(--ruler-passed);
-}
-.ruler-end {
-  width: 1px;
-  left: -0.5px;
-  top: 29px;
-  height: 18px;
-  background: var(--color-muted);
-}
 .is-dragging .ruler-ticks,
-.is-dragging .ruler-marker,
-.is-dragging .ruler-end {
+.is-dragging .ruler-marker {
   transition: none;
 }
 [aria-disabled='true'] {
@@ -82,7 +69,6 @@
 @media (prefers-reduced-motion: reduce) {
   .ruler-ticks,
   .ruler-marker,
-  .ruler-end,
   .ruler-tick {
     transition: none;
   }
@@ -103,4 +89,34 @@
   text-align: center;
   white-space: nowrap;
   pointer-events: none;
+}
+
+.ruler-tick.is-fine {
+  width: 1px;
+  height: 4px;
+}
+.ruler-tick.is-elapsed .ruler-number {
+  color: var(--ruler-passed);
+}
+.is-seconds .ruler-ticks {
+  transition: transform 1000ms linear;
+}
+.is-seconds .ruler-viewport {
+  animation: timer-seconds-in 160ms var(--ease-out);
+}
+@keyframes timer-seconds-in {
+  from {
+    opacity: 0.65;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-seconds .ruler-ticks {
+    transition: none;
+  }
+  .is-seconds .ruler-viewport {
+    animation: none;
+  }
 }

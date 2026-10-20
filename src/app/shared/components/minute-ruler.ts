@@ -8,6 +8,7 @@ import {
   effect,
   inject,
   input,
+  linkedSignal,
   output,
   signal,
   untracked,
@@ -15,6 +16,7 @@ import {
 import { formatCountdown, maxClockSeconds } from '../../core/models/step-timer';
 
 const pitch = 18;
+const secondPitch = pitch / 5;
 const maximum = maxClockSeconds / 60;
 const cycleLength = maximum + 1;
 const inset = 16;
@@ -36,6 +38,7 @@ const inset = 16;
       [attr.aria-disabled]="locked()"
       [class.is-dragging]="dragging() || rewinding()"
       [class.is-rewinding]="rewinding()"
+      [class.is-seconds]="secondsScale()"
       (pointerdown)="begin($event)"
       (lostpointercapture)="captureLost()"
       (keydown)="key($event)"
@@ -46,34 +49,31 @@ const inset = 16;
       [class.is-overdue]="overdue()"
     >
       <div class="ruler-viewport" aria-hidden="true">
-        <div class="ruler-ticks" [style.transform]="offset()">
-          @for (tick of ticks(); track $index) {
-            <span
-              class="ruler-tick"
-              [class.is-major]="tickMinute(tick) % 5 === 0"
-              [attr.data-minute]="tickMinute(tick)"
-              [class.is-elapsed]="timeline() && tick >= 0 && tick * 60 <= elapsedSeconds()"
-              [class.is-after-end]="
-                timeline() && tick * 60 > totalSeconds() && tick * 60 > elapsedSeconds()
-              "
-              [style.left.px]="$index * pitch"
-            >
-              @if (tickMinute(tick) % 5 === 0) {
-                <span class="ruler-number">{{ tickMinute(tick) }}</span>
-              }
-            </span>
-          }
-        </div>
+        @for (key of [trackKey()]; track key) {
+          <div class="ruler-ticks" [style.transform]="offset()">
+            @for (tick of ticks(); track tick) {
+              <span
+                class="ruler-tick"
+                [class.is-major]="isMajor(tick)"
+                [class.is-fine]="secondsScale() && tick % 5 !== 0"
+                [attr.data-minute]="secondsScale() ? null : tickMinute(tick)"
+                [attr.data-second]="secondsScale() ? tick : null"
+                [class.is-elapsed]="secondsScale() && tick >= 0 && tick <= elapsedSeconds()"
+                [class.is-after-end]="
+                  secondsScale() && tick > totalSeconds() && tick > elapsedSeconds()
+                "
+                [style.left.px]="tick * tickPitch()"
+              >
+                @if (isMajor(tick)) {
+                  <span class="ruler-number">{{ tickLabel(tick) }}</span>
+                }
+              </span>
+            }
+          </div>
+        }
       </div>
-      <span
-        class="ruler-marker"
-        [class.is-timeline]="timeline() && !adjusting()"
-        [class.is-overdue]="overdue()"
-        [style.transform]="markerTransform()"
-        aria-hidden="true"
-      ></span>
-      @if (timeline() && endVisible()) {
-        <span class="ruler-end" [style.transform]="endTransform()" aria-hidden="true"></span>
+      @if (!timeline()) {
+        <span class="ruler-marker" [style.transform]="markerTransform()" aria-hidden="true"></span>
       }
     </div>
   `,
@@ -89,7 +89,6 @@ export class MinuteRulerComponent {
   readonly label = input('Timer duration');
   readonly durationChange = output<number>();
   protected readonly maximum = maximum;
-  protected readonly pitch = pitch;
   private readonly document = inject(DOCUMENT);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly width = signal(360);
@@ -100,9 +99,22 @@ export class MinuteRulerComponent {
   private readonly introPosition = signal<number | undefined>(undefined);
   protected readonly locked = computed(() => this.disabled() || this.timeline());
   protected readonly rewinding = computed(() => this.introPosition() !== undefined);
+  protected readonly secondsScale = computed(() => this.timeline() && !this.rewinding());
+  protected readonly tickPitch = computed(() => (this.secondsScale() ? secondPitch : pitch));
+  // A new track has no stale CSS transform to interpolate after changing units or catching up.
+  // Adjacent clock updates retain the track and its ticks for smooth one-second movement.
+  protected readonly trackKey = linkedSignal({
+    source: () => ({ seconds: this.secondsScale(), elapsed: this.elapsedSeconds() }),
+    computation: (current, previous): number => {
+      const discontinuity =
+        !previous ||
+        current.seconds !== previous.source.seconds ||
+        (current.seconds && Math.abs(current.elapsed - previous.source.elapsed) > 2);
+      return discontinuity ? (previous?.value ?? -1) + 1 : previous.value;
+    },
+  });
   protected readonly dragging = signal(false);
   protected wheelRemainder = 0;
-  protected readonly adjusting = computed(() => this.position() !== undefined);
   protected readonly minute = computed(() =>
     this.tickMinute(Math.round(this.position() ?? this.currentMinute())),
   );
@@ -110,7 +122,8 @@ export class MinuteRulerComponent {
   private readonly visiblePosition = computed(() => {
     const intro = this.introPosition();
     if (intro !== undefined) return intro;
-    if (this.timeline()) return Math.max(0, this.elapsedSeconds() / 60);
+    if (this.timeline())
+      return Math.max(0, this.secondsScale() ? this.elapsedSeconds() : this.elapsedSeconds() / 60);
     return this.position() ?? this.idlePosition();
   });
   private readonly windowStart = computed(() => {
@@ -122,25 +135,20 @@ export class MinuteRulerComponent {
         : undefined;
     return anchor === undefined
       ? this.defaultWindowStart(visible)
-      : visible - (anchor - inset) / pitch;
+      : visible - (anchor - inset) / this.tickPitch();
   });
   protected readonly ticks = computed(() =>
-    Array.from({ length: 39 }, (_, i) => Math.floor(this.windowStart()) + i),
+    Array.from(
+      { length: Math.ceil(this.width() / this.tickPitch()) + 2 },
+      (_, i) => Math.floor(this.windowStart()) + i,
+    ),
   );
   protected readonly offset = computed(() => {
-    const offset = inset - (this.windowStart() - Math.floor(this.windowStart())) * pitch;
+    const offset = inset - this.windowStart() * this.tickPitch();
     return 'translateX(' + Math.round(offset * 1000) / 1000 + 'px)';
   });
   protected readonly markerTransform = computed(
     () => 'translateX(' + this.x(this.visiblePosition()) + 'px)',
-  );
-  protected readonly endVisible = computed(
-    () =>
-      this.x(this.totalSeconds() / 60) >= inset &&
-      this.x(this.totalSeconds() / 60) <= this.width() - inset,
-  );
-  protected readonly endTransform = computed(
-    () => 'translateX(' + this.x(this.totalSeconds() / 60) + 'px)',
   );
   private gesture?: {
     id: number;
@@ -405,8 +413,8 @@ export class MinuteRulerComponent {
       return;
     this.watchMotion();
     this.watchInterruption();
-    const fromAnchor = this.anchor() ?? inset + (from - this.defaultWindowStart(from)) * pitch;
     this.introPosition.set(from);
+    const fromAnchor = this.anchor() ?? inset + (from - this.defaultWindowStart(from)) * pitch;
     this.introAnchor.set(fromAnchor);
     const started = performance.now();
     const advance = (time: number) => {
@@ -511,11 +519,17 @@ export class MinuteRulerComponent {
   }
 
   private x(minute: number): number {
-    return Math.round((inset + (minute - this.windowStart()) * pitch) * 1000) / 1000;
+    return Math.round((inset + (minute - this.windowStart()) * this.tickPitch()) * 1000) / 1000;
   }
   private setPosition(value: number): void {
     this.position.set(value);
     if (this.minute() * 60 !== this.seconds()) this.durationChange.emit(this.minute() * 60);
+  }
+  protected isMajor(tick: number): boolean {
+    return this.secondsScale() ? tick % 10 === 0 : this.tickMinute(tick) % 5 === 0;
+  }
+  protected tickLabel(tick: number): string {
+    return this.secondsScale() ? formatCountdown(tick) : String(this.tickMinute(tick));
   }
   protected tickMinute(tick: number): number {
     return ((tick % cycleLength) + cycleLength) % cycleLength;
@@ -527,7 +541,7 @@ export class MinuteRulerComponent {
     this.durationChange.emit(Math.min(maxClockSeconds, this.tickMinute(minute) * 60 + remainder));
   }
   private defaultWindowStart(position: number): number {
-    const capacity = Math.max(1, (this.width() - inset * 2) / pitch);
+    const capacity = Math.max(1, (this.width() - inset * 2) / this.tickPitch());
     return position < 0 ? position : Math.max(0, position - capacity / 2);
   }
   private idlePosition(): number {

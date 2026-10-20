@@ -182,27 +182,106 @@ describe('minute ruler gestures', () => {
     expect(zoom.defaultPrevented).toBe(false);
     expect(f.changes.at(-1)).toBe(32 * 60);
   });
-  it('colours passed minute ticks and follows elapsed time instead of remaining time', async () => {
-    const f = setup(480);
+  it('uses one-second divisions with five-second and ten-second ticks while timing', async () => {
+    const f = setup(53),
+      root = f.view.nativeElement as HTMLElement;
     f.view.componentRef.setInput('timeline', true);
-    f.view.componentRef.setInput('totalSeconds', 600);
-    f.view.componentRef.setInput('elapsedSeconds', 120);
+    f.view.componentRef.setInput('totalSeconds', 60);
+    f.view.componentRef.setInput('elapsedSeconds', 7);
     f.view.detectChanges();
     await vi.advanceTimersByTimeAsync(600);
     f.view.detectChanges();
-    const root = f.view.nativeElement as HTMLElement;
-    expect(root.querySelectorAll('.is-elapsed')).toHaveLength(3);
-    const marker = root.querySelector<HTMLElement>('.ruler-marker')!;
-    const before = marker.style.transform;
-    f.view.componentRef.setInput('seconds', 360);
-    f.view.componentRef.setInput('totalSeconds', 480);
+    const tick = (second: number) =>
+      root.querySelector<HTMLElement>('[data-second="' + second + '"]')!;
+    expect(tick(1).classList.contains('is-fine')).toBe(true);
+    expect(tick(5).classList.contains('is-fine')).toBe(false);
+    expect(tick(5).classList.contains('is-major')).toBe(false);
+    expect(tick(10).classList.contains('is-major')).toBe(true);
+    expect(tick(10).querySelector('.ruler-number')?.textContent?.trim()).toBe('00:10');
+    expect(
+      Number.parseFloat(tick(5).style.left) - Number.parseFloat(tick(0).style.left),
+    ).toBeCloseTo(18);
+    expect(root.querySelectorAll('.is-elapsed')).toHaveLength(8);
+    expect(tick(7).classList.contains('is-elapsed')).toBe(true);
+    expect(tick(8).classList.contains('is-elapsed')).toBe(false);
+    f.view.componentRef.setInput('elapsedSeconds', 11);
     f.view.detectChanges();
-    expect(marker.style.transform).toBe(before);
-    expect(root.querySelectorAll('.is-elapsed')).toHaveLength(3);
-    f.view.componentRef.setInput('elapsedSeconds', 180);
+    expect(root.querySelectorAll('.is-elapsed')).toHaveLength(12);
+    expect(f.changes).toEqual([]);
+  });
+  it('removes selection and end markers while timing and restores the minute scale on Stop', async () => {
+    const f = setup(),
+      root = f.view.nativeElement as HTMLElement;
+    f.view.componentRef.setInput('timeline', true);
+    f.view.componentRef.setInput('totalSeconds', 1800);
     f.view.detectChanges();
-    expect(root.querySelectorAll('.is-elapsed')).toHaveLength(4);
-    expect(marker.style.transform).not.toBe(before);
+    await vi.advanceTimersByTimeAsync(600);
+    f.view.detectChanges();
+    expect(root.querySelector('.ruler-marker')).toBeNull();
+    expect(root.querySelector('.ruler-end')).toBeNull();
+    expect(root.querySelectorAll('.is-fine').length).toBeGreaterThan(0);
+    f.view.componentRef.setInput('overdue', true);
+    f.view.detectChanges();
+    expect(root.querySelector('.ruler-marker')).toBeNull();
+    f.view.componentRef.setInput('timeline', false);
+    f.view.detectChanges();
+    expect(root.querySelector('.ruler-marker')).not.toBeNull();
+    expect(root.querySelector('[data-second]')).toBeNull();
+    expect(root.querySelector('.is-fine')).toBeNull();
+    expect(root.querySelector('[data-minute]')).not.toBeNull();
+  });
+  it('keeps seconds rendering bounded and reuses ticks as a long timer advances', async () => {
+    const f = setup(5),
+      root = f.view.nativeElement as HTMLElement;
+    f.view.componentRef.setInput('timeline', true);
+    f.view.componentRef.setInput('totalSeconds', 3600);
+    f.view.componentRef.setInput('elapsedSeconds', 3595);
+    f.view.detectChanges();
+    await vi.advanceTimersByTimeAsync(600);
+    f.view.detectChanges();
+    const tick = root.querySelector('[data-second="3595"]');
+    expect(tick).not.toBeNull();
+    const offset = () =>
+      Number(
+        root
+          .querySelector<HTMLElement>('.ruler-ticks')!
+          .style.transform.match(/translateX\(([\d.-]+)px\)/)?.[1],
+      );
+    const before = offset();
+    expect(root.querySelectorAll('.ruler-tick').length).toBeLessThan(150);
+    f.view.componentRef.setInput('elapsedSeconds', 3596);
+    f.view.detectChanges();
+    expect(root.querySelector('[data-second="3595"]')).toBe(tick);
+    expect(offset() - before).toBeCloseTo(-3.6, 2);
+    expect(root.querySelector('.ruler-marker')).toBeNull();
+  });
+  it('replaces the track across scale changes and clock jumps without animating stale coordinates', async () => {
+    const f = setup(1800),
+      root = f.view.nativeElement as HTMLElement;
+    const track = () => root.querySelector<HTMLElement>('.ruler-ticks')!;
+    const idle = track();
+    f.view.componentRef.setInput('timeline', true);
+    f.view.componentRef.setInput('elapsedSeconds', 1800);
+    f.view.detectChanges();
+    expect(track()).toBe(idle);
+    await vi.advanceTimersByTimeAsync(600);
+    f.view.detectChanges();
+    const resumed = track();
+    expect(resumed).not.toBe(idle);
+    expect(root.querySelector('[data-second="1800"]')).not.toBeNull();
+    f.view.componentRef.setInput('elapsedSeconds', 1801);
+    f.view.detectChanges();
+    expect(track()).toBe(resumed);
+    f.view.componentRef.setInput('elapsedSeconds', 2400);
+    f.view.detectChanges();
+    const caughtUp = track();
+    expect(caughtUp).not.toBe(resumed);
+    expect(root.querySelector('[data-second="2400"]')).not.toBeNull();
+    f.view.componentRef.setInput('timeline', false);
+    f.view.detectChanges();
+    expect(track()).not.toBe(caughtUp);
+    expect(root.querySelector('[data-minute]')).not.toBeNull();
+    expect(f.changes).toEqual([]);
   });
   it('owns a drag from the center and blocks page scrolling until release', async () => {
     const f = setup();
@@ -414,11 +493,13 @@ describe('minute ruler gestures', () => {
   it('swipes from the selected time to zero when starting, without changing the duration', async () => {
     const f = setup(1800),
       root = f.view.nativeElement as HTMLElement;
+    const offset = root.querySelector<HTMLElement>('.ruler-ticks')!.style.transform;
     f.view.componentRef.setInput('timeline', true);
     f.view.componentRef.setInput('disabled', true);
     f.view.componentRef.setInput('totalSeconds', 1800);
     f.view.detectChanges();
     expect(root.querySelector('.is-rewinding')).not.toBeNull();
+    expect(root.querySelector<HTMLElement>('.ruler-ticks')!.style.transform).toBe(offset);
     await vi.advanceTimersByTimeAsync(200);
     f.view.detectChanges();
     expect(root.querySelector('.is-rewinding')).not.toBeNull();
@@ -428,27 +509,32 @@ describe('minute ruler gestures', () => {
     expect(f.changes).toEqual([]);
     f.view.componentRef.setInput('elapsedSeconds', 60);
     f.view.detectChanges();
-    expect(root.querySelectorAll('.is-elapsed')).toHaveLength(2);
+    expect(root.querySelector('[data-second="60"]')?.classList.contains('is-elapsed')).toBe(true);
     pointer(f.slider, 'pointerdown', 230);
     pointer(document, 'pointerup', 230);
     f.slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     expect(f.changes).toEqual([]);
   });
-  it('starts the clock from the thumb anchor without a marker jump', async () => {
-    const f = setup();
+  it('preserves the start swipe while hiding the selection marker immediately', async () => {
+    const f = setup(),
+      root = f.view.nativeElement as HTMLElement;
     pointer(f.slider, 'pointerdown', 180);
     pointer(document, 'pointermove', 234);
     pointer(document, 'pointerup', 234);
     f.view.detectChanges();
     expect(markerX(f)).toBeCloseTo(234, 1);
-    const count = f.changes.length;
+    const offset = root.querySelector<HTMLElement>('.ruler-ticks')!.style.transform,
+      count = f.changes.length;
     f.view.componentRef.setInput('timeline', true);
     f.view.componentRef.setInput('disabled', true);
     f.view.detectChanges();
-    expect(markerX(f)).toBeCloseTo(234, 1);
+    expect(root.querySelector('.ruler-marker')).toBeNull();
+    expect(root.querySelector('.is-rewinding')).not.toBeNull();
+    expect(root.querySelector<HTMLElement>('.ruler-ticks')!.style.transform).toBe(offset);
     await vi.advanceTimersByTimeAsync(600);
     f.view.detectChanges();
-    expect(markerX(f)).toBeCloseTo(16, 1);
+    expect(root.querySelector('.is-seconds')).not.toBeNull();
+    expect(root.querySelector('.ruler-marker')).toBeNull();
     expect(f.changes).toHaveLength(count);
   });
   it('skips the start swipe with reduced motion and cancels it on reset', async () => {
