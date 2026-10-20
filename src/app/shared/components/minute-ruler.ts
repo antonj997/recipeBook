@@ -12,13 +12,14 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { formatCountdown, maxStepTimerSeconds } from '../../core/models/step-timer';
+import { formatCountdown, maxClockSeconds } from '../../core/models/step-timer';
 
 const pitch = 18;
-const maximum = maxStepTimerSeconds / 60;
+const maximum = maxClockSeconds / 60;
+const cycleLength = maximum + 1;
 const inset = 16;
 
-/** A bounded minute ruler. Only an active gesture owns document listeners or an animation frame. */
+/** A cyclic minute ruler. Gestures and the bounded start swipe share one frame owner. */
 @Component({
   selector: 'app-minute-ruler',
   styleUrl: './minute-ruler.scss',
@@ -26,14 +27,15 @@ const inset = 16;
     <div
       class="minute-ruler"
       role="slider"
-      [tabIndex]="disabled() ? -1 : 0"
+      [tabIndex]="locked() ? -1 : 0"
       [attr.aria-label]="label()"
-      aria-valuemin="1"
+      aria-valuemin="0"
       [attr.aria-valuemax]="maximum"
       [attr.aria-valuenow]="minute()"
       [attr.aria-valuetext]="valueText()"
-      [attr.aria-disabled]="disabled()"
-      [class.is-dragging]="dragging()"
+      [attr.aria-disabled]="locked()"
+      [class.is-dragging]="dragging() || rewinding()"
+      [class.is-rewinding]="rewinding()"
       (pointerdown)="begin($event)"
       (lostpointercapture)="captureLost()"
       (keydown)="key($event)"
@@ -48,14 +50,18 @@ const inset = 16;
           @for (tick of ticks(); track $index) {
             <span
               class="ruler-tick"
-              [class.is-major]="tick % 5 === 0"
-              [class.is-elapsed]="timeline() && tick * 60 <= elapsedSeconds()"
+              [class.is-major]="tickMinute(tick) % 5 === 0"
+              [attr.data-minute]="tickMinute(tick)"
+              [class.is-elapsed]="timeline() && tick >= 0 && tick * 60 <= elapsedSeconds()"
               [class.is-after-end]="
                 timeline() && tick * 60 > totalSeconds() && tick * 60 > elapsedSeconds()
               "
               [style.left.px]="$index * pitch"
-              [style.visibility]="tick > extent() ? 'hidden' : null"
-            ></span>
+            >
+              @if (tickMinute(tick) % 5 === 0) {
+                <span class="ruler-number">{{ tickMinute(tick) }}</span>
+              }
+            </span>
           }
         </div>
       </div>
@@ -88,29 +94,28 @@ export class MinuteRulerComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly width = signal(360);
   private readonly position = signal<number | undefined>(undefined);
+  private readonly cycle = signal(0);
+  private readonly introPosition = signal<number | undefined>(undefined);
+  protected readonly locked = computed(() => this.disabled() || this.timeline());
+  protected readonly rewinding = computed(() => this.introPosition() !== undefined);
   protected readonly dragging = signal(false);
   protected wheelRemainder = 0;
   protected readonly adjusting = computed(() => this.position() !== undefined);
-  protected readonly minute = computed(() => Math.round(this.position() ?? this.currentMinute()));
+  protected readonly minute = computed(() =>
+    this.tickMinute(Math.round(this.position() ?? this.currentMinute())),
+  );
   protected readonly valueText = computed(() => formatCountdown(this.minute() * 60));
   private readonly visiblePosition = computed(() => {
-    const position = this.position();
-    if (position !== undefined)
-      return position + (this.timeline() ? this.elapsedSeconds() / 60 : 0);
-    return this.timeline() ? Math.max(0, this.elapsedSeconds() / 60) : this.currentMinute();
+    const intro = this.introPosition();
+    if (intro !== undefined) return intro;
+    if (this.timeline()) return Math.max(0, this.elapsedSeconds() / 60);
+    return this.position() ?? this.idlePosition();
   });
-  protected readonly extent = computed(() =>
-    this.timeline()
-      ? Math.max(
-          maximum,
-          Math.ceil(this.totalSeconds() / 60),
-          Math.ceil(this.elapsedSeconds() / 60) + 1,
-        )
-      : maximum,
-  );
   private readonly windowStart = computed(() => {
+    const visible = this.visiblePosition();
     const capacity = Math.max(1, (this.width() - inset * 2) / pitch);
-    return Math.max(0, Math.min(this.extent() - capacity, this.visiblePosition() - capacity / 2));
+    // Keep the initial zero near the left, while allowing the scale to repeat on either side.
+    return visible < 0 ? visible : Math.max(0, visible - capacity / 2);
   });
   protected readonly ticks = computed(() =>
     Array.from({ length: 39 }, (_, i) => Math.floor(this.windowStart()) + i),
@@ -150,6 +155,8 @@ export class MinuteRulerComponent {
   private hold?: ReturnType<typeof setTimeout>;
   private frame?: number;
   private lastFrame = 0;
+  private lastIdentity?: string;
+  private lastTimeline?: boolean;
   private coasting = false;
   private motionPreference?: MediaQueryList;
   private readonly motionListener = () => {
@@ -170,10 +177,25 @@ export class MinuteRulerComponent {
 
   constructor() {
     effect(() => {
-      this.identity();
+      const identity = this.identity();
       const unavailable = this.disabled();
+      const timeline = this.timeline();
       untracked(() => {
-        if (unavailable || this.gesture || this.coasting) this.cancel();
+        const changed = this.lastIdentity !== identity;
+        const starting = !changed && this.lastTimeline === false && timeline;
+        const from = this.position() ?? this.idlePosition();
+        if (
+          changed ||
+          unavailable ||
+          timeline !== this.lastTimeline ||
+          this.gesture ||
+          this.coasting
+        )
+          this.cancel();
+        if (changed) this.cycle.set(0);
+        this.lastIdentity = identity;
+        this.lastTimeline = timeline;
+        if (starting) this.rewind(from);
       });
     });
     const destroy = inject(DestroyRef);
@@ -204,7 +226,7 @@ export class MinuteRulerComponent {
   }
 
   protected begin(event: PointerEvent): void {
-    if (this.disabled() || event.button !== 0 || event.isPrimary === false) return;
+    if (this.locked() || event.button !== 0 || event.isPrimary === false) return;
     this.cancel();
     event.preventDefault();
     const element = event.currentTarget as HTMLElement;
@@ -222,7 +244,7 @@ export class MinuteRulerComponent {
       width: bounds.width,
       active: false,
       mouse: event.pointerType === 'mouse',
-      startMinute: this.currentMinute(),
+      startMinute: this.idlePosition(),
       sampleX: event.clientX,
       sampleAt: performance.now(),
       velocity: 0,
@@ -238,18 +260,16 @@ export class MinuteRulerComponent {
     this.document.addEventListener('wheel', this.preventScroll, { passive: false });
     this.document.addEventListener('pointerup', this.upListener);
     this.document.addEventListener('pointercancel', this.cancelListener);
-    this.document.addEventListener('scroll', this.cancelListener, true);
-    this.document.addEventListener('visibilitychange', this.visibilityListener);
-    this.document.defaultView?.addEventListener('blur', this.cancelListener);
+    this.watchInterruption();
     if (!this.gesture.mouse) this.hold = setTimeout(() => this.activate(), 350);
   }
 
   private activate(): void {
     const gesture = this.gesture;
-    if (!gesture || gesture.active || this.disabled() || this.document.hidden) return;
+    if (!gesture || gesture.active || this.locked() || this.document.hidden) return;
     gesture.active = true;
     this.dragging.set(true);
-    this.position.set(this.currentMinute());
+    this.position.set(this.idlePosition());
     this.lastFrame = 0;
     if (!gesture.mouse) this.frame = requestAnimationFrame((time) => this.advance(time));
   }
@@ -286,7 +306,7 @@ export class MinuteRulerComponent {
     // the edges reach 24 minutes per second, with a quadratic ramp for fine control.
     const speed =
       Math.abs(distance) < 0.04 ? 0 : Math.sign(distance) * (0.5 + 23.5 * distance * distance);
-    if (speed) this.setPosition((this.position() ?? this.currentMinute()) + speed * dt);
+    if (speed) this.setPosition((this.position() ?? this.idlePosition()) + speed * dt);
     if (this.gesture === gesture) this.frame = requestAnimationFrame((next) => this.advance(next));
   }
 
@@ -297,16 +317,14 @@ export class MinuteRulerComponent {
       const minute = Math.round(
         this.windowStart() + (event.clientX - gesture.left - inset) / pitch,
       );
-      const seconds = this.timeline() ? minute * 60 - this.elapsedSeconds() : minute * 60;
-      this.durationChange.emit(
-        Math.min(maxStepTimerSeconds, Math.max(this.timeline() ? 1 : 60, seconds)),
-      );
+      this.cycle.set(Math.floor(minute / cycleLength));
+      this.durationChange.emit(this.tickMinute(minute) * 60);
     }
     const velocity =
       gesture.active && !gesture.mouse && performance.now() - gesture.sampleAt < 120
         ? gesture.velocity
         : 0;
-    const from = this.position() ?? this.currentMinute();
+    const from = this.position() ?? this.idlePosition();
     const reducedMotion = this.document.defaultView?.matchMedia?.(
       '(prefers-reduced-motion: reduce)',
     ).matches;
@@ -322,21 +340,16 @@ export class MinuteRulerComponent {
   private coast(from: number, velocity: number): void {
     const speed = (Math.abs(velocity) * 1000) / pitch;
     const ticks = Math.min(20, Math.max(1, Math.round((speed * speed) / 60)));
-    const target = this.clamp(Math.round(from) + Math.sign(velocity) * ticks);
+    const target = Math.round(from) + Math.sign(velocity) * ticks;
     if (target === Math.round(from)) return;
     const duration = Math.min(1100, Math.max(650, ((2 * ticks) / speed) * 1000));
     const started = performance.now();
-    this.motionPreference = this.document.defaultView?.matchMedia?.(
-      '(prefers-reduced-motion: reduce)',
-    );
-    this.motionPreference?.addEventListener('change', this.motionListener);
+    this.watchMotion();
     this.coasting = true;
     this.dragging.set(true);
     this.position.set(from);
     this.document.addEventListener('pointerdown', this.interruptListener, true);
-    this.document.addEventListener('scroll', this.cancelListener, true);
-    this.document.addEventListener('visibilitychange', this.visibilityListener);
-    this.document.defaultView?.addEventListener('blur', this.cancelListener);
+    this.watchInterruption();
     const advance = (time: number) => {
       if (!this.coasting) return;
       const progress = Math.min(1, Math.max(0, (time - started) / duration));
@@ -346,6 +359,39 @@ export class MinuteRulerComponent {
       else this.frame = requestAnimationFrame(advance);
     };
     this.frame = requestAnimationFrame(advance);
+  }
+
+  private rewind(from: number): void {
+    if (
+      this.document.hidden ||
+      this.document.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    )
+      return;
+    this.watchMotion();
+    this.watchInterruption();
+    this.introPosition.set(from);
+    const started = performance.now();
+    const advance = (time: number) => {
+      const progress = Math.min(1, Math.max(0, (time - started) / 420));
+      const target = this.elapsedSeconds() / 60;
+      this.introPosition.set(from + (target - from) * (1 - (1 - progress) ** 3));
+      if (progress === 1) this.cancel();
+      else this.frame = requestAnimationFrame(advance);
+    };
+    this.frame = requestAnimationFrame(advance);
+  }
+
+  private watchMotion(): void {
+    this.motionPreference = this.document.defaultView?.matchMedia?.(
+      '(prefers-reduced-motion: reduce)',
+    );
+    this.motionPreference?.addEventListener('change', this.motionListener);
+  }
+
+  private watchInterruption(): void {
+    this.document.addEventListener('scroll', this.cancelListener, true);
+    this.document.addEventListener('visibilitychange', this.visibilityListener);
+    this.document.defaultView?.addEventListener('blur', this.cancelListener);
   }
 
   protected cancel(): void {
@@ -359,7 +405,10 @@ export class MinuteRulerComponent {
     this.document.removeEventListener('pointerdown', this.interruptListener, true);
     this.wheelRemainder = 0;
     this.frame = undefined;
+    const position = this.position();
+    if (position !== undefined) this.cycle.set(Math.floor(Math.round(position) / cycleLength));
     this.position.set(undefined);
+    this.introPosition.set(undefined);
     this.dragging.set(false);
     this.document.removeEventListener('pointermove', this.moveListener);
     this.document.removeEventListener('touchmove', this.preventScroll);
@@ -374,7 +423,7 @@ export class MinuteRulerComponent {
   }
 
   protected key(event: KeyboardEvent): void {
-    if (this.disabled()) return;
+    if (this.locked()) return;
     const delta: Record<string, number> = {
       ArrowRight: 1,
       ArrowUp: 1,
@@ -385,21 +434,21 @@ export class MinuteRulerComponent {
     };
     const next =
       event.key === 'Home'
-        ? 60
+        ? 0
         : event.key === 'End'
-          ? maxStepTimerSeconds
+          ? maxClockSeconds
           : event.key in delta
             ? this.seconds() + delta[event.key] * 60
             : undefined;
     if (next === undefined) return;
     event.preventDefault();
     this.cancel();
-    this.durationChange.emit(Math.min(maxStepTimerSeconds, Math.max(1, next)));
+    this.selectRelative(next);
   }
 
   protected wheel(event: WheelEvent): void {
     if (
-      this.disabled() ||
+      this.locked() ||
       this.gesture ||
       event.ctrlKey ||
       event.metaKey ||
@@ -414,9 +463,7 @@ export class MinuteRulerComponent {
     const minutes = Math.trunc(this.wheelRemainder / 40);
     if (!minutes) return;
     this.wheelRemainder -= minutes * 40;
-    this.durationChange.emit(
-      Math.min(maxStepTimerSeconds, Math.max(1, this.seconds() + minutes * 60)),
-    );
+    this.selectRelative(this.seconds() + minutes * 60);
   }
 
   private x(minute: number): number {
@@ -424,13 +471,22 @@ export class MinuteRulerComponent {
   }
   private setPosition(value: number): void {
     const before = this.minute();
-    this.position.set(this.clamp(value));
+    this.position.set(value);
     if (this.minute() !== before) this.durationChange.emit(this.minute() * 60);
   }
-  private currentMinute(): number {
-    return this.clamp(Math.round(this.seconds() / 60));
+  protected tickMinute(tick: number): number {
+    return ((tick % cycleLength) + cycleLength) % cycleLength;
   }
-  private clamp(value: number): number {
-    return Math.min(maximum, Math.max(1, value));
+  private selectRelative(seconds: number): void {
+    const minute = Math.floor(seconds / 60);
+    const remainder = ((seconds % 60) + 60) % 60;
+    this.cycle.update((cycle) => cycle + Math.floor(minute / cycleLength));
+    this.durationChange.emit(Math.min(maxClockSeconds, this.tickMinute(minute) * 60 + remainder));
+  }
+  private idlePosition(): number {
+    return this.currentMinute() + this.cycle() * cycleLength;
+  }
+  private currentMinute(): number {
+    return Math.min(maximum, Math.max(0, Math.round(this.seconds() / 60)));
   }
 }

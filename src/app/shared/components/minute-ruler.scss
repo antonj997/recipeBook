@@ -6,7 +6,7 @@
 .minute-ruler {
   position: relative;
   width: 100%;
-  height: 48px;
+  height: 56px;
   overflow: hidden;
   border-radius: 5px;
   cursor: ew-resize;
@@ -30,7 +30,7 @@
 }
 .ruler-tick {
   position: absolute;
-  top: 50%;
+  top: 68%;
   width: 2px;
   height: 8px;
   transform: translate(-50%, -50%);
@@ -51,7 +51,7 @@
 .ruler-marker,
 .ruler-end {
   position: absolute;
-  top: 14px;
+  top: 28px;
   left: -1.5px;
   width: 3px;
   height: 20px;
@@ -66,7 +66,7 @@
 .ruler-end {
   width: 1px;
   left: -0.5px;
-  top: 15px;
+  top: 29px;
   height: 18px;
   background: var(--color-muted);
 }
@@ -77,7 +77,6 @@
 }
 [aria-disabled='true'] {
   touch-action: pan-y;
-  opacity: 0.45;
   cursor: default;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -87,4 +86,21 @@
   .ruler-tick {
     transition: none;
   }
+}
+
+.ruler-number {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  color: var(--color-muted);
+  font:
+    10px / 1 Arial,
+    Helvetica,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+  min-width: 2ch;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
 }

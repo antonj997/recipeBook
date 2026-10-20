@@ -18,7 +18,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  padding: 4px 10px;
+  padding: 4px 10px 4px 3px;
   border: 1px solid var(--color-control-border);
   border-radius: 8px;
   background: var(--color-surface);
@@ -35,12 +35,11 @@ app-minute-ruler {
 }
 .timer-face {
   display: flex;
-  justify-content: center;
+  justify-content: start;
   min-width: 0;
 }
 input.timer-input {
-  // Reserve hours space so crossing 60 minutes cannot move the ruler during a drag.
-  width: 9ch;
+  width: 5ch;
   min-width: 0;
   min-height: 44px;
   padding: 4px 0;
@@ -51,7 +50,7 @@ input.timer-input {
   font-size: 1.25rem;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
-  text-align: center;
+  text-align: left;
   caret-color: var(--color-ink);
 }
 input.timer-input[aria-invalid='true'] {
@@ -106,4 +105,9 @@ input.timer-input.is-overdue {
   justify-content: center;
   width: 44px;
   touch-action: manipulation;
+}
+
+input.timer-input:disabled {
+  opacity: 1;
+  -webkit-text-fill-color: currentColor;
 }

@@ -29,6 +29,20 @@ describe('deadline-based step countdowns', () => {
       return { recipes: { bulkGet: async (ids: string[]) => ids.map((id) => recipes.get(id)) } };
     },
   };
+  function reloadTimers(): StepTimerService {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: TimerPushService, useValue: push },
+        { provide: CloudCookbookService, useValue: cookbook },
+        {
+          provide: SupabaseService,
+          useValue: { cacheScope: 'timer-tests', user, accountVersion: version },
+        },
+      ],
+    });
+    return TestBed.inject(StepTimerService);
+  }
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-18T17:00:00Z'));
@@ -270,9 +284,98 @@ describe('deadline-based step countdowns', () => {
   });
   it('ignores invalid typed durations', () => {
     const timers = TestBed.inject(StepTimerService);
-    for (const seconds of [0, -1, NaN, Infinity, 604801]) timers.setDuration(target, seconds);
+    for (const seconds of [-1, 0.5, NaN, Infinity, 604801]) timers.setDuration(target, seconds);
     expect(timers.state(target).remaining).toBe(120);
   });
+
+  it('caps a long preset and typed duration at 60 minutes', () => {
+    const timers = TestBed.inject(StepTimerService);
+    const longTarget = recipeStepTimers({ ...recipe, stepDetails: [{ timerSeconds: 7200 }] })[0]!;
+    expect(timers.state(longTarget)).toMatchObject({ remaining: 3600, duration: 3600 });
+    timers.start(longTarget);
+    expect(timers.state(longTarget)).toMatchObject({ remaining: 3600, duration: 3600 });
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([
+      { target: longTarget, deadline: Date.now() + 3_600_000 },
+    ]);
+    timers.pause(longTarget);
+    timers.setDuration(longTarget, 7200);
+    timers.adjust(longTarget, 1);
+    expect(timers.state(longTarget).remaining).toBe(3600);
+    expect(longTarget.seconds).toBe(7200);
+  });
+
+  it('clears a running clock to idle at zero and keeps Start inactive after reload', async () => {
+    const timers = TestBed.inject(StepTimerService);
+    timers.start(target);
+    await vi.advanceTimersByTimeAsync(30_000);
+    timers.setDuration(target, 0);
+    expect(timers.state(target)).toEqual({
+      remaining: 0,
+      duration: 0,
+      running: false,
+      started: false,
+      done: false,
+      elapsed: 0,
+    });
+    timers.start(target);
+    expect(timers.state(target)).toMatchObject({ remaining: 0, running: false, started: false });
+    expect(push.replaceTimers).toHaveBeenLastCalledWith([{ target, deadline: undefined }]);
+    const restored = reloadTimers();
+    restored.start(target);
+    expect(restored.state(target)).toMatchObject({ remaining: 0, duration: 0, running: false });
+    restored.reset(target);
+    expect(restored.state(target)).toMatchObject({ remaining: 120, duration: 120 });
+  });
+
+  it.each([
+    { running: false, secondsLeft: 7200, planned: 3900 },
+    { running: true, secondsLeft: 7200, planned: 3900 },
+    { running: true, secondsLeft: 6000, planned: 5100 },
+  ])(
+    'normalizes a long saved clock without extending it on reload ($running, $secondsLeft seconds left)',
+    ({ running, secondsLeft, planned }) => {
+      const key = 'recipebook:timers:v1:' + JSON.stringify(['timer-tests', 'device']);
+      const longRecipe = { ...recipe, stepDetails: [{ timerSeconds: 7200 }] };
+      recipes.set(recipe.id, longRecipe);
+      const runtimeTarget = recipeStepTimers(longRecipe)[0]!;
+      const savedTarget = { ...runtimeTarget, seconds: 7200 };
+      localStorage.setItem(
+        key,
+        JSON.stringify([
+          {
+            target: savedTarget,
+            remaining: 7200,
+            duration: 7500,
+            deadline: running ? Date.now() + secondsLeft * 1000 : undefined,
+            started: true,
+            done: false,
+            updatedAt: Date.now(),
+          },
+        ]),
+      );
+      const timers = TestBed.inject(StepTimerService);
+      expect(timers.state(runtimeTarget)).toMatchObject({
+        remaining: 3600,
+        duration: planned,
+        running,
+      });
+      expect(push.replaceTimers).toHaveBeenLastCalledWith([
+        {
+          target: savedTarget,
+          deadline: running ? Date.now() + 3_600_000 : undefined,
+        },
+      ]);
+      const [saved] = JSON.parse(localStorage.getItem(key)!);
+      expect(saved).toMatchObject({ target: savedTarget, remaining: 3600, duration: planned });
+      expect(saved.deadline).toBe(running ? Date.now() + 3_600_000 : undefined);
+      vi.setSystemTime(Date.now() + 60_000);
+      expect(reloadTimers().state(runtimeTarget)).toMatchObject({
+        remaining: running ? 3540 : 3600,
+        duration: planned,
+        running,
+      });
+    },
+  );
 
   it('keeps total planned time through adjustments, reload, and resume', async () => {
     const timers = TestBed.inject(StepTimerService);
@@ -316,16 +419,21 @@ describe('deadline-based step countdowns', () => {
     expect(timers.state(target)).toMatchObject({ remaining: 110, duration: 120 });
   });
 
-  it('clamps a shortened countdown to one second while preserving time already passed', async () => {
+  it('clears a shortened countdown at zero', async () => {
     const timers = TestBed.inject(StepTimerService);
     timers.setDuration(target, 30);
     timers.start(target);
     await vi.advanceTimersByTimeAsync(10_000);
     timers.adjust(target, -1);
-    expect(timers.state(target)).toMatchObject({ remaining: 1, duration: 11, running: true });
+    expect(timers.state(target)).toMatchObject({
+      remaining: 0,
+      duration: 0,
+      running: false,
+      started: false,
+    });
     timers.pause(target);
     timers.adjust(target, -1);
-    expect(timers.state(target)).toMatchObject({ remaining: 1, duration: 11, running: false });
+    expect(timers.state(target)).toMatchObject({ remaining: 0, duration: 0, running: false });
   });
 
   it('turns an overdue adjustment into a fresh stopped countdown', async () => {
@@ -385,7 +493,7 @@ describe('deadline-based step countdowns', () => {
 
   it.each([
     { remaining: 60, duration: 60 },
-    { remaining: 0, duration: 120 },
+    { remaining: 0, duration: 0 },
   ])(
     'starts a legacy idle timer at $remaining seconds without inventing time already passed',
     ({ remaining, duration }) => {
@@ -405,7 +513,7 @@ describe('deadline-based step countdowns', () => {
       const timers = TestBed.inject(StepTimerService);
       timers.start(target);
       const state = timers.state(target);
-      expect(state).toMatchObject({ remaining: duration, duration, running: true });
+      expect(state).toMatchObject({ remaining: duration, duration, running: remaining > 0 });
       expect(state.duration - state.remaining).toBe(0);
     },
   );
@@ -651,6 +759,13 @@ describe('deadline-based step countdowns', () => {
     const stopped = play.mock.calls.length;
     await vi.advanceTimersByTimeAsync(5000);
     expect(play).toHaveBeenCalledTimes(stopped);
+    timers.setDuration(target, 1);
+    timers.start(target);
+    await vi.advanceTimersByTimeAsync(1000);
+    timers.setDuration(target, 0);
+    const cleared = play.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(play).toHaveBeenCalledTimes(cleared);
     timers.setDuration(target, 1);
     timers.start(target);
     await vi.advanceTimersByTimeAsync(31_000);

@@ -118,23 +118,6 @@ describe('minute ruler gestures', () => {
     await vi.advanceTimersByTimeAsync(1500);
     expect(f.changes).toHaveLength(count);
   });
-  it('never increases a sub-minute timer when decreasing it with desktop controls', () => {
-    const f = setup(30);
-    f.slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
-    expect(f.changes.at(-1)).toBe(1);
-    f.slider.focus();
-    f.slider.dispatchEvent(
-      new WheelEvent('wheel', { deltaY: 40, bubbles: true, cancelable: true }),
-    );
-    expect(f.changes.at(-1)).toBe(1);
-  });
-  it('clamps leftward momentum at one minute', async () => {
-    const f = setup(120);
-    await fling(f, 40);
-    await vi.advanceTimersByTimeAsync(1500);
-    expect(f.changes.at(-1)).toBe(60);
-    expect(f.changes.every((value) => value >= 60)).toBe(true);
-  });
   it('taps the exact minute tick without starting a hold loop', async () => {
     const f = setup();
     pointer(f.slider, 'pointerdown', 234);
@@ -199,11 +182,13 @@ describe('minute ruler gestures', () => {
     expect(zoom.defaultPrevented).toBe(false);
     expect(f.changes.at(-1)).toBe(32 * 60);
   });
-  it('colours passed minute ticks and follows elapsed time instead of remaining time', () => {
+  it('colours passed minute ticks and follows elapsed time instead of remaining time', async () => {
     const f = setup(480);
     f.view.componentRef.setInput('timeline', true);
     f.view.componentRef.setInput('totalSeconds', 600);
     f.view.componentRef.setInput('elapsedSeconds', 120);
+    f.view.detectChanges();
+    await vi.advanceTimersByTimeAsync(600);
     f.view.detectChanges();
     const root = f.view.nativeElement as HTMLElement;
     expect(root.querySelectorAll('.is-elapsed')).toHaveLength(3);
@@ -218,34 +203,6 @@ describe('minute ruler gestures', () => {
     f.view.detectChanges();
     expect(root.querySelectorAll('.is-elapsed')).toHaveLength(4);
     expect(marker.style.transform).not.toBe(before);
-  });
-  it('keeps the elapsed timeline moving beyond seven days after extensions', () => {
-    const f = setup(120);
-    f.view.componentRef.setInput('timeline', true);
-    f.view.componentRef.setInput('totalSeconds', 604920);
-    f.view.componentRef.setInput('elapsedSeconds', 604800);
-    f.view.detectChanges();
-    const marker = (f.view.nativeElement as HTMLElement).querySelector<HTMLElement>(
-      '.ruler-marker',
-    )!;
-    const before = marker.style.transform;
-    f.view.componentRef.setInput('elapsedSeconds', 604830);
-    f.view.detectChanges();
-    expect(marker.style.transform).not.toBe(before);
-    expect((f.view.nativeElement as HTMLElement).querySelector('.ruler-end')).not.toBeNull();
-  });
-  it('sets a running finish point from a timeline tick without undoing elapsed time', () => {
-    const f = setup(480);
-    f.view.componentRef.setInput('timeline', true);
-    f.view.componentRef.setInput('elapsedSeconds', 120);
-    f.view.componentRef.setInput('totalSeconds', 600);
-    f.view.detectChanges();
-    pointer(f.slider, 'pointerdown', 106);
-    pointer(document, 'pointerup', 106);
-    expect(f.changes.at(-1)).toBe(180);
-    pointer(f.slider, 'pointerdown', 16);
-    pointer(document, 'pointerup', 16);
-    expect(f.changes.at(-1)).toBe(1);
   });
   it('owns a drag from the center and blocks page scrolling until release', async () => {
     const f = setup();
@@ -311,7 +268,7 @@ describe('minute ruler gestures', () => {
     await vi.advanceTimersByTimeAsync(1000);
     const second = f.changes.at(-1)!;
     expect(first).toBeGreaterThan(30 * 60);
-    expect(second - afterMove).toBeGreaterThan(first - 30 * 60);
+    expect((second - afterMove + 3660) % 3660).toBeGreaterThan(first - 30 * 60);
     pointer(document, 'pointerup', 358);
     const count = f.changes.length;
     await vi.advanceTimersByTimeAsync(1500);
@@ -356,23 +313,102 @@ describe('minute ruler gestures', () => {
     );
     expect(f.changes.at(-1)).toBe(630);
   });
-  it('supports keyboard stepping, one-second lower bounds and Home at one minute', () => {
-    const f = setup(60);
-    const key = (key: string) =>
-      f.slider.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
-    key('ArrowLeft');
-    expect(f.changes.at(-1)).toBe(1);
-    key('Home');
+  it('loops from sixty to zero and back using the keyboard', () => {
+    const f = setup(3600);
+    f.slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(f.changes.at(-1)).toBe(0);
+    f.slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(f.changes.at(-1)).toBe(3600);
+    f.slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    expect(f.changes.at(-1)).toBe(0);
+  });
+  it('retains a continuous mouse drag after wrapping through zero', () => {
+    const f = setup(3540);
+    const mouse = (type: string, x: number) => {
+      const event = new MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        clientX: x,
+        clientY: 20,
+      });
+      Object.defineProperties(event, {
+        pointerId: { value: 3 },
+        pointerType: { value: 'mouse' },
+        isPrimary: { value: true },
+      });
+      (type === 'pointerdown' ? f.slider : document).dispatchEvent(event);
+    };
+    mouse('pointerdown', 180);
+    mouse('pointermove', 216);
+    mouse('pointerup', 216);
+    expect(f.changes.at(-1)).toBe(0);
+    mouse('pointerdown', 180);
+    mouse('pointermove', 198);
+    mouse('pointerup', 198);
     expect(f.changes.at(-1)).toBe(60);
-    key('ArrowRight');
-    expect(f.changes.at(-1)).toBe(120);
-    key('PageUp');
-    expect(f.changes.at(-1)).toBe(720);
-    key('End');
-    expect(f.changes.at(-1)).toBe(604800);
-    key('ArrowRight');
-    expect(f.changes.at(-1)).toBe(604800);
-    key('Home');
-    expect(f.changes.at(-1)).toBe(60);
+    mouse('pointerdown', 180);
+    mouse('pointermove', 144);
+    mouse('pointerup', 144);
+    expect(f.changes.at(-1)).toBe(3600);
+  });
+  it('shows a small label every five minutes, including sixty followed by zero', () => {
+    const f = setup(3600),
+      root = f.view.nativeElement as HTMLElement;
+    const ticks = Array.from(root.querySelectorAll<HTMLElement>('.ruler-tick'));
+    const labels = Array.from(root.querySelectorAll('.ruler-number')).map((e) =>
+      e.textContent?.trim(),
+    );
+    expect(labels).toContain('60');
+    expect(labels).toContain('0');
+    const sixty = ticks.findIndex((t) => t.dataset['minute'] === '60');
+    expect(sixty).toBeGreaterThanOrEqual(0);
+    expect(ticks[sixty + 1]?.dataset['minute']).toBe('0');
+    expect(labels.every((label) => Number(label) % 5 === 0)).toBe(true);
+  });
+  it('swipes from the selected time to zero when starting, without changing the duration', async () => {
+    const f = setup(1800),
+      root = f.view.nativeElement as HTMLElement;
+    f.view.componentRef.setInput('timeline', true);
+    f.view.componentRef.setInput('disabled', true);
+    f.view.componentRef.setInput('totalSeconds', 1800);
+    f.view.detectChanges();
+    expect(root.querySelector('.is-rewinding')).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(200);
+    f.view.detectChanges();
+    expect(root.querySelector('.is-rewinding')).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(400);
+    f.view.detectChanges();
+    expect(root.querySelector('.is-rewinding')).toBeNull();
+    expect(f.changes).toEqual([]);
+    f.view.componentRef.setInput('elapsedSeconds', 60);
+    f.view.detectChanges();
+    expect(root.querySelectorAll('.is-elapsed')).toHaveLength(2);
+    pointer(f.slider, 'pointerdown', 230);
+    pointer(document, 'pointerup', 230);
+    f.slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(f.changes).toEqual([]);
+  });
+  it('skips the start swipe with reduced motion and cancels it on reset', async () => {
+    const f = setup();
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    f.view.componentRef.setInput('timeline', true);
+    f.view.detectChanges();
+    expect((f.view.nativeElement as HTMLElement).querySelector('.is-rewinding')).toBeNull();
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    f.view.componentRef.setInput('timeline', false);
+    f.view.detectChanges();
+    f.view.componentRef.setInput('timeline', true);
+    f.view.detectChanges();
+    expect((f.view.nativeElement as HTMLElement).querySelector('.is-rewinding')).not.toBeNull();
+    f.view.componentRef.setInput('timeline', false);
+    f.view.detectChanges();
+    await vi.advanceTimersByTimeAsync(1000);
+    f.view.detectChanges();
+    expect((f.view.nativeElement as HTMLElement).querySelector('.is-rewinding')).toBeNull();
   });
 });

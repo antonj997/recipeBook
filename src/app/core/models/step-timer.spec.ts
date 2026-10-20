@@ -64,12 +64,44 @@ describe('conservative English and Swedish step timers', () => {
   it('formats countdowns without changing digit widths each second', () => {
     expect(formatCountdown(1800)).toBe('30:00');
     expect(formatCountdown(65)).toBe('01:05');
-    expect(formatCountdown(5400)).toBe('01:30:00');
+    expect(formatCountdown(3600)).toBe('60:00');
+    expect(formatCountdown(5400)).toBe('90:00');
     expect(formatCountdown(0)).toBe('00:00');
   });
 });
 
 describe('timer settings in recipe metadata and backups', () => {
+  it('preserves long timer definitions and their identity for background alert validation', () => {
+    const recipe = {
+      id: 'slow-cook',
+      title: 'Stew',
+      servings: 4,
+      ingredients: ['Beans'],
+      instructions: ['Simmer until tender.'],
+      stepDetails: [{ timerSeconds: 7200 }],
+    };
+    const timer = recipeStepTimers(recipe)[0]!;
+    expect(timer.seconds).toBe(7200);
+    expect(recipe.stepDetails[0].timerSeconds).toBe(7200);
+    expect(
+      recipeStepTimers({ ...recipe, stepDetails: [{ timerSeconds: 10800 }] })[0]!.key,
+    ).not.toBe(timer.key);
+    expect(resolveStepTimer('Simmer until tender.', 7200)).toBe(7200);
+    expect(
+      readRecipeMetadata({ stepDetails: [{ timerSeconds: 604800 }] }, true).stepDetails,
+    ).toEqual([{ timerSeconds: 604800 }]);
+  });
+  it('preserves the complete automatically detected duration in timer definitions', () => {
+    const recipe = {
+      id: 'long-rest',
+      title: 'Bread',
+      servings: 4,
+      ingredients: ['Flour'],
+      instructions: ['Let rise for 2 hours.'],
+    };
+    expect(recipeStepTimers(recipe)[0]!.seconds).toBe(7200);
+    expect(detectStepTimer(recipe.instructions[0])).toBe(7200);
+  });
   it('keeps the same timer identity for raw and displayed legacy step titles', () => {
     const recipe = {
       id: 'legacy',

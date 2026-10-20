@@ -13,8 +13,7 @@ import {
 import { StepTimerService } from '../../core/services/step-timer.service';
 import {
   formatCountdown,
-  isStepTimerSeconds,
-  maxStepTimerSeconds,
+  maxClockSeconds,
   type StepTimerTarget,
 } from '../../core/models/step-timer';
 import { MinuteRulerComponent } from './minute-ruler';
@@ -41,7 +40,7 @@ import { IconComponent } from './icon';
             autocomplete="off"
             spellcheck="false"
             maxlength="16"
-            [disabled]="disabled()"
+            [disabled]="locked()"
             [value]="editing() ? draft() : display()"
             [attr.aria-label]="
               (state().done ? 'Time overdue' : 'Time remaining') +
@@ -63,8 +62,8 @@ import { IconComponent } from './icon';
         </span>
         <app-minute-ruler
           [seconds]="state().done ? target().seconds : state().remaining"
-          [disabled]="disabled() || completed()"
-          [timeline]="state().started"
+          [disabled]="locked()"
+          [timeline]="state().running || state().done"
           [totalSeconds]="state().duration"
           [elapsedSeconds]="passed()"
           [overdue]="state().done"
@@ -77,7 +76,7 @@ import { IconComponent } from './icon';
         <button
           type="button"
           class="timer-minute"
-          [disabled]="disabled() || state().remaining <= 1"
+          [disabled]="locked() || state().remaining <= 0"
           [attr.aria-label]="'Subtract one minute from step ' + (target().index + 1) + ' timer'"
           title="Subtract one minute"
           (click)="adjust(-1)"
@@ -87,7 +86,7 @@ import { IconComponent } from './icon';
         <button
           type="button"
           class="timer-action timer-start"
-          [disabled]="disabled() || state().running"
+          [disabled]="disabled() || state().running || (!state().done && state().remaining === 0)"
           [attr.aria-label]="'Start timer for step ' + (target().index + 1)"
           (click)="start()"
         >
@@ -114,7 +113,7 @@ import { IconComponent } from './icon';
         <button
           type="button"
           class="timer-minute"
-          [disabled]="disabled() || state().remaining >= maximum"
+          [disabled]="locked() || state().remaining >= maximum"
           [attr.aria-label]="'Add one minute to step ' + (target().index + 1) + ' timer'"
           title="Add one minute"
           (click)="adjust(1)"
@@ -131,8 +130,8 @@ import { IconComponent } from './icon';
       >
         {{
           invalid()
-            ? 'Enter a time from 0:01 to 168:00:00.'
-            : 'Type minutes and seconds. 6000 = 1 hour. Enter to set.'
+            ? 'Enter a time from 00:00 to 60:00.'
+            : 'Type minutes and seconds. 3000 = 30 minutes. Enter to set.'
         }}
       </p>
     }
@@ -151,7 +150,10 @@ export class StepTimerComponent {
     const state = this.state();
     return formatCountdown(state.done ? state.elapsed : state.remaining);
   });
-  protected readonly maximum = maxStepTimerSeconds;
+  protected readonly maximum = maxClockSeconds;
+  protected readonly locked = computed(
+    () => this.disabled() || this.completed() || this.state().running || this.state().done,
+  );
   protected readonly passed = computed(() => {
     const state = this.state();
     return state.started ? Math.max(0, state.duration - state.remaining) + state.elapsed : 0;
@@ -166,7 +168,7 @@ export class StepTimerComponent {
   constructor() {
     effect(() => {
       const key = this.target().key;
-      const unavailable = this.completed() || this.disabled();
+      const unavailable = this.locked();
       untracked(() => {
         if (unavailable || (this.editing() && this.editTarget !== key)) this.cancelEdit();
         if (this.completed() && this.element.nativeElement.contains(this.document.activeElement))
@@ -179,6 +181,7 @@ export class StepTimerComponent {
   }
 
   protected beginEdit(event: Event): void {
+    if (this.locked()) return;
     this.ruler()?.stopMotion();
     if (!this.editing()) {
       this.nativeEdit = undefined;
@@ -238,7 +241,7 @@ export class StepTimerComponent {
       return;
     }
     if (pasted && /^\d+(?::\d{0,2}){1,2}$/.test(value)) {
-      // A complete colon-formatted paste also accepts an explicit hours segment.
+      // Keep colon-formatted paste intact so unsupported formats report an error.
       this.digitDraft = undefined;
       this.draft.set(value);
     } else {
@@ -254,13 +257,11 @@ export class StepTimerComponent {
     change: { start: number; end: number; data: string; inputType: string },
   ): void {
     const value = this.draft();
-    const digits = this.digitDraft ?? durationDigits(value);
+    const digits = this.digitDraft ?? value.replace(/\D/g, '');
     const displayDigits = value.replace(/\D/g, '');
     const selectedAll = change.start === 0 && change.end === value.length;
-    const atEnd = change.start === value.length && change.end === value.length;
-    const editHours = value.split(':').length === 3 && !selectedAll && !atEnd;
-    const source = editHours ? displayDigits : digits;
-    const padding = editHours ? 0 : displayDigits.length - digits.length;
+    const source = digits;
+    const padding = displayDigits.length - digits.length;
     const position = (offset: number) =>
       Math.max(0, value.slice(0, offset).replace(/\D/g, '').length - padding);
     let start = selectedAll ? 0 : position(change.start);
@@ -271,8 +272,8 @@ export class StepTimerComponent {
     }
     const inserted = change.data.replace(/\D/g, '');
     const edited = source.slice(0, start) + inserted + source.slice(end);
-    const next = editHours ? durationDigits(maskHoursDigits(edited)) : edited;
-    if (next.length > 7) {
+    const next = edited;
+    if (next.length > 4) {
       field.value = value;
       return;
     }
@@ -293,7 +294,7 @@ export class StepTimerComponent {
   }
   protected commitEdit(): boolean {
     if (!this.editing()) return true;
-    if (this.completed() || this.disabled() || this.editTarget !== this.target().key) {
+    if (this.locked() || this.editTarget !== this.target().key) {
       this.cancelEdit();
       return false;
     }
@@ -343,40 +344,22 @@ export class StepTimerComponent {
 
   protected adjust(minutes: -1 | 1): void {
     this.ruler()?.stopMotion();
-    if (this.disabled() || this.completed() || !this.commitEdit()) return;
+    if (this.locked() || !this.commitEdit()) return;
     this.timers.adjust(this.target(), minutes);
   }
 
   protected setDuration(seconds: number): void {
-    if (this.disabled() || this.completed()) return;
+    if (this.locked()) return;
     this.cancelEdit();
     this.timers.setDuration(this.target(), seconds);
   }
 }
 
-/** Keep the raw growing minutes segment while displaying canonical hours and minutes. */
+/** Numeric typing keeps the last two digits as seconds. */
 function maskDigits(digits: string): string {
   if (!digits) return '';
   const value = digits.padStart(4, '0');
-  const minutes = Number(value.slice(0, -2));
-  const seconds = value.slice(-2);
-  const hours = Math.floor(minutes / 60);
-  return hours
-    ? String(hours).padStart(2, '0') + ':' + String(minutes % 60).padStart(2, '0') + ':' + seconds
-    : String(minutes).padStart(2, '0') + ':' + seconds;
-}
-
-/** Convert explicit hours to raw minutes without normalizing invalid seconds. */
-function durationDigits(value: string): string {
-  const parts = value.split(':');
-  return parts.length === 3
-    ? String(Number(parts[0]) * 60 + Number(parts[1])) + parts[2]
-    : value.replace(/\D/g, '');
-}
-
-function maskHoursDigits(digits: string): string {
-  const value = digits.padStart(5, '0');
-  return value.slice(0, -4) + ':' + value.slice(-4, -2) + ':' + value.slice(-2);
+  return String(Number(value.slice(0, -2))).padStart(2, '0') + ':' + value.slice(-2);
 }
 
 /** Find an edit when a keyboard sends input without a preceding beforeinput. */
@@ -414,12 +397,8 @@ function changedRange(
 }
 function parseDuration(text: string): number | undefined {
   const value = text.trim();
-  let seconds: number;
-  if (/^\d+:\d{2}(?::\d{2})?$/.test(value)) {
-    const parts = value.split(':').map(Number);
-    if (parts.at(-1)! >= 60 || (parts.length === 3 && parts[1] >= 60)) return;
-    seconds =
-      parts.length === 3 ? parts[0] * 3600 + parts[1] * 60 + parts[2] : parts[0] * 60 + parts[1];
-  } else return;
-  return isStepTimerSeconds(seconds) ? seconds : undefined;
+  if (!/^\d{1,2}:\d{2}$/.test(value)) return;
+  const [minutes, seconds] = value.split(':').map(Number);
+  const total = minutes * 60 + seconds;
+  return seconds < 60 && total <= maxClockSeconds ? total : undefined;
 }

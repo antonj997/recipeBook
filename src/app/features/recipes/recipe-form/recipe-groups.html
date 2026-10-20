@@ -78,7 +78,7 @@
                     type="number"
                     inputmode="decimal"
                     min="0.016666666666666666"
-                    max="10080"
+                    max="60"
                     step="any"
                     [value]="timerMinutes(control)"
                     [attr.aria-label]="'Timer minutes for step ' + number(control)"
@@ -100,7 +100,7 @@
                 </div>
                 @if (timerInvalid(control)) {
                   <p class="timer-error" [id]="rowId(control) + '-timer-error'" role="alert">
-                    Enter a time between 1 second and 7 days.
+                    Enter a time between 1 second and 60 minutes.
                   </p>
                 }
               } @else {

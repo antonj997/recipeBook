@@ -310,6 +310,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
       timerMode: 'custom',
       timerMinutes: (stepTimerDuration(control.value) ?? 300) / 60,
     });
+    fields?.controls.timerMinutes.markAsDirty();
     fields?.markAsDirty();
     requestAnimationFrame(() => document.getElementById(this.rowId(control) + '-timer')?.focus());
   }
@@ -328,6 +329,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
       timerMode: 'custom',
       timerMinutes: input.value === '' ? null : input.valueAsNumber,
     });
+    fields?.controls.timerMinutes.markAsDirty();
     fields?.markAsDirty();
   }
   photo(control: FormControl<string>) {

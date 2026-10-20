@@ -2,6 +2,7 @@ import type { Recipe } from './recipe.model';
 
 import { instructionText, isStepTimerSeconds } from './recipe-metadata';
 export { isStepTimerSeconds, maxStepTimerSeconds } from './recipe-metadata';
+export const maxClockSeconds = 60 * 60;
 export interface StepTimerTarget {
   key: string;
   recipeId: string;
@@ -116,10 +117,7 @@ export function resolveStepTimer(text: string, override?: number | null): number
 
 export function formatCountdown(seconds: number): string {
   const total = Math.max(0, Math.ceil(seconds));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor(total / 60) % 60;
+  const minutes = Math.floor(total / 60);
   const rest = String(total % 60).padStart(2, '0');
-  return hours
-    ? String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + rest
-    : String(minutes).padStart(2, '0') + ':' + rest;
+  return String(minutes).padStart(2, '0') + ':' + rest;
 }

@@ -4,6 +4,7 @@ import { DestroyRef, Service, computed, effect, inject, signal, untracked } from
 import {
   isStepTimerSeconds,
   recipeStepTimers,
+  maxClockSeconds,
   maxStepTimerSeconds,
   type StepTimerTarget,
 } from '../models/step-timer';
@@ -116,8 +117,8 @@ export class StepTimerService {
               : 0,
         }
       : {
-          remaining: target.seconds,
-          duration: target.seconds,
+          remaining: Math.min(target.seconds, maxClockSeconds),
+          duration: Math.min(target.seconds, maxClockSeconds),
           running: false,
           started: false,
           done: false,
@@ -125,20 +126,29 @@ export class StepTimerService {
         };
   }
   setDuration(target: StepTimerTarget, seconds: number): void {
-    if (!isStepTimerSeconds(seconds)) return;
+    if (seconds !== 0 && !isStepTimerSeconds(seconds)) return;
     this.ensureScope();
-    this.changeDuration(target, seconds * 1000, this.entries().get(target.key), Date.now());
+    this.changeDuration(
+      target,
+      Math.min(seconds, maxClockSeconds) * 1000,
+      this.entries().get(target.key),
+      Date.now(),
+    );
   }
   start(target: StepTimerTarget): void {
     this.ensureScope();
     const saved = this.entries().get(target.key);
     if (saved?.deadline !== undefined && !saved.done) return;
+    const remaining = Math.min(
+      maxClockSeconds,
+      saved?.done ? target.seconds : (saved?.remaining ?? target.seconds),
+    );
+    if (remaining === 0) return;
     this.prepareSound();
-    const remaining = saved?.done ? target.seconds : saved?.remaining || target.seconds;
     this.put({
       target,
       remaining,
-      duration: saved?.done ? target.seconds : (saved?.duration ?? remaining),
+      duration: saved?.done ? remaining : (saved?.duration ?? remaining),
       deadline: Date.now() + remaining * 1000,
       started: true,
       done: false,
@@ -172,10 +182,7 @@ export class StepTimerService {
       : saved?.deadline === undefined
         ? (saved?.remaining ?? target.seconds) * 1000
         : Math.max(0, saved.deadline - now);
-    const adjusted = Math.max(
-      1000,
-      Math.min(maxStepTimerSeconds * 1000, milliseconds + minutes * 60_000),
-    );
+    const adjusted = Math.max(0, Math.min(maxClockSeconds * 1000, milliseconds + minutes * 60_000));
     this.changeDuration(target, adjusted, saved, now);
   }
   private changeDuration(
@@ -189,14 +196,18 @@ export class StepTimerService {
       saved?.deadline === undefined
         ? (saved?.remaining ?? target.seconds)
         : Math.max(0, Math.ceil((saved.deadline - now) / 1000));
-    const passed = saved?.started && !expired ? Math.max(0, saved.duration - currentRemaining) : 0;
     const remaining = Math.ceil(milliseconds / 1000);
+    const passed =
+      remaining > 0 && saved?.started && !expired
+        ? Math.max(0, saved.duration - currentRemaining)
+        : 0;
     this.put({
       target,
       remaining,
       duration: Math.min(Number.MAX_SAFE_INTEGER, passed + remaining),
-      deadline: saved?.deadline !== undefined && !expired ? now + milliseconds : undefined,
-      started: saved?.started ?? false,
+      deadline:
+        remaining > 0 && saved?.deadline !== undefined && !expired ? now + milliseconds : undefined,
+      started: remaining > 0 && (saved?.started ?? false),
       done: false,
       updatedAt: now,
     });
@@ -273,6 +284,14 @@ export class StepTimerService {
     this.loadedScope.set(scope);
     this.entries.set(entries);
     this.now.set(Date.now());
+    try {
+      // Persist normalized deadlines so reopening cannot extend a legacy long clock again.
+      const normalized = JSON.stringify([...entries.values()]);
+      if (normalized !== this.stored) localStorage.setItem(scope, normalized);
+      this.stored = normalized;
+    } catch {
+      /* The normalized in-memory countdown remains available without storage. */
+    }
     this.syncClock();
     this.syncPush();
     this.syncAlarm();
@@ -332,7 +351,12 @@ export class StepTimerService {
       (raw['duration'] !== undefined &&
         (typeof raw['duration'] !== 'number' ||
           !Number.isSafeInteger(raw['duration']) ||
-          raw['duration'] <= 0)) ||
+          raw['duration'] < 0 ||
+          (raw['duration'] === 0 &&
+            (raw['remaining'] !== 0 ||
+              raw['started'] !== false ||
+              raw['done'] !== false ||
+              raw['deadline'] !== undefined)))) ||
       typeof raw['started'] !== 'boolean' ||
       typeof raw['done'] !== 'boolean' ||
       typeof raw['updatedAt'] !== 'number' ||
@@ -346,6 +370,16 @@ export class StepTimerService {
       (raw['done'] === true && raw['deadline'] === undefined)
     )
       return;
+    const deadline = raw['deadline'] as number | undefined;
+    const remaining =
+      deadline === undefined
+        ? raw['remaining']
+        : Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    const duration =
+      (raw['duration'] as number | undefined) ??
+      (raw['started'] ? Math.max(target['seconds'], raw['remaining']) : raw['remaining']);
+    const cappedRemaining = Math.min(remaining, maxClockSeconds);
+    const passed = raw['started'] ? Math.max(0, duration - remaining) : 0;
     return {
       target: {
         key: target['key'],
@@ -353,13 +387,12 @@ export class StepTimerService {
         index: target['index'],
         seconds: target['seconds'],
       },
-      remaining: raw['remaining'],
-      duration:
-        (raw['duration'] as number | undefined) ??
-        (raw['started']
-          ? Math.max(target['seconds'], raw['remaining'])
-          : raw['remaining'] || target['seconds']),
-      deadline: raw['deadline'] as number | undefined,
+      remaining: Math.min(raw['remaining'], maxClockSeconds),
+      duration: remaining > maxClockSeconds ? passed + cappedRemaining : duration,
+      deadline:
+        deadline === undefined
+          ? undefined
+          : Math.min(deadline, Date.now() + maxClockSeconds * 1000),
       started: raw['started'],
       done: raw['done'],
       updatedAt: raw['updatedAt'],
