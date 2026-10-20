@@ -9,7 +9,7 @@ import { StepTimerService } from '../../../core/services/step-timer.service';
 import { FeedbackService } from '../../../core/services/feedback.service';
 import { CookingSessionService } from '../../../core/services/cooking-session.service';
 
-describe('mobile recipe sections', () => {
+describe('recipe detail', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.stubGlobal('matchMedia', () => ({
@@ -116,5 +116,47 @@ describe('mobile recipe sections', () => {
     f.host.detectChanges();
     expect(document.activeElement?.id).toBe('recipe-ingredients-tab');
     expect(f.ingredients.getAttribute('aria-hidden')).toBe(null);
+  });
+
+  it('gives an unavailable recipe a heading and a way back to the library', async () => {
+    const route = TestBed.inject(ActivatedRoute);
+    route.snapshot.data['recipePage'].recipe = undefined;
+    const f = await fixture();
+    const heading = f.host.nativeElement.querySelector('h1') as HTMLElement | null;
+    const back = [...f.host.nativeElement.querySelectorAll('a')].find(
+      (link) => (link as HTMLAnchorElement).textContent?.trim() === 'Back to recipes',
+    ) as HTMLAnchorElement | undefined;
+
+    expect(heading?.textContent?.trim()).toBeTruthy();
+    expect(back?.getAttribute('href')).toBe('/');
+    expect(f.host.nativeElement.textContent).toContain('This recipe is no longer available.');
+  });
+
+  it('keeps a load error visible beside the recovery action', async () => {
+    const route = TestBed.inject(ActivatedRoute);
+    route.snapshot.data['recipePage'].error = 'Could not read your recipes. Try again when online.';
+    const f = await fixture();
+    const alert = f.host.nativeElement.querySelector('[role="alert"]') as HTMLElement | null;
+    const heading = f.host.nativeElement.querySelector('h1') as HTMLElement | null;
+    const back = [...f.host.nativeElement.querySelectorAll('a')].find(
+      (link) => (link as HTMLAnchorElement).textContent?.trim() === 'Back to recipes',
+    ) as HTMLAnchorElement | undefined;
+
+    expect(alert?.textContent?.trim()).toBe('Could not read your recipes. Try again when online.');
+    expect(heading?.textContent?.trim()).toBeTruthy();
+    expect(back?.getAttribute('href')).toBe('/');
+  });
+
+  it('offers the same recovery when the recipe route has no identifier', async () => {
+    const route = TestBed.inject(ActivatedRoute);
+    Object.defineProperty(route.snapshot, 'paramMap', { value: convertToParamMap({}) });
+    const f = await fixture();
+    const heading = f.host.nativeElement.querySelector('h1') as HTMLElement | null;
+    const back = [...f.host.nativeElement.querySelectorAll('a')].find(
+      (link) => (link as HTMLAnchorElement).textContent?.trim() === 'Back to recipes',
+    ) as HTMLAnchorElement | undefined;
+
+    expect(heading?.textContent?.trim()).toBeTruthy();
+    expect(back?.getAttribute('href')).toBe('/');
   });
 });

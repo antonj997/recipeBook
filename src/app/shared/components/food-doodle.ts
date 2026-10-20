@@ -41,6 +41,13 @@ import { Component, input } from "@angular/core";
           <path d="M80 64v-6q8-4 17 0v6" />
         </g>
       </g>
+    } @else if (kind() === "empty-bowl") {
+      <path fill="var(--color-accent)" d="M21 66q7 41 58 43 51-1 61-43Z" />
+      <path
+        fill="var(--color-surface)"
+        d="M21 66c-1-27 117-28 119 0-1 27-117 28-119 0Z"
+      />
+      <path d="M63 111l-5 8q20 4 43 0l-6-8" />
     } @else if (kind() === "plate") {
       <path
         fill="var(--color-surface)"
@@ -308,6 +315,7 @@ import { Component, input } from "@angular/core";
 export class FoodDoodleComponent {
   kind = input<
     | "bowl"
+    | "empty-bowl"
     | "plate"
     | "pasta"
     | "toast"

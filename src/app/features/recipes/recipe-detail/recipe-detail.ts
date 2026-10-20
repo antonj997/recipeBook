@@ -34,6 +34,7 @@ import { RecipeService } from '../../../core/services/recipe.service';
 
 import { FeedbackService } from '../../../core/services/feedback.service';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
+import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
 
 @Component({
   selector: 'app-recipe-detail',
@@ -53,6 +54,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
     IconComponent,
     RouterLink,
     LoadingStateComponent,
+    FoodDoodleComponent,
   ],
   templateUrl: './recipe-detail.html',
   styleUrl: './recipe-detail.scss',

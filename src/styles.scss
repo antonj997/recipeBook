@@ -665,3 +665,42 @@ body {
     transform: none;
   }
 }
+
+/* Recovery stays on the cookbook canvas rather than leaving an empty white strip. */
+main .recipe-detail.empty-recipe-page {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: calc(100svh - var(--app-header-height));
+  padding-bottom: 0;
+  background: var(--color-canvas);
+}
+.recipe-detail.empty-recipe-page > .empty-recipe-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-block: 24px 72px;
+  text-align: center;
+}
+.empty-recipe-content app-food-doodle {
+  width: clamp(136px, 28vw, 184px);
+  margin-bottom: 24px;
+  --doodle-fill: var(--color-accent);
+  --doodle-fill-light: var(--color-surface);
+}
+.empty-recipe-content h1 {
+  font:
+    500 clamp(2rem, 5vw, 3rem) / 1.15 Georgia,
+    serif;
+  letter-spacing: -0.025em;
+  margin-bottom: 12px;
+}
+.empty-recipe-content p {
+  max-width: 38ch;
+  margin-bottom: 28px;
+  color: var(--color-muted);
+}
+
+.recipe-detail.empty-recipe-page > .recipe-navigation.page {
+  background: inherit;
+}

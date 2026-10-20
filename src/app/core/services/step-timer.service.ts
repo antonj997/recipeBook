@@ -14,6 +14,7 @@ export type { StepTimerTarget } from '../models/step-timer';
 
 export interface StepTimerState {
   remaining: number;
+  duration: number;
   running: boolean;
   started: boolean;
   done: boolean;
@@ -22,6 +23,7 @@ export interface StepTimerState {
 interface SavedTimer {
   target: StepTimerTarget;
   remaining: number;
+  duration: number;
   deadline?: number;
   started: boolean;
   done: boolean;
@@ -100,6 +102,7 @@ export class StepTimerService {
     const saved = this.loadedScope() === this.scope() ? this.entries().get(target.key) : undefined;
     return saved
       ? {
+          duration: saved.duration,
           remaining:
             saved.deadline === undefined
               ? saved.remaining
@@ -112,21 +115,19 @@ export class StepTimerService {
               ? Math.max(0, Math.floor((this.now() - saved.deadline) / 1000))
               : 0,
         }
-      : { remaining: target.seconds, running: false, started: false, done: false, elapsed: 0 };
+      : {
+          remaining: target.seconds,
+          duration: target.seconds,
+          running: false,
+          started: false,
+          done: false,
+          elapsed: 0,
+        };
   }
   setDuration(target: StepTimerTarget, seconds: number): void {
     if (!isStepTimerSeconds(seconds)) return;
     this.ensureScope();
-    const saved = this.entries().get(target.key);
-    this.put({
-      target,
-      remaining: seconds,
-      deadline:
-        saved?.deadline !== undefined && !saved.done ? Date.now() + seconds * 1000 : undefined,
-      started: saved?.started ?? false,
-      done: false,
-      updatedAt: Date.now(),
-    });
+    this.changeDuration(target, seconds * 1000, this.entries().get(target.key), Date.now());
   }
   start(target: StepTimerTarget): void {
     this.ensureScope();
@@ -137,6 +138,7 @@ export class StepTimerService {
     this.put({
       target,
       remaining,
+      duration: saved?.done ? target.seconds : (saved?.duration ?? remaining),
       deadline: Date.now() + remaining * 1000,
       started: true,
       done: false,
@@ -164,21 +166,39 @@ export class StepTimerService {
   adjust(target: StepTimerTarget, minutes: -1 | 1): void {
     this.ensureScope();
     const saved = this.entries().get(target.key);
-    const milliseconds =
-      saved?.deadline === undefined
+    const now = Date.now();
+    const milliseconds = saved?.done
+      ? 0
+      : saved?.deadline === undefined
         ? (saved?.remaining ?? target.seconds) * 1000
-        : saved.deadline - Date.now();
+        : Math.max(0, saved.deadline - now);
     const adjusted = Math.max(
       1000,
       Math.min(maxStepTimerSeconds * 1000, milliseconds + minutes * 60_000),
     );
+    this.changeDuration(target, adjusted, saved, now);
+  }
+  private changeDuration(
+    target: StepTimerTarget,
+    milliseconds: number,
+    saved: SavedTimer | undefined,
+    now: number,
+  ): void {
+    const expired = saved?.done || (saved?.deadline !== undefined && saved.deadline <= now);
+    const currentRemaining =
+      saved?.deadline === undefined
+        ? (saved?.remaining ?? target.seconds)
+        : Math.max(0, Math.ceil((saved.deadline - now) / 1000));
+    const passed = saved?.started && !expired ? Math.max(0, saved.duration - currentRemaining) : 0;
+    const remaining = Math.ceil(milliseconds / 1000);
     this.put({
       target,
-      remaining: Math.ceil(adjusted / 1000),
-      deadline: saved?.deadline === undefined ? undefined : Date.now() + adjusted,
+      remaining,
+      duration: Math.min(Number.MAX_SAFE_INTEGER, passed + remaining),
+      deadline: saved?.deadline !== undefined && !expired ? now + milliseconds : undefined,
       started: saved?.started ?? false,
       done: false,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
   }
   reset(target: StepTimerTarget): void {
@@ -309,6 +329,10 @@ export class StepTimerService {
       !Number.isSafeInteger(raw['remaining']) ||
       raw['remaining'] < 0 ||
       raw['remaining'] > maxStepTimerSeconds ||
+      (raw['duration'] !== undefined &&
+        (typeof raw['duration'] !== 'number' ||
+          !Number.isSafeInteger(raw['duration']) ||
+          raw['duration'] <= 0)) ||
       typeof raw['started'] !== 'boolean' ||
       typeof raw['done'] !== 'boolean' ||
       typeof raw['updatedAt'] !== 'number' ||
@@ -330,6 +354,11 @@ export class StepTimerService {
         seconds: target['seconds'],
       },
       remaining: raw['remaining'],
+      duration:
+        (raw['duration'] as number | undefined) ??
+        (raw['started']
+          ? Math.max(target['seconds'], raw['remaining'])
+          : raw['remaining'] || target['seconds']),
       deadline: raw['deadline'] as number | undefined,
       started: raw['started'],
       done: raw['done'],

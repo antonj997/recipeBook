@@ -85,11 +85,27 @@ describe('editable step timer controls', () => {
     element.dispatchEvent(event);
   }
 
-  it('uses an accessible minute ruler instead of plus/minus controls', () => {
+  it('uses an accessible minute ruler alongside one-minute controls', () => {
     const f = fixture();
     expect(f.root.querySelector('[role="slider"]')).not.toBeNull();
-    expect(f.root.querySelector('[aria-label^="Add one minute"]')).toBeNull();
-    expect(f.root.querySelector('[aria-label^="Subtract one minute"]')).toBeNull();
+    expect(f.root.querySelector('[aria-label^="Add one minute"]')).not.toBeNull();
+    expect(f.root.querySelector('[aria-label^="Subtract one minute"]')).not.toBeNull();
+  });
+  it('adds and removes one minute without clearing elapsed progress', async () => {
+    const f = fixture();
+    f.timers.start(target);
+    await vi.advanceTimersByTimeAsync(30_000);
+    f.view.detectChanges();
+    const plus = f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]');
+    const minus = f.root.querySelector<HTMLButtonElement>('[aria-label^="Subtract one minute"]');
+    expect(plus).not.toBeNull();
+    expect(minus).not.toBeNull();
+    plus!.click();
+    f.view.detectChanges();
+    expect(f.timers.state(target)).toMatchObject({ remaining: 150, duration: 180, running: true });
+    minus!.click();
+    f.view.detectChanges();
+    expect(f.timers.state(target)).toMatchObject({ remaining: 90, duration: 120, running: true });
   });
   it('keeps Start, Stop and Reset below the ruler, and resumes stopped timers', () => {
     const f = fixture();
@@ -166,8 +182,8 @@ describe('editable step timer controls', () => {
       ['1', '00:01'],
       ['0', '00:10'],
       ['0', '01:00'],
-      ['0', '010:00'],
-      ['0', '0100:00'],
+      ['0', '10:00'],
+      ['0', '01:40:00'],
     ]) {
       input.dispatchEvent(
         new InputEvent('beforeinput', {
@@ -263,6 +279,198 @@ describe('editable step timer controls', () => {
     },
   );
 
+  it('shows hours and minutes separators while numeric entry keeps growing in minutes', () => {
+    const f = fixture();
+    const input = field(f.root);
+    input.dispatchEvent(new FocusEvent('focus'));
+    for (const [digit, display] of [
+      ['1', '00:01'],
+      ['1', '00:11'],
+      ['1', '01:11'],
+      ['1', '11:11'],
+      ['1', '01:51:11'],
+      ['1', '18:31:11'],
+    ]) {
+      input.dispatchEvent(
+        new InputEvent('beforeinput', {
+          inputType: 'insertText',
+          data: digit,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      f.view.detectChanges();
+      expect(input.value).toBe(display);
+      expect(input.selectionStart).toBe(display.length);
+    }
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(f.timers.state(target).remaining).toBe(66671);
+  });
+
+  it.each([true, false])(
+    'keeps raw numeric meaning after native edits of an hours display (beforeinput: %s)',
+    (withBeforeInput) => {
+      const f = fixture();
+      const input = field(f.root);
+      type(input, '6000');
+      f.view.detectChanges();
+      expect(input.value).toBe('01:00:00');
+      for (const [digit, display] of [
+        ['1', '10:00:01'],
+        ['1', '100:00:11'],
+      ]) {
+        input.setSelectionRange(input.value.length, input.value.length);
+        if (withBeforeInput)
+          input.dispatchEvent(
+            new InputEvent('beforeinput', {
+              inputType: 'insertText',
+              data: digit,
+              bubbles: true,
+            }),
+          );
+        input.setRangeText(digit, input.selectionStart!, input.selectionEnd!, 'end');
+        input.dispatchEvent(
+          new InputEvent('input', { inputType: 'insertText', data: digit, bubbles: true }),
+        );
+        f.view.detectChanges();
+        expect(input.value).toBe(display);
+        expect(input.selectionStart).toBe(display.length);
+      }
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(f.timers.state(target).remaining).toBe(360011);
+    },
+  );
+
+  it('backspaces the raw numeric entry after the display gains an hours segment', () => {
+    const f = fixture();
+    const input = field(f.root);
+    type(input, '111111');
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.dispatchEvent(
+      new InputEvent('beforeinput', {
+        inputType: 'deleteContentBackward',
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    f.view.detectChanges();
+    expect(input.value).toBe('01:51:11');
+    expect(input.selectionStart).toBe(input.value.length);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(f.timers.state(target).remaining).toBe(6671);
+  });
+
+  it.each([true, false])(
+    'replaces a selected minutes segment in the hours display (cancelable: %s)',
+    (cancelable) => {
+      const f = fixture();
+      const input = field(f.root);
+      type(input, '111111');
+      f.view.detectChanges();
+      expect(input.value).toBe('18:31:11');
+      input.setSelectionRange(3, 5);
+      input.dispatchEvent(
+        new InputEvent('beforeinput', {
+          inputType: 'insertText',
+          data: '45',
+          bubbles: true,
+          cancelable,
+        }),
+      );
+      if (!cancelable) {
+        input.setRangeText('45', input.selectionStart!, input.selectionEnd!, 'end');
+        input.dispatchEvent(
+          new InputEvent('input', { inputType: 'insertText', data: '45', bubbles: true }),
+        );
+      }
+      f.view.detectChanges();
+      expect(input.value).toBe('18:45:11');
+      expect(input.selectionStart).toBe(6);
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(f.timers.state(target).remaining).toBe(67511);
+    },
+  );
+
+  it('selects a canonical hours value on focus and replaces the whole duration', () => {
+    const f = fixture();
+    f.timers.setDuration(target, 7200);
+    f.view.detectChanges();
+    const input = field(f.root);
+    input.dispatchEvent(new FocusEvent('focus'));
+    expect(input.value).toBe('02:00:00');
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, 8]);
+    input.dispatchEvent(
+      new InputEvent('beforeinput', {
+        inputType: 'insertText',
+        data: '6000',
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    f.view.detectChanges();
+    expect(input.value).toBe('01:00:00');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(f.timers.state(target).remaining).toBe(3600);
+  });
+
+  it('keeps an explicit hours paste editable after a native numeric edit', () => {
+    const f = fixture();
+    const input = field(f.root);
+    type(input, '1:02:03');
+    input.setSelectionRange(input.value.length - 2, input.value.length);
+    input.dispatchEvent(
+      new InputEvent('beforeinput', {
+        inputType: 'insertText',
+        data: '04',
+        bubbles: true,
+      }),
+    );
+    input.setRangeText('04', input.selectionStart!, input.selectionEnd!, 'end');
+    input.dispatchEvent(
+      new InputEvent('input', { inputType: 'insertText', data: '04', bubbles: true }),
+    );
+    f.view.detectChanges();
+    expect(input.value).toBe('01:02:04');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(f.timers.state(target).remaining).toBe(3724);
+  });
+
+  it.each([true, false])(
+    'keeps hours entry stable after native backspace (beforeinput: %s)',
+    (withBeforeInput) => {
+      const f = fixture();
+      const input = field(f.root);
+      type(input, '111111');
+      input.setSelectionRange(input.value.length, input.value.length);
+      if (withBeforeInput)
+        input.dispatchEvent(
+          new InputEvent('beforeinput', {
+            inputType: 'deleteContentBackward',
+            bubbles: true,
+          }),
+        );
+      input.setRangeText('', input.selectionStart! - 1, input.selectionEnd!, 'end');
+      input.dispatchEvent(
+        new InputEvent('input', { inputType: 'deleteContentBackward', bubbles: true }),
+      );
+      f.view.detectChanges();
+      expect(input.value).toBe('01:51:11');
+      expect(input.selectionStart).toBe(input.value.length);
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(f.timers.state(target).remaining).toBe(6671);
+    },
+  );
+  it('keeps invalid seconds visible when numeric entry gains an hours segment', () => {
+    const f = fixture();
+    const input = field(f.root);
+    type(input, '6075');
+    f.view.detectChanges();
+    expect(input.value).toBe('01:00:75');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    f.view.detectChanges();
+    expect(f.timers.state(target).remaining).toBe(120);
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+  });
   it('offers Reset while a timer is running', () => {
     const f = fixture();
     f.timers.start(target);

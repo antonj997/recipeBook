@@ -1,4 +1,9 @@
-<article class="recipe-detail" [class.draft-preview]="isDraft" [class.wide-reading]="wideReading()">
+<article
+  class="recipe-detail"
+  [class.draft-preview]="isDraft"
+  [class.wide-reading]="wideReading()"
+  [class.empty-recipe-page]="!loading() && (!!error() || !recipe())"
+>
   <div
     class="recipe-navigation page"
     [appRecipeTransition]="recipe()?.id ?? ''"
@@ -24,10 +29,15 @@
   </div>
   @if (loading()) {
     <div class="recipe-message page"><app-loading-state label="Loading recipe…" /></div>
-  } @else if (error()) {
-    <div class="recipe-message page">
-      <p role="alert">{{ error() }}</p>
-    </div>
+  } @else if (error() || !recipe()) {
+    <section class="empty-recipe-content page" aria-labelledby="recipe-unavailable-title">
+      <app-food-doodle kind="empty-bowl" />
+      <h1 id="recipe-unavailable-title">This bowl is empty</h1>
+      <p [attr.role]="error() ? 'alert' : null">
+        {{ error() || 'The requested recipe could not be found.' }}
+      </p>
+      <a routerLink="/" class="button primary">Back to recipes</a>
+    </section>
   } @else {
     @if (recipe(); as selectedRecipe) {
       <div class="recipe-intro page">
@@ -258,11 +268,6 @@
             /></a>
           }
         </div>
-      </div>
-    } @else {
-      <div class="recipe-message page">
-        <h1>Recipe not found</h1>
-        <p>The requested recipe does not exist.</p>
       </div>
     }
   }

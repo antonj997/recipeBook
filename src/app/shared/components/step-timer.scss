@@ -61,14 +61,15 @@ input.timer-input.is-overdue {
   color: var(--color-danger);
 }
 .timer-actions {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: 44px repeat(3, minmax(0, 1fr)) 44px;
+  gap: 2px;
 }
-.timer-action {
-  min-width: 60px;
+.timer-action,
+.timer-minute {
+  min-width: 0;
   min-height: 44px;
-  padding: 8px 12px;
+  padding: 8px;
   border: 0;
   border-radius: 5px;
   background: transparent;
@@ -97,4 +98,12 @@ input.timer-input.is-overdue {
   .step-timer {
     transition: none;
   }
+}
+
+.timer-minute {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  touch-action: manipulation;
 }
