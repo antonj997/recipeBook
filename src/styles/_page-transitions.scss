@@ -58,7 +58,7 @@ html[data-page-transition='expand']::view-transition-image-pair(book-recipe-surf
   background: var(--book-expand-color, var(--color-canvas));
   animation-name: book-surface-corners;
 }
-/* Flat list rows need a transparent backing during the swatch-to-row lead.
+/* Flat list rows need a transparent backing during the photo-strip-to-row lead.
    Restore the opaque backing when shared travel starts to retain gap protection. */
 html[data-page-transition='expand'][data-expand-list]::view-transition-image-pair(
     book-recipe-surface
@@ -361,7 +361,7 @@ html[data-page-transition='expand']::view-transition-old(book-recipe-card-descri
 }
 @keyframes book-list-fill {
   0% {
-    clip-path: inset(var(--book-list-strip-inset) round 3px);
+    clip-path: inset(var(--book-list-strip-inset) round 0px 8px 8px 0px);
     animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
   #{math.div(motion.$list-lead, motion.$travel + motion.$list-lead) * 100%} {

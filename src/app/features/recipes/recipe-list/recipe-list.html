@@ -136,19 +136,22 @@
             [routerLink]="['/recipes', recipe.id]"
             (click)="openRecipe(recipe.id)"
           >
-            <span class="index-image" [style.background-color]="recipeBackground(recipe)">
-              @if (recipe.imageDataUrl) {
-                <img
-                  [src]="recipe.imageDataUrl"
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  [appRecipeTransition]="recipe.id"
-                  transitionPart="image"
-                />
-              } @else {
-                <app-food-placeholder [seed]="recipe.id" [color]="recipe.color" />
-              }
+            <span class="index-media">
+              <span class="index-color" aria-hidden="true"></span>
+              <span class="index-image" [style.background-color]="recipeBackground(recipe)">
+                @if (recipe.imageDataUrl) {
+                  <img
+                    [src]="recipe.imageDataUrl"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    [appRecipeTransition]="recipe.id"
+                    transitionPart="image"
+                  />
+                } @else {
+                  <app-food-placeholder [seed]="recipe.id" [color]="recipe.color" />
+                }
+              </span>
             </span>
             <span class="index-copy"
               ><span
@@ -159,7 +162,6 @@
                 ><app-recipe-title [title]="recipe.title"
               /></span>
               <span class="index-metadata">
-                <span class="index-color" aria-hidden="true"></span>
                 @if (recipe.totalTime != null) {
                   <span
                     class="index-time recipe-time"
