@@ -2,7 +2,10 @@ import { recipeBackground } from '../../../core/models/recipe-color';
 import { RecipeContextDirective } from '../../../shared/components/recipe-context';
 import { SelectMenuComponent } from '../../../shared/components/select-menu';
 import { LibraryViewToggleComponent } from '../../../shared/components/library-view-toggle';
-import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
+import {
+  recipeCategoryNames,
+  type RecipeCollection,
+} from '../../../core/models/recipe-collection.model';
 import { NgTemplateOutlet } from '@angular/common';
 import {
   afterRenderEffect,
@@ -84,6 +87,15 @@ export class RecipeListComponent implements OnDestroy {
     ...this.collections().map((collection) => ({ value: collection.id, label: collection.name })),
     { value: 'manage-categories', label: 'Manage categories…', action: true },
   ]);
+  private readonly recipeCategories = computed(() => {
+    const names = new Map(this.collections().map((category) => [category.id, category.name]));
+    return new Map(
+      this.recipes().map((recipe) => [recipe.id, recipeCategoryNames(recipe.collectionIds, names)]),
+    );
+  });
+  categoryNames(recipe: Recipe): string[] {
+    return this.recipeCategories().get(recipe.id) ?? [];
+  }
   selectedCollectionId = signal(this.initial.categoryId);
   view = signal(this.initial.view);
   restoreRecipeId = signal(this.initial.recipeId);

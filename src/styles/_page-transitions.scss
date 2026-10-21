@@ -58,6 +58,21 @@ html[data-page-transition='expand']::view-transition-image-pair(book-recipe-surf
   background: var(--book-expand-color, var(--color-canvas));
   animation-name: book-surface-corners;
 }
+/* Flat list rows need a transparent backing during the swatch-to-row lead.
+   Restore the opaque backing when shared travel starts to retain gap protection. */
+html[data-page-transition='expand'][data-expand-list]::view-transition-image-pair(
+    book-recipe-surface
+  ) {
+  background: transparent;
+  animation-name: book-surface-corners, book-list-surface-backing;
+  animation-fill-mode: both, forwards;
+}
+@keyframes book-list-surface-backing {
+  from,
+  to {
+    background: var(--book-expand-color, var(--color-canvas));
+  }
+}
 html[data-page-transition='expand']::view-transition-image-pair(book-recipe-image) {
   // Outline paints over the opaque source snapshot without changing its crop.
   // The native pair owns both the geometry and animated corners from first frame.

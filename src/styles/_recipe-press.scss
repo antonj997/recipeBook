@@ -1,6 +1,5 @@
 /* Keep recipe colors opaque; acknowledge presses without shifting their contents. */
-.recipe-card__surface,
-.index-row {
+.recipe-card__surface {
   scale: 1;
   transition:
     scale var(--motion-press) var(--ease-out),
@@ -20,19 +19,16 @@
   pointer-events: none;
   transition: opacity 100ms var(--ease-out);
 }
-.recipe-card.recipe-pressed .recipe-card__surface,
-.index-row.recipe-pressed {
+.recipe-card.recipe-pressed .recipe-card__surface {
   scale: 0.985;
 }
-:is(.recipe-card.recipe-pressed .recipe-card__surface, .index-row.recipe-pressed)::after {
+.recipe-card.recipe-pressed .recipe-card__surface::after {
   border-width: 2px;
   opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
   .recipe-card__surface,
-  .recipe-card.recipe-pressed .recipe-card__surface,
-  .index-row,
-  .index-row.recipe-pressed {
+  .recipe-card.recipe-pressed .recipe-card__surface {
     scale: 1;
     transition: none;
   }

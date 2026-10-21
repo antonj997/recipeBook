@@ -2,7 +2,10 @@ import { RecipePhotoWarmupService } from '../../core/services/recipe-photo-warmu
 import { RecipeTransitionPartDirective } from './recipe-transition-part';
 import { recipeBackground } from '../../core/models/recipe-color';
 import { RecipeContextDirective } from './recipe-context';
-import type { RecipeCollection } from '../../core/models/recipe-collection.model';
+import {
+  recipeCategoryNames,
+  type RecipeCollection,
+} from '../../core/models/recipe-collection.model';
 import { CardTiltDirective } from './card-tilt';
 import { IconComponent } from './icon';
 import { RecipeTitleComponent } from './recipe-title';
@@ -75,10 +78,7 @@ export class RecipeRailComponent implements OnDestroy {
       this.recipes().map((recipe) => [
         recipe,
         {
-          categories: (recipe.collectionIds ?? [])
-            .map((id) => labels.get(id))
-            .filter((name): name is string => !!name)
-            .slice(0, 3),
+          categories: recipeCategoryNames(recipe.collectionIds, labels),
           calories: perPortionNutrition(recipe.nutrition)?.calories,
         },
       ]),

@@ -136,7 +136,6 @@
             [routerLink]="['/recipes', recipe.id]"
             (click)="openRecipe(recipe.id)"
           >
-            <span class="index-color" aria-hidden="true"></span>
             <span class="index-image" [style.background-color]="recipeBackground(recipe)">
               @if (recipe.imageDataUrl) {
                 <img
@@ -159,14 +158,30 @@
                 transitionPart="title"
                 ><app-recipe-title [title]="recipe.title"
               /></span>
-              @if (recipe.totalTime != null) {
-                <span
-                  class="index-time recipe-time"
-                  [appRecipeTransition]="recipe.id"
-                  transitionPart="time"
-                  ><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</span
-                >
-              }
+              <span class="index-metadata">
+                <span class="index-color" aria-hidden="true"></span>
+                @if (recipe.totalTime != null) {
+                  <span
+                    class="index-time recipe-time"
+                    [appRecipeTransition]="recipe.id"
+                    transitionPart="time"
+                    ><app-icon name="clock" />{{ formatTime(recipe.totalTime!) }}</span
+                  >
+                }
+                @let categories = categoryNames(recipe);
+                @if (categories.length) {
+                  @if (recipe.totalTime != null) {
+                    <span class="metadata-separator" aria-hidden="true">·</span>
+                  }
+                  <span
+                    class="index-categories"
+                    [title]="categories.join(' · ')"
+                    [appRecipeTransition]="recipe.id"
+                    transitionPart="categories"
+                    >{{ categories.join(' · ') }}</span
+                  >
+                }
+              </span>
             </span>
           </a>
         } @empty {
