@@ -3,6 +3,16 @@
   display: block;
   width: 5.25rem;
   height: 4.5rem;
+  border-radius: 8px;
+}
+.index-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--recipe-outline);
+  border-radius: inherit;
+  pointer-events: none;
+  transition: border-width var(--motion-fast) var(--ease-out);
 }
 .index-color {
   position: absolute;
@@ -249,9 +259,6 @@
   height: 4.5rem;
   border-radius: 8px;
   overflow: hidden;
-  outline: 2px solid transparent;
-  outline-offset: -2px;
-  transition: outline-color var(--motion-fast) var(--ease-out);
 }
 .index-image :is(img, app-food-placeholder) {
   position: absolute;
@@ -372,19 +379,19 @@
   .index-row:hover {
     border-bottom-color: var(--recipe-outline);
   }
-  .index-row:hover .index-image {
-    outline-color: var(--recipe-outline);
+  .index-row:hover .index-media::after {
+    border-width: 2px;
   }
   .index-add-row:hover app-icon {
     border-color: var(--color-ink);
   }
 }
-.index-row.recipe-pressed .index-image {
-  outline-color: var(--recipe-outline);
+.index-row.recipe-pressed .index-media::after {
+  border-width: 2px;
 }
 @media (prefers-reduced-motion: reduce) {
   .index-row,
-  .index-image {
+  .index-media::after {
     transition: none;
   }
 }
