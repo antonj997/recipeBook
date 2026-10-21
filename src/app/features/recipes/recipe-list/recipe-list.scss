@@ -273,9 +273,7 @@
 .index-title {
   min-width: 0;
   height: 2.5em;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  display: block;
   overflow: hidden;
   font-family: Georgia, serif;
   line-height: 1.25;

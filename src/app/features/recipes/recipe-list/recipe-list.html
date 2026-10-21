@@ -159,7 +159,7 @@
                 [title]="recipe.title"
                 [appRecipeTransition]="recipe.id"
                 transitionPart="title"
-                ><app-recipe-title [title]="recipe.title"
+                ><app-recipe-title [title]="recipe.title" [maxLines]="2"
               /></span>
               <span class="index-metadata">
                 @if (recipe.totalTime != null) {
