@@ -9,6 +9,7 @@ export class GuestRecipesService {
   readonly auth = this.cloud.auth;
   readonly recipes = signal(0);
   readonly categories = signal(0);
+  readonly shoppingItems = signal(0);
   readonly checking = signal(false);
   readonly busy = signal<'add' | 'delete' | null>(null);
   readonly error = signal('');
@@ -20,6 +21,7 @@ export class GuestRecipesService {
       (this.checkedVersion() !== this.auth.accountVersion() ||
         this.recipes() > 0 ||
         this.categories() > 0 ||
+        this.shoppingItems() > 0 ||
         !!this.error()),
   );
 
@@ -33,6 +35,7 @@ export class GuestRecipesService {
         this.busy.set(null);
         this.recipes.set(0);
         this.categories.set(0);
+        this.shoppingItems.set(0);
       }
       // Angular effects run after the auth callback. No asynchronous work holds its auth lock.
       untracked(() => void this.refresh());
@@ -52,11 +55,12 @@ export class GuestRecipesService {
       if (version !== this.auth.accountVersion() || request !== this.request) return;
       this.recipes.set(counts.recipes);
       this.categories.set(counts.collections);
+      this.shoppingItems.set(counts.shoppingItems);
       this.error.set('');
       this.checkedVersion.set(version);
     } catch {
       if (version === this.auth.accountVersion() && request === this.request)
-        this.error.set('Could not check your device recipes. Your saved data is safe. Try again.');
+        this.error.set('Could not check your device data. Your saved data is safe. Try again.');
     } finally {
       if (request === this.request) this.checking.set(false);
     }
@@ -75,8 +79,8 @@ export class GuestRecipesService {
       if (!this.error())
         this.feedback.show(
           choice === 'add'
-            ? 'Device recipes added to your account. Changes saved here will sync when online.'
-            : 'Device recipes deleted. Your account cookbook is unchanged.',
+            ? 'Device recipes and shopping items added to your account. Changes will sync when online.'
+            : 'Device recipes and shopping items deleted. Your account data is unchanged.',
         );
     } catch (error) {
       if (version === this.auth.accountVersion())

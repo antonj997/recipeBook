@@ -16,14 +16,25 @@
     <span class="brand-word" aria-hidden="true">Recipebook</span>
   </a>
   @if (!hideSettings()) {
-    <a
-      class="settings-link"
-      [routerLink]="settingsTarget()"
-      [class.active]="onSettings()"
-      [attr.aria-label]="onSettings() ? 'Back from settings' : 'Settings'"
-      [title]="onSettings() ? 'Back from settings' : 'Settings'"
-      ><app-icon name="settings" />
-    </a>
+    <nav class="header-actions" aria-label="App">
+      <a
+        class="settings-link shopping-link"
+        routerLink="/shopping-list"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+        aria-label="Shopping list"
+        title="Shopping list"
+        ><app-icon name="basket"
+      /></a>
+      <a
+        class="settings-link"
+        [routerLink]="settingsTarget()"
+        [class.active]="onSettings()"
+        [attr.aria-label]="onSettings() ? 'Back from settings' : 'Settings'"
+        [title]="onSettings() ? 'Back from settings' : 'Settings'"
+        ><app-icon name="settings" />
+      </a>
+    </nav>
   }
 </header>
 <main

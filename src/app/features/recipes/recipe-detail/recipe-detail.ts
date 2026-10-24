@@ -1,3 +1,4 @@
+import { RecipeShoppingPickerComponent } from '../../../shared/components/recipe-shopping-picker';
 import { TimerAlertPreferencesComponent } from '../../../shared/components/timer-alert-preferences';
 import { StepTimerService } from '../../../core/services/step-timer.service';
 import { StepTimerComponent } from '../../../shared/components/step-timer';
@@ -61,6 +62,7 @@ import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
   },
   imports: [
     StepTimerComponent,
+    RecipeShoppingPickerComponent,
     TimerAlertPreferencesComponent,
     RecipeTitleComponent,
     RecipeTransitionPartDirective,
@@ -364,6 +366,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     this.failedStepPhotos.update((current) => new Set([...current, index]));
   }
   recipe = signal<Recipe | undefined>(undefined);
+  readonly shoppingPickerOpen = signal(false);
   selectedServings = signal(4);
   baseServings = computed(() => {
     const value = this.recipe()?.servings;

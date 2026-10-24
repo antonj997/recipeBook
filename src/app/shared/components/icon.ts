@@ -64,6 +64,9 @@ import { Component, input } from '@angular/core';
         <path d="M3 3h7l11 11-7 7L3 10Z" />
         <circle cx="7.5" cy="7.5" r="1" />
       }
+      @case ('basket') {
+        <path d="M3 9h18l-2 12H5L3 9Zm4 0 5-6 5 6M9 13v4m6-4v4" />
+      }
       @case ('list') {
         <path d="M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1" />
       }
@@ -124,5 +127,6 @@ export class IconComponent {
     | 'shelf'
     | 'category'
     | 'list'
+    | 'basket'
   >();
 }

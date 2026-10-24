@@ -248,3 +248,16 @@ main:focus {
 .toast-region.editing {
   bottom: calc(104px + env(safe-area-inset-bottom));
 }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .shopping-link:hover {
+    transform: none;
+    --icon-stroke-width: 2.1;
+  }
+}

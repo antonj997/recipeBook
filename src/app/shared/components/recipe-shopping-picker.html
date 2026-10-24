@@ -1,0 +1,169 @@
+<dialog
+  #dialog
+  aria-labelledby="shopping-picker-heading"
+  (cancel)="cancel($event)"
+  (close)="close()"
+  (pointerdown)="backdropStart($event)"
+  (click)="backdropClick($event)"
+>
+  <div class="picker-sheet" [attr.aria-busy]="busy()">
+    <header class="picker-header">
+      <h2 id="shopping-picker-heading">Add from recipe</h2>
+      <button
+        type="button"
+        class="close-picker"
+        aria-label="Close ingredient picker"
+        (click)="close()"
+      >
+        <app-icon name="close" />
+      </button>
+    </header>
+    <div #pickerBody class="picker-body">
+      @if (selectedRecipe(); as chosen) {
+        @if (!recipe()) {
+          <button type="button" class="change-recipe" [disabled]="busy()" (click)="changeRecipe()">
+            <app-icon name="chevron" />Choose another recipe
+          </button>
+        }
+        <h3 #ingredientHeading tabindex="-1" class="recipe-heading">{{ chosen.title }}</h3>
+        @if (confirming()) {
+          <section class="duplicate-confirmation" aria-labelledby="duplicate-heading">
+            <h3 #confirmHeading id="duplicate-heading" tabindex="-1">Add another batch?</h3>
+            <p>
+              These ingredients are already on your list. Add the selected ingredients again for
+              {{ selectedServings() }} servings?
+            </p>
+          </section>
+        } @else if (chosen.ingredients.length) {
+          <div class="selection-tools">
+            <app-select-menu
+              menuId="shopping-servings-menu"
+              label="Servings"
+              [value]="selectedServings().toString()"
+              [options]="servingOptions()"
+              [disabled]="busy()"
+              (valueChange)="changeServings($event)"
+            />
+            <div class="selection-actions">
+              <button
+                type="button"
+                [disabled]="busy() || selectedCount() === chosen.ingredients.length"
+                (click)="selectAll()"
+              >
+                Select all
+              </button>
+              <button type="button" [disabled]="busy() || !selectedCount()" (click)="deselectAll()">
+                Deselect all
+              </button>
+            </div>
+          </div>
+          @for (group of ingredientGroups(); track $index) {
+            @if (group.section) {
+              <h4 class="group-heading">{{ group.section }}</h4>
+            }
+            <ul class="ingredient-choices">
+              @for (ingredient of group.ingredients; track ingredient.index) {
+                <li>
+                  <label class="check-control">
+                    <input
+                      type="checkbox"
+                      [checked]="selected().has(ingredient.index)"
+                      [disabled]="busy()"
+                      (change)="toggle(ingredient.index)"
+                    />
+                    <app-checkbox-mark /><span>{{ ingredient.text }}</span>
+                  </label>
+                </li>
+              }
+            </ul>
+          }
+        } @else {
+          <p class="empty-copy">This recipe has no ingredients to add.</p>
+        }
+      } @else {
+        <label class="search-field"
+          ><app-icon name="search" /><span class="sr-only">Search recipes</span>
+          <input
+            #searchInput
+            type="search"
+            autofocus
+            placeholder="Search recipes"
+            [value]="query()"
+            (input)="onSearch($event)"
+          />
+        </label>
+        @if (loading()) {
+          <p class="loading-copy" role="status">Loading recipes…</p>
+          <div class="loading-lines" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        } @else if (recipes().length) {
+          <ul class="recipe-choices">
+            @for (choice of filteredRecipes(); track choice.id) {
+              <li>
+                <button type="button" class="recipe-choice" (click)="chooseRecipe(choice)">
+                  <span class="recipe-thumbnail">
+                    @if (choice.imageDataUrl && !failedPhotos().has(choice.id)) {
+                      <img
+                        [src]="choice.imageDataUrl"
+                        alt=""
+                        loading="lazy"
+                        (error)="hidePhoto(choice.id)"
+                      />
+                    } @else {
+                      <app-food-placeholder [seed]="choice.id" [color]="choice.color" />
+                    }
+                  </span>
+                  <span class="recipe-choice-title">{{ choice.title }}</span
+                  ><app-icon name="arrow" />
+                </button>
+              </li>
+            } @empty {
+              <li class="empty-copy">No recipes match “{{ query() }}”. Try another search.</li>
+            }
+          </ul>
+        } @else if (!error()) {
+          <p class="empty-copy">
+            Your recipes will appear here. Add a recipe to your cookbook first, or add items
+            directly to your shopping list.
+          </p>
+        }
+      }
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+        @if (!selectedRecipe()) {
+          <button type="button" [disabled]="loading()" (click)="loadRecipes()">Try again</button>
+        }
+      }
+    </div>
+    @if (selectedRecipe()) {
+      <footer class="picker-footer">
+        @if (confirming()) {
+          <button type="button" [disabled]="busy()" (click)="cancelConfirmation()">Cancel</button>
+          <button
+            type="button"
+            class="primary add-selected"
+            [disabled]="busy()"
+            (click)="submit(true)"
+          >
+            {{ busy() ? 'Adding…' : 'Add again' }}
+          </button>
+        } @else {
+          <p aria-live="polite">{{ selectedCount() }} selected</p>
+          <button
+            type="button"
+            class="primary add-selected"
+            [disabled]="busy() || !selectedCount()"
+            (click)="submit()"
+          >
+            {{
+              busy()
+                ? 'Adding…'
+                : 'Add ' + selectedCount() + (selectedCount() === 1 ? ' item' : ' items')
+            }}
+          </button>
+        }
+      </footer>
+    }
+  </div>
+</dialog>

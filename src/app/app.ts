@@ -28,7 +28,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IconComponent } from './shared/components/icon';
@@ -40,6 +40,7 @@ import { FeedbackService } from './core/services/feedback.service';
     RecipeActionsOverlayComponent,
     RouterOutlet,
     RouterLink,
+    RouterLinkActive,
     IconComponent,
     LeaveConfirmationComponent,
     GuestRecipesDialogComponent,

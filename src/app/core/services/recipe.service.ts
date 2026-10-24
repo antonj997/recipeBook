@@ -4,18 +4,20 @@ import { readRecipeMetadata, isHttpsUrl } from '../models/recipe-metadata';
 import { Injectable, inject } from '@angular/core';
 import type { Recipe } from '../models/recipe.model';
 import { CloudCookbookService } from './cloud-cookbook.service';
+import { readShoppingItem, type ShoppingItem } from '../models/shopping-item';
+import type Dexie from 'dexie';
 
-export interface RecipeBackup {
+export type RecipeBackup = {
   app: 'recipiebook';
-  version: 1;
   exportedAt: string;
   recipes: Recipe[];
   collections?: RecipeCollection[];
-}
+} & ({ version: 1; shoppingItems?: never } | { version: 2; shoppingItems: ShoppingItem[] });
 
 export interface ImportResult {
   added: number;
   skipped: number;
+  shoppingAdded?: number;
 }
 
 // Checks that a value is a regular object.
@@ -164,16 +166,30 @@ export class RecipeService {
 
   async exportBackup(): Promise<RecipeBackup> {
     const database = this.cloud.database;
-    const [recipes, collections] = await Promise.all([
-      database.recipes.orderBy('title').toArray(),
-      database.collections.orderBy('sortOrder').toArray(),
-    ]);
+    const version = this.accountVersion();
+    const transactions: Dexie = database;
+    const { recipes, collections, shoppingItems } = await transactions.transaction(
+      'r',
+      database.recipes,
+      database.collections,
+      database.shoppingItems,
+      async () => ({
+        recipes: await database.recipes.orderBy('title').toArray(),
+        collections: await database.collections.orderBy('sortOrder').toArray(),
+        shoppingItems: (await database.shoppingItems.orderBy('createdAt').toArray()).map(
+          readShoppingItem,
+        ),
+      }),
+    );
+    if (database !== this.cloud.database || version !== this.accountVersion())
+      throw new Error('Account changed. Try again.');
 
     return {
       app: 'recipiebook',
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       collections,
+      shoppingItems,
       recipes: recipes.map((recipe) => {
         const clean = { ...recipe } as Recipe & Record<string, unknown>;
         for (const key of [
@@ -200,7 +216,7 @@ export class RecipeService {
     if (
       !isObject(data) ||
       data['app'] !== 'recipiebook' ||
-      data['version'] !== 1 ||
+      (data['version'] !== 1 && data['version'] !== 2) ||
       !isNonEmptyString(data['exportedAt']) ||
       Number.isNaN(Date.parse(data['exportedAt'])) ||
       !Array.isArray(data['recipes'])
@@ -303,12 +319,25 @@ export class RecipeService {
       recipes.push(recipe);
     }
 
+    const shoppingItems: ShoppingItem[] = [];
+    if (data['version'] === 2) {
+      if (!Array.isArray(data['shoppingItems']))
+        throw new Error('Invalid shopping list in backup.');
+      const seen = new Set<string>();
+      for (const raw of data['shoppingItems']) {
+        const item = readShoppingItem(raw);
+        if (seen.has(item.id)) throw new Error('The backup contains duplicate shopping item IDs.');
+        seen.add(item.id);
+        shoppingItems.push(item);
+      }
+    }
+
     return {
       app: 'recipiebook',
-      version: 1,
       exportedAt: data['exportedAt'],
       recipes,
       collections,
+      ...(data['version'] === 2 ? { version: 2, shoppingItems } : { version: 1 }),
     };
   }
 
@@ -316,10 +345,19 @@ export class RecipeService {
     // Validate the entire backup first.
     const backup = this.validateBackup(data);
 
-    if (backup.recipes.length === 0 && !backup.collections?.length) {
-      return { added: 0, skipped: 0 };
+    if (
+      backup.recipes.length === 0 &&
+      !backup.collections?.length &&
+      !backup.shoppingItems?.length
+    ) {
+      return { added: 0, skipped: 0, shoppingAdded: 0 };
     }
 
-    return this.cloud.importRecords(backup.recipes, backup.collections);
+    return this.cloud.importRecords(
+      backup.recipes,
+      backup.collections,
+      this.cloud.database,
+      backup.shoppingItems,
+    );
   }
 }

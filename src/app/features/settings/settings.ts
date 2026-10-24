@@ -102,7 +102,7 @@ export class SettingsComponent {
       await this.auth.signOut();
       if (this.active)
         this.message.set(
-          'Signed out. Your account’s recipes and pending changes stay on this device. Sign back into the same account to see them.',
+          'Signed out. Your account’s recipes, shopping list and pending changes stay on this device. Sign back into the same account to see them.',
         );
     } catch (error) {
       if (this.current(version))
@@ -163,7 +163,9 @@ export class SettingsComponent {
         URL.revokeObjectURL(url);
       }, 60_000);
 
-      this.message.set(`Prepared a backup containing ${backup.recipes.length} recipes.`);
+      this.message.set(
+        `Prepared a backup containing ${backup.recipes.length} recipes and ${backup.shoppingItems?.length ?? 0} shopping items.`,
+      );
     } catch (error) {
       console.error('Export failed:', error);
 
@@ -205,8 +207,8 @@ export class SettingsComponent {
       const backup = this.recipeService.validateBackup(data);
 
       const confirmed = window.confirm(
-        `Import ${backup.recipes.length} recipes?\n\n` +
-          'Recipes already in your cookbook will be skipped.',
+        `Import ${backup.recipes.length} recipes and ${backup.shoppingItems?.length ?? 0} shopping items?\n\n` +
+          'Existing recipes and shopping items will be kept. Items already imported will be skipped.',
       );
 
       if (!confirmed || !this.current(version)) {
@@ -218,7 +220,8 @@ export class SettingsComponent {
       if (!this.current(version)) return;
 
       this.message.set(
-        `Imported ${result.added} recipes. ` + `Skipped ${result.skipped} existing recipes.`,
+        `Imported ${result.added} recipes and ${result.shoppingAdded ?? 0} shopping items. ` +
+          `Skipped ${result.skipped} existing recipes.`,
       );
     } catch (error) {
       console.error('Import failed:', error);

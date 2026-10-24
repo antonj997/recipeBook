@@ -125,6 +125,16 @@
             >
               <h2 id="ingredients-heading" class="wide-section-heading">Ingredients</h2>
               <div class="ingredients-tools">
+                @if (!isDraft && selectedRecipe.ingredients.length) {
+                  <button
+                    type="button"
+                    class="recipe-shopping-button"
+                    aria-haspopup="dialog"
+                    (click)="shoppingPickerOpen.set(true)"
+                  >
+                    <app-icon name="basket" />Add to shopping list
+                  </button>
+                }
                 <app-select-menu
                   menuId="recipe-servings-menu"
                   [dragSelect]="true"
@@ -296,4 +306,12 @@
       <button type="button" [disabled]="savingDraft()" (click)="editDraft()">edit</button>
     </div>
   </div>
+}
+
+@if (shoppingPickerOpen() && recipe()) {
+  <app-recipe-shopping-picker
+    [recipe]="recipe() ?? null"
+    [servings]="selectedServings()"
+    (closed)="shoppingPickerOpen.set(false)"
+  />
 }

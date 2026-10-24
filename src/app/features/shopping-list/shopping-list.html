@@ -1,0 +1,225 @@
+<section class="shopping-page page page--narrow" aria-labelledby="shopping-heading">
+  <a routerLink="/" class="back-link"><app-icon name="chevron" />Back to home</a>
+  <h1 id="shopping-heading">Shopping list</h1>
+  <div class="add-tools">
+    <form class="add-item" (submit)="$event.preventDefault(); addItems()">
+      <label for="shopping-add" class="sr-only">Add an item</label>
+      <input
+        #addInput
+        id="shopping-add"
+        type="text"
+        autocomplete="off"
+        placeholder="Add an item, like 2 lemons"
+        [value]="draft()"
+        [disabled]="shopping.loading()"
+        (input)="onDraft($event)"
+        (paste)="pasteItems($event)"
+      />
+      <button
+        type="submit"
+        class="primary"
+        aria-label="Add item"
+        [attr.aria-busy]="adding()"
+        [disabled]="adding() || shopping.loading() || !draft().trim()"
+      >
+        <app-icon name="plus" />
+      </button>
+    </form>
+    <button
+      type="button"
+      class="add-recipe"
+      [disabled]="busy() || shopping.loading()"
+      (click)="openPicker()"
+    >
+      <app-icon name="book" />Add from recipe
+    </button>
+  </div>
+  @if (!shopping.cloud.online()) {
+    <p class="sync-status" role="status">You’re offline. Your list is saved on this device.</p>
+  } @else if (shopping.cloud.error()) {
+    <p class="sync-status" role="status">{{ shopping.cloud.error() }}</p>
+  }
+  @if (error()) {
+    <div class="list-error">
+      <p role="alert">{{ error() }}</p>
+      @if (shopping.error()) {
+        <button type="button" [disabled]="shopping.loading()" (click)="shopping.refresh()">
+          Try again
+        </button>
+      }
+    </div>
+  }
+  @if (shopping.loading() && !shopping.items().length) {
+    <p class="loading-copy" role="status">Loading your list…</p>
+    <div class="loading-lines" aria-hidden="true"><span></span><span></span><span></span></div>
+  } @else if (!shopping.items().length) {
+    <div class="empty-list">
+      <app-icon name="basket" />
+      <h2>What do you need?</h2>
+      <p>Add an item above, paste a few lines, or choose ingredients from a recipe.</p>
+    </div>
+  } @else {
+    @if (!toBuy().length) {
+      <p class="all-bought">Everything on your list is bought.</p>
+    }
+    @for (section of sections(); track section.key) {
+      @if (section.groups.length) {
+        <section
+          [class.bought-section]="section.bought"
+          [attr.aria-labelledby]="'shopping-' + section.key + '-heading'"
+        >
+          @if (section.bought) {
+            <div class="bought-heading">
+              <h2 id="shopping-bought-heading">
+                <button
+                  #boughtButton
+                  type="button"
+                  class="bought-disclosure"
+                  [attr.aria-expanded]="showBought()"
+                  aria-controls="shopping-bought-items"
+                  (click)="showBought.set(!showBought())"
+                >
+                  <app-icon name="chevron" [class.is-open]="showBought()" />Bought
+                  <span>{{ bought().length }}</span>
+                </button>
+              </h2>
+              <button
+                type="button"
+                class="text-action clear-bought"
+                [disabled]="busy()"
+                (click)="clearBought()"
+              >
+                Clear bought
+              </button>
+            </div>
+          } @else {
+            <h2 id="shopping-to-buy-heading" class="sr-only">To buy</h2>
+          }
+          @if (!section.bought || showBought()) {
+            <ul
+              class="shopping-items"
+              [id]="section.bought ? 'shopping-bought-items' : 'shopping-to-buy-items'"
+            >
+              @for (group of section.groups; track group.key) {
+                <li class="shopping-row" [class.is-bought]="group.checked">
+                  @if (editor()?.key === group.key) {
+                    <form
+                      class="item-editor"
+                      (submit)="$event.preventDefault(); saveEdit()"
+                      (keydown.escape)="cancelEdit()"
+                    >
+                      <label [for]="'shopping-edit-' + group.items[0].id">Edit item</label>
+                      <input
+                        #editInput
+                        class="edit-item-input"
+                        [id]="'shopping-edit-' + group.items[0].id"
+                        type="text"
+                        autocomplete="off"
+                        [value]="editor()?.text"
+                        [disabled]="busy()"
+                        (input)="onEdit($event)"
+                      />
+                      <div class="edit-actions">
+                        <button type="button" [disabled]="busy()" (click)="cancelEdit()">
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          class="primary"
+                          [disabled]="busy() || !editor()?.text?.trim()"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </form>
+                  } @else {
+                    <div class="item-main">
+                      <label class="check-control">
+                        <input
+                          type="checkbox"
+                          [id]="'shopping-item-' + group.items[0].id"
+                          [checked]="group.checked"
+                          [disabled]="busy()"
+                          (change)="toggleGroup(group, $event)"
+                        />
+                        <app-checkbox-mark /><span class="item-name">{{ group.text }}</span>
+                      </label>
+                      <div class="row-actions">
+                        <button
+                          type="button"
+                          class="text-action"
+                          [attr.aria-label]="'Edit ' + group.text"
+                          [disabled]="busy()"
+                          (click)="startEdit(group)"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          class="text-action delete-item"
+                          [attr.aria-label]="'Delete ' + group.text"
+                          [disabled]="busy()"
+                          (click)="removeGroup(group, $event)"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    @if (group.sources.length) {
+                      <ul class="item-sources" aria-label="Source recipes">
+                        @for (source of sourceLabels(group); track $index) {
+                          <li>
+                            @if (source.exists) {
+                              <a [routerLink]="['/recipes', source.recipeId]">{{ source.title }}</a>
+                            } @else {
+                              <span>{{ source.title }}</span>
+                            }
+                            <span class="source-servings"> · {{ source.servings }} servings</span>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+    }
+    <div class="list-actions">
+      <button
+        type="button"
+        class="text-action clear-list"
+        [disabled]="busy()"
+        (click)="requestClear()"
+      >
+        Clear list
+      </button>
+    </div>
+  }
+</section>
+<dialog
+  #clearDialog
+  class="clear-dialog"
+  aria-labelledby="shopping-clear-heading"
+  aria-describedby="shopping-clear-copy"
+  (cancel)="cancelClear($event)"
+  (pointerdown)="clearBackdropStart($event)"
+  (click)="clearBackdropClick($event)"
+>
+  <h2 id="shopping-clear-heading">Clear shopping list?</h2>
+  <p id="shopping-clear-copy">You still have items to buy. Clear these items from your list?</p>
+  <div class="dialog-actions">
+    <button type="button" autofocus [disabled]="busy()" (click)="cancelClear()">Keep list</button>
+    <button type="button" class="delete-button" [disabled]="busy()" (click)="confirmClear()">
+      {{ busy() ? 'Clearing…' : 'Clear list' }}
+    </button>
+  </div>
+  @if (localError()) {
+    <p class="dialog-error" role="alert">{{ localError() }}</p>
+  }
+</dialog>
+@if (pickerOpen()) {
+  <app-recipe-shopping-picker (closed)="pickerOpen.set(false)" />
+}

@@ -3,7 +3,13 @@ import type Dexie from 'dexie';
 import { db } from '../database';
 import type { Recipe } from '../models/recipe.model';
 import type { RecipeCollection } from '../models/recipe-collection.model';
-import { AccountDatabase, type CookbookTable, type PendingChange } from './account-database';
+import { readShoppingItem, type ShoppingItem, type ShoppingSource } from '../models/shopping-item';
+import {
+  AccountDatabase,
+  type CookbookTable,
+  type CookbookValue,
+  type PendingChange,
+} from './account-database';
 import { SupabaseService } from './supabase.service';
 import { downloadPhotos, uploadPhotos, type RecipePhotos } from './cloud-photos';
 import { readRecipeMetadata, isRecipeImage, isHttpsUrl } from '../models/recipe-metadata';
@@ -12,7 +18,7 @@ type CookbookDatabase = typeof db | AccountDatabase;
 interface CloudRow {
   id: string;
   payload: unknown;
-  photos: RecipePhotos | null;
+  photos?: RecipePhotos | null;
   deleted: boolean;
 }
 
@@ -74,11 +80,7 @@ export class CloudCookbookService {
     }
   }
 
-  async put(
-    table: CookbookTable,
-    value: Recipe | RecipeCollection,
-    database = this.database,
-  ): Promise<void> {
+  async put(table: CookbookTable, value: CookbookValue, database = this.database): Promise<void> {
     await this.write(database, [{ table, id: value.id, value }]);
   }
   async putRecipes(recipes: Recipe[], database = this.database): Promise<void> {
@@ -89,6 +91,56 @@ export class CloudCookbookService {
   }
   async remove(table: CookbookTable, id: string, database = this.database): Promise<void> {
     await this.write(database, [{ table, id, value: null }]);
+  }
+
+  async applyShoppingChanges(
+    puts: readonly ShoppingItem[],
+    removeIds: readonly string[],
+    database = this.database,
+    options: { rejectDuplicateSources?: boolean; restoreMissingOnly?: boolean } = {},
+  ): Promise<void> {
+    // Validate the entire batch before opening a transaction or queueing any records.
+    const values = puts.map(readShoppingItem);
+    if (removeIds.some((id) => typeof id !== 'string' || !id.trim() || id.length > 200))
+      throw new Error('Invalid shopping item ID.');
+    await this.write(database, async () => {
+      // These conditions must share the write transaction's IndexedDB lock. Reads made by
+      // the UI before committing can already be stale after another tab's batch or Undo.
+      if (options.rejectDuplicateSources) {
+        const sourceKey = (source: ShoppingSource) =>
+          JSON.stringify([
+            source.recipeId,
+            source.servings,
+            source.ingredientIndex,
+            source.originalText,
+          ]);
+        const currentSources = new Set(
+          (await database.shoppingItems.toArray()).flatMap((item) =>
+            (item.sources ?? []).map(sourceKey),
+          ),
+        );
+        if (
+          values.some((item) =>
+            item.sources?.some((source) => currentSources.has(sourceKey(source))),
+          )
+        )
+          throw new Error('These ingredients are already on your list.');
+      }
+      let accepted = values;
+      if (options.restoreMissingOnly) {
+        const existing = await database.shoppingItems.bulkGet(values.map((value) => value.id));
+        const included = new Set<string>();
+        accepted = values.filter((value, index) => {
+          if (existing[index] || included.has(value.id)) return false;
+          included.add(value.id);
+          return true;
+        });
+      }
+      return [
+        ...accepted.map((value) => ({ table: 'shoppingItems' as const, id: value.id, value })),
+        ...removeIds.map((id) => ({ table: 'shoppingItems' as const, id, value: null })),
+      ];
+    });
   }
 
   async removeCollection(id: string, database = this.database): Promise<void> {
@@ -147,15 +199,23 @@ export class CloudCookbookService {
 
   private async write(
     database: CookbookDatabase,
-    changes: Pick<PendingChange, 'table' | 'id' | 'value'>[],
+    changes:
+      | Pick<PendingChange, 'table' | 'id' | 'value'>[]
+      | (() => Promise<Pick<PendingChange, 'table' | 'id' | 'value'>[]>),
   ): Promise<void> {
-    const tables = [database.recipes, database.collections];
+    const version = this.auth.accountVersion();
+    const current = () => database === this.database && version === this.auth.accountVersion();
+    if (!current()) throw new Error('Account changed. Try again.');
+    const tables = [database.recipes, database.collections, database.shoppingItems];
     const transactions: Dexie = database;
     await transactions.transaction(
       'rw',
       database instanceof AccountDatabase ? [...tables, database.outbox] : tables,
       async () => {
-        for (const change of changes) {
+        if (!current()) throw new Error('Account changed. Try again.');
+        const records = typeof changes === 'function' ? await changes() : changes;
+        for (const change of records) {
+          if (!current()) throw new Error('Account changed. Try again.');
           const table = database.table(change.table);
           if (change.value) await table.put(change.value);
           else await table.delete(change.id);
@@ -166,12 +226,13 @@ export class CloudCookbookService {
               revision: crypto.randomUUID(),
             });
         }
+        if (!current()) throw new Error('Account changed. Try again.');
       },
     );
-    this.revision.update((value) => value + 1);
-    if (database instanceof AccountDatabase && database === this.cache) {
+    if (current()) this.revision.update((value) => value + 1);
+    if (database instanceof AccountDatabase && current()) {
       const pending = await database.outbox.count();
-      if (database === this.cache) {
+      if (current()) {
         this.pending.set(pending);
         void this.sync();
       }
@@ -182,38 +243,51 @@ export class CloudCookbookService {
     recipes: Recipe[],
     collections: RecipeCollection[] = [],
     database = this.database,
+    shoppingItems: readonly ShoppingItem[] = [],
   ) {
-    const existing = await database.recipes.bulkGet(recipes.map((recipe) => recipe.id));
-    const savedCollections = new Set((await database.collections.toArray()).map((c) => c.id));
-    const added = recipes.filter((_, index) => !existing[index]);
-    await this.write(database, [
-      ...collections
-        .filter((c) => !savedCollections.has(c.id))
-        .map((value) => ({
-          table: 'collections' as const,
-          id: value.id,
-          value,
-        })),
-      ...added.map((value) => ({
-        table: 'recipes' as const,
-        id: value.id,
-        value,
-      })),
-    ]);
-    return { added: added.length, skipped: recipes.length - added.length };
+    const shopping = shoppingItems.map(readShoppingItem);
+    let result = { added: 0, skipped: recipes.length, shoppingAdded: 0 };
+    await this.write(database, async () => {
+      const existing = await database.recipes.bulkGet(recipes.map((recipe) => recipe.id));
+      const savedCollections = new Set((await database.collections.toArray()).map((c) => c.id));
+      const existingShopping = new Set(
+        (await database.shoppingItems.toArray()).map((item) => item.id),
+      );
+      const added = recipes.filter((_, index) => !existing[index]);
+      const shoppingAdded = shopping.filter((item) => !existingShopping.has(item.id));
+      result = {
+        added: added.length,
+        skipped: recipes.length - added.length,
+        shoppingAdded: shoppingAdded.length,
+      };
+      return [
+        ...collections
+          .filter((c) => !savedCollections.has(c.id))
+          .map((value) => ({
+            table: 'collections' as const,
+            id: value.id,
+            value,
+          })),
+        ...added.map((value) => ({ table: 'recipes' as const, id: value.id, value })),
+        ...shoppingAdded.map((value) => ({ table: 'shoppingItems' as const, id: value.id, value })),
+      ];
+    });
+    return result;
   }
 
   async deviceRecords() {
-    return db.transaction('r', db.recipes, db.collections, async () => ({
+    return db.transaction('r', db.recipes, db.collections, db.shoppingItems, async () => ({
       recipes: await db.recipes.toArray(),
       collections: await db.collections.toArray(),
+      shoppingItems: await db.shoppingItems.toArray(),
     }));
   }
 
   async deviceRecordCounts() {
-    return db.transaction('r', db.recipes, db.collections, async () => ({
+    return db.transaction('r', db.recipes, db.collections, db.shoppingItems, async () => ({
       recipes: await db.recipes.count(),
       collections: await db.collections.count(),
+      shoppingItems: await db.shoppingItems.count(),
     }));
   }
 
@@ -245,15 +319,24 @@ export class CloudCookbookService {
           ),
         ),
       );
+      const shoppingIds = new Map(
+        await Promise.all(
+          source.shoppingItems.map(
+            async (item) => [item.id, await deviceCopyId(userId, 'shoppingItems', item)] as const,
+          ),
+        ),
+      );
       assertCurrent();
       await database.transaction(
         'rw',
         database.recipes,
         database.collections,
+        database.shoppingItems,
         database.outbox,
         async () => {
           const remapped = new Map<string, string>();
-          const save = async (table: CookbookTable, value: Recipe | RecipeCollection) => {
+          const remappedRecipes = new Map<string, string>();
+          const save = async (table: CookbookTable, value: CookbookValue) => {
             assertCurrent();
             await database.table(table).put(value);
             await database.outbox.put({
@@ -288,8 +371,11 @@ export class CloudCookbookService {
               collectionIds: recipe.collectionIds?.map((id) => remapped.get(id) ?? id),
             };
             const existing = await database.recipes.get(recipe.id);
-            if (existing && sameDeviceContent(existing, value)) continue;
-            const id = existing ? recipeIds.get(recipe.id)! : recipe.id;
+            const id =
+              existing && !sameDeviceContent(existing, value)
+                ? recipeIds.get(recipe.id)!
+                : recipe.id;
+            remappedRecipes.set(recipe.id, id);
             const copy = { ...value, id };
             const priorCopy = await database.recipes.get(id);
             if (priorCopy && !sameDeviceContent(priorCopy, copy))
@@ -298,6 +384,30 @@ export class CloudCookbookService {
               );
             if (!priorCopy) await save('recipes', copy);
           }
+          for (const item of source.shoppingItems) {
+            assertCurrent();
+            const value = readShoppingItem({
+              ...item,
+              ...(item.sources
+                ? {
+                    sources: item.sources.map((source) => ({
+                      ...source,
+                      recipeId: remappedRecipes.get(source.recipeId) ?? source.recipeId,
+                    })),
+                  }
+                : {}),
+            });
+            const existing = await database.shoppingItems.get(item.id);
+            const id =
+              existing && !sameDeviceContent(existing, value) ? shoppingIds.get(item.id)! : item.id;
+            const copy = { ...value, id };
+            const priorCopy = await database.shoppingItems.get(id);
+            if (priorCopy && !sameDeviceContent(priorCopy, copy))
+              throw new Error(
+                'A previously transferred shopping item has changed. Device data is kept.',
+              );
+            if (!priorCopy) await save('shoppingItems', copy);
+          }
           assertCurrent();
         },
       );
@@ -305,7 +415,7 @@ export class CloudCookbookService {
     assertCurrent();
     // Account cache and outbox are durable before removing anything from the guest database.
     // Concurrent guest edits and new records stay available for another explicit choice.
-    await db.transaction('rw', db.recipes, db.collections, async () => {
+    await db.transaction('rw', db.recipes, db.collections, db.shoppingItems, async () => {
       for (const recipe of source.recipes) {
         assertCurrent();
         if (sameDeviceRecord(await db.recipes.get(recipe.id), recipe)) {
@@ -318,6 +428,11 @@ export class CloudCookbookService {
         if (remaining.some((recipe) => recipe.collectionIds?.includes(category.id))) continue;
         if (sameDeviceRecord(await db.collections.get(category.id), category))
           await db.collections.delete(category.id);
+      }
+      for (const item of source.shoppingItems) {
+        assertCurrent();
+        if (sameDeviceRecord(await db.shoppingItems.get(item.id), item))
+          await db.shoppingItems.delete(item.id);
       }
       assertCurrent();
     });
@@ -356,10 +471,14 @@ export class CloudCookbookService {
     client: NonNullable<SupabaseService['client']>,
     version: number,
   ): Promise<void> {
-    const current = () => this.cache === cache && this.auth.accountVersion() === version;
+    const current = () =>
+      this.cache === cache &&
+      this.auth.user()?.id === userId &&
+      this.auth.accountVersion() === version;
     this.syncing.set(true);
     this.error.set('');
     let completed = false;
+    let shoppingUnavailable = false;
     try {
       const pending = await cache.outbox.count();
       if (!current()) return;
@@ -367,7 +486,8 @@ export class CloudCookbookService {
       if (!navigator.onLine) return;
       for (const change of await cache.outbox.toArray()) {
         if (!current()) return;
-        let payload: Recipe | RecipeCollection | null = change.value;
+        if (change.table === 'shoppingItems' && shoppingUnavailable) continue;
+        let payload: CookbookValue | null = change.value;
         let photos: RecipePhotos = {};
         if (change.table === 'recipes' && payload) {
           const uploaded = await uploadPhotos(client, userId, readCloudRecipe(payload));
@@ -375,36 +495,52 @@ export class CloudCookbookService {
           photos = uploaded.photos;
         }
         if (!current()) return;
-        const { error } = await client.from(change.table).upsert(
+        const { error } = await client.from(remoteTable(change.table)).upsert(
           {
             user_id: userId,
             id: change.id,
             payload,
-            photos,
+            ...(change.table === 'shoppingItems' ? {} : { photos }),
             deleted: change.value === null,
           },
           { onConflict: 'user_id,id' },
         );
-        if (error) throw new Error(error.message);
+        if (error) {
+          if (change.table === 'shoppingItems' && missingShoppingTable(error)) {
+            shoppingUnavailable = true;
+            continue;
+          }
+          throw new Error(error.message);
+        }
         await cache.transaction('rw', cache.outbox, cache.photos, async () => {
           // An edit made during upload must stay queued, rather than being acknowledged away.
-          if ((await cache.outbox.get(change.key))?.revision !== change.revision) return;
+          if (!current() || (await cache.outbox.get(change.key))?.revision !== change.revision)
+            return;
           await cache.outbox.delete(change.key);
           if (change.table === 'recipes') await cache.photos.put({ id: change.id, paths: photos });
         });
       }
-      for (const tableName of ['collections', 'recipes'] as const) {
+      for (const tableName of ['collections', 'recipes', 'shoppingItems'] as const) {
+        if (tableName === 'shoppingItems' && shoppingUnavailable) continue;
         const rows: CloudRow[] = [];
         for (let offset = 0; ; offset += 500) {
           if (!current()) return;
           const { data, error } = await client
-            .from(tableName)
-            .select('id,payload,photos,deleted')
+            .from(remoteTable(tableName))
+            .select(
+              tableName === 'shoppingItems' ? 'id,payload,deleted' : 'id,payload,photos,deleted',
+            )
             .eq('user_id', userId)
             .order('id')
             .range(offset, offset + 499);
-          if (error) throw new Error(error.message);
-          const page = (data ?? []) as CloudRow[];
+          if (error) {
+            if (tableName === 'shoppingItems' && missingShoppingTable(error)) {
+              shoppingUnavailable = true;
+              break;
+            }
+            throw new Error(error.message);
+          }
+          const page = (data ?? []) as unknown as CloudRow[];
           rows.push(...page);
           if (page.length < 500) break;
         }
@@ -412,7 +548,7 @@ export class CloudCookbookService {
           if (!current()) return;
           const key = `${tableName}:${row.id}`;
           if (await cache.outbox.get(key)) continue;
-          let value: Recipe | RecipeCollection | null = null;
+          let value: CookbookValue | null = null;
           if (!row.deleted) {
             if (tableName === 'recipes') {
               value = await downloadPhotos(
@@ -423,6 +559,9 @@ export class CloudCookbookService {
                 await cache.recipes.get(row.id),
                 (await cache.photos.get(row.id))?.paths,
               );
+            } else if (tableName === 'shoppingItems') {
+              value = readShoppingItem(row.payload);
+              if (value.id !== row.id) throw new Error('Invalid cloud shopping item ID.');
             } else value = readCloudCollection(row.payload);
           }
           if (!current()) return;
@@ -432,18 +571,23 @@ export class CloudCookbookService {
             cache.outbox,
             cache.photos,
             async () => {
-              if (await cache.outbox.get(key)) return;
+              if (!current() || (await cache.outbox.get(key))) return;
               if (value) await cache.table(tableName).put(value);
               else await cache.table(tableName).delete(row.id);
               if (tableName === 'recipes')
                 await cache.photos.put({ id: row.id, paths: row.photos ?? {} });
+              if (!current()) throw new Error('Account changed. Try again.');
             },
           );
         }
       }
       if (current()) {
         this.revision.update((value) => value + 1);
-        this.lastSynced.set(new Date().toISOString());
+        if (shoppingUnavailable)
+          this.error.set(
+            'Shopping list sync is not ready yet. Your items are saved on this device.',
+          );
+        else this.lastSynced.set(new Date().toISOString());
       }
       completed = true;
     } catch (error) {
@@ -463,18 +607,21 @@ export class CloudCookbookService {
         }
         this.pending.set(pending);
         this.syncing.set(false);
-        if (completed && pending > 0) queueMicrotask(() => void this.sync());
+        if (completed && pending > 0) {
+          // During the additive rollout, drain concurrent recipe/category writes but do not
+          // spin indefinitely on shopping records whose table is not available yet.
+          const retryable =
+            !shoppingUnavailable ||
+            (await cache.outbox.toArray()).some((change) => change.table !== 'shoppingItems');
+          if (current() && retryable) queueMicrotask(() => void this.sync());
+        }
       }
     }
   }
 }
 
 // Stable IDs preserve different recipes with the same ID and make interrupted transfers retryable.
-async function deviceCopyId(
-  userId: string,
-  table: CookbookTable,
-  value: Recipe | RecipeCollection,
-) {
+async function deviceCopyId(userId: string, table: CookbookTable, value: CookbookValue) {
   const digest = new Uint8Array(
     await crypto.subtle.digest(
       'SHA-256',
@@ -493,13 +640,21 @@ function sameDeviceRecord(a: unknown, b: unknown): boolean {
   return a !== undefined && canonicalRecord(a) === canonicalRecord(b);
 }
 
-function sameDeviceContent(a: Recipe | RecipeCollection, b: Recipe | RecipeCollection): boolean {
+function sameDeviceContent(a: CookbookValue, b: CookbookValue): boolean {
   return deviceContent(a) === deviceContent(b);
 }
 
-function deviceContent(value: Recipe | RecipeCollection): string {
+function deviceContent(value: CookbookValue): string {
   const { createdAt, updatedAt, ...content } = value as Recipe;
   return canonicalRecord(content);
+}
+
+function remoteTable(table: CookbookTable): string {
+  return table === 'shoppingItems' ? 'shopping_items' : table;
+}
+
+function missingShoppingTable(error: { code?: string }): boolean {
+  return error.code === 'PGRST205' || error.code === '42P01';
 }
 
 function canonicalRecord(value: unknown): string {

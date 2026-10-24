@@ -12,22 +12,23 @@ import { GuestRecipesService } from '../../core/services/guest-recipes.service';
     [attr.aria-busy]="guest.busy() || guest.checking() ? 'true' : null"
   >
     <h2 id="guest-heading">
-      {{ deleting() ? 'Delete device recipes?' : 'Recipes on this device' }}
+      {{ deleting() ? 'Delete device data?' : 'Saved on this device' }}
     </h2>
     <div id="guest-copy">
       @if (guest.checking()) {
-        <p role="status">Checking recipes saved without an account…</p>
+        <p role="status">Checking data saved without an account…</p>
       } @else {
         <p>
-          {{ guest.recipes() }} {{ guest.recipes() === 1 ? 'recipe' : 'recipes' }} and
+          {{ guest.recipes() }} {{ guest.recipes() === 1 ? 'recipe' : 'recipes' }},
           {{ guest.categories() }}
-          {{ guest.categories() === 1 ? 'category were' : 'categories were' }} saved while signed
-          out.
+          {{ guest.categories() === 1 ? 'category' : 'categories' }} and {{ guest.shoppingItems() }}
+          {{ guest.shoppingItems() === 1 ? 'shopping item' : 'shopping items' }}
+          were saved while signed out.
         </p>
         @if (deleting()) {
           <p>
-            Delete these recipes, their photos and categories from this device? This cannot be
-            undone. Recipes already in your account are kept.
+            Delete these recipes, their photos, categories and shopping items from this device? This
+            cannot be undone. Data already in your account is kept.
           </p>
         } @else {
           <p>
@@ -35,8 +36,9 @@ import { GuestRecipesService } from '../../core/services/guest-recipes.service';
             device before continuing.
           </p>
           <p>
-            Adding keeps ingredients, photos and categories. The recipes become part of your account
-            and are removed from the signed-out collection after they are safely saved.
+            Adding keeps ingredients, photos, categories and shopping items, including their recipe
+            sources. They are removed from the signed-out data after they are safely saved to your
+            account.
           </p>
         }
       }
@@ -46,7 +48,7 @@ import { GuestRecipesService } from '../../core/services/guest-recipes.service';
     }
     @if (guest.busy()) {
       <p role="status">
-        {{ guest.busy() === 'add' ? 'Adding recipes…' : 'Deleting device recipes…' }}
+        {{ guest.busy() === 'add' ? 'Adding saved data…' : 'Deleting device data…' }}
       </p>
     }
     <div class="actions">
@@ -58,7 +60,7 @@ import { GuestRecipesService } from '../../core/services/guest-recipes.service';
           (click)="guest.choose('delete')"
           [disabled]="blocked()"
         >
-          Delete device recipes
+          Delete device data
         </button>
       } @else {
         <button
@@ -68,7 +70,7 @@ import { GuestRecipesService } from '../../core/services/guest-recipes.service';
           (click)="guest.choose('add')"
           [disabled]="blocked() || !hasRecords()"
         >
-          Add recipes to account
+          Add to account
         </button>
         <button
           type="button"
@@ -76,7 +78,7 @@ import { GuestRecipesService } from '../../core/services/guest-recipes.service';
           (click)="deleting.set(true)"
           [disabled]="blocked() || !hasRecords()"
         >
-          Delete device recipes
+          Delete device data
         </button>
       }
     </div>
@@ -153,7 +155,9 @@ export class GuestRecipesDialogComponent {
     return !!this.guest.busy() || this.guest.checking() || this.guest.auth.busy();
   }
   hasRecords(): boolean {
-    return this.guest.recipes() > 0 || this.guest.categories() > 0;
+    return (
+      this.guest.recipes() > 0 || this.guest.categories() > 0 || this.guest.shoppingItems() > 0
+    );
   }
   reopen(): void {
     // An accidental close never bypasses the mandatory choice, including browser navigation.

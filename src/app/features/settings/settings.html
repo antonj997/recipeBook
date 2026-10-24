@@ -76,8 +76,8 @@
         </details>
       } @else {
         <p class="scope-note">
-          Recipes saved while signed out stay on this device. When you sign in, choose to add them
-          to your account or delete them before continuing.
+          Recipes and shopping items saved while signed out stay on this device. When you sign in,
+          choose to add them to your account or delete them before continuing.
         </p>
         <app-account-access [blocked]="importing() || exporting()" />
       }
@@ -99,9 +99,9 @@
     <p>
       {{
         auth.user()
-          ? 'Back up the recipes and categories in your signed-in
+          ? 'Back up the recipes, categories and shopping list in your signed-in
       account.'
-          : 'Back up the recipes and categories saved on this device.'
+          : 'Back up the recipes, categories and shopping list saved on this device.'
       }}
       Photos are included.
     </p>
@@ -119,7 +119,7 @@
       </div>
       <div>
         <h3>Restore a cookbook</h3>
-        <p>Add recipes from a Recipebook backup. Existing recipes stay intact.</p>
+        <p>Add recipes and shopping items from a Recipebook backup. Existing data stays intact.</p>
         <input
           #backupFile
           type="file"

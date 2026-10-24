@@ -59,6 +59,13 @@ export const routes: Routes = [
     canDeactivate: [confirmBeforeLeaving],
   },
   {
+    path: 'shopping-list',
+    loadComponent: () =>
+      import('./features/shopping-list/shopping-list').then((m) => m.ShoppingListComponent),
+    title: 'Shopping list',
+    canDeactivate: [confirmBeforeLeaving],
+  },
+  {
     path: 'settings',
     loadComponent: () => import('./features/settings/settings').then((m) => m.SettingsComponent),
     title: 'Settings',

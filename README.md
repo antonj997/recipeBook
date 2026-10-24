@@ -17,9 +17,10 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 - Hold or right-click recipes to change categories, edit or delete; undo accidental deletion.
 - Paste ingredient and instruction lists into the editor to split them into rows.
 - Store photos, cooking time and available nutrition information.
-- Sign in with email and password for a private cookbook across devices.
+- Keep a private shopping list: add your own items or select scaled recipe ingredients, check purchases off, and undo deletions. Clear matching quantities combine for display while their individual recipe sources remain saved.
+- Sign in with email and password for a private cookbook and shopping list across devices.
 - Use saved recipes offline and install the app as a PWA.
-- Export and restore cookbook backups, including photos.
+- Export and restore backups including photos and shopping items; older recipe-only backups remain supported.
 
 ## Getting started
 
@@ -36,7 +37,7 @@ For cloud accounts and hosted link import, provide `SUPABASE_URL` and `SUPABASE_
 
 ## Accounts and storage
 
-Each signed-in account has a private cloud cookbook and offline cache. Recipes created or imported while signed out stay on the device. After signing in, choose to add these recipes and categories to the account or delete them. Adding first saves the account copy and queued cloud changes, then removes unchanged guest records. There is no separate-cookbook option.
+Each signed-in account has a private cloud cookbook and offline cache. Recipes, categories and shopping items created while signed out stay on the device. After signing in, choose to add them to the account or delete them. Adding first saves the account copy and queued cloud changes, then removes unchanged guest records. There is no separate-cookbook option.
 
 Passwords require at least eight characters, without character-composition rules. Email confirmation and password recovery use Supabase. Its default email sender only supports project team addresses and has a low sending limit; configure custom SMTP before offering accounts to friends outside the project team.
 
@@ -53,7 +54,7 @@ The `Publish Recipebook` GitHub Actions workflow deploys `main` to GitHub Pages.
 
 ## Project structure
 
-- `src/app/features`: recipe browsing, categories, cooking view, editor, importer and settings.
+- `src/app/features`: recipe browsing, categories, shopping list, cooking view, editor, importer and settings.
 - `src/app/shared`: reusable controls, illustrations and animations.
 - `src/app/core`: storage, account synchronization, photos and recipe models.
 - `server`: local recipe importer.

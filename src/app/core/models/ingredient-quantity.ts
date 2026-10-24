@@ -104,3 +104,32 @@ function formatQuantity(value: number, decimalComma: boolean): string | undefine
   const formatted = String(hundredths / 100);
   return decimalComma ? formatted.replace('.', ',') : formatted;
 }
+
+/** A conservative scalar amount for shopping totals; retain the full unit/name suffix. */
+export function readIngredientAmount(ingredient: string): {
+  value: number;
+  suffix: string;
+  decimalComma: boolean;
+} | null {
+  const match = leadingQuantity.exec(ingredient);
+  if (!match || match[1].trim() || match[3]) return null;
+  const remainder = ingredient.slice(match[0].length);
+  const suffix = remainder.trim();
+  // Worded ranges and uncertainty are not additive scalar quantities.
+  if (/^(?:(?:to|or|and|till|till och med|eller|och)\b|[±~≈])/i.test(suffix)) return null;
+  if (
+    !suffix ||
+    unsafeRemainder.test(suffix) ||
+    /^(?:%|°|[cf]\b|degrees?\b|percent\b|procent\b|[eE][+-]?\d)/i.test(suffix) ||
+    (/^\S/.test(remainder) && !attachedUnit.test(remainder))
+  )
+    return null;
+  const value = parseQuantity(match[2]);
+  return Number.isFinite(value) && value > 0 && !!formatQuantity(value, match[2].includes(','))
+    ? { value, suffix, decimalComma: match[2].includes(',') }
+    : null;
+}
+
+export function formatIngredientAmount(value: number, decimalComma = false): string | undefined {
+  return formatQuantity(value, decimalComma);
+}

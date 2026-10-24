@@ -1,0 +1,239 @@
+:host {
+  display: contents;
+}
+dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+dialog::backdrop {
+  background: #14141355;
+  backdrop-filter: blur(4px);
+}
+dialog[open] {
+  animation: picker-in var(--motion-reveal) var(--motion-ease-out);
+}
+.picker-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 50px);
+}
+.picker-header,
+.picker-footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  flex: 0 0 auto;
+}
+.picker-header {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+}
+.picker-header h2 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+.close-picker {
+  padding: 10px;
+  border-color: transparent;
+  flex: 0 0 44px;
+}
+.picker-body {
+  padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--color-control-border) transparent;
+}
+.recipe-heading {
+  margin: 0 0 24px;
+  font:
+    400 1.55rem/1.2 Georgia,
+    'Times New Roman',
+    serif;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.change-recipe {
+  border: 0;
+  justify-content: flex-start;
+  padding: 0;
+  margin: -12px 0 16px;
+  color: var(--color-muted);
+}
+.selection-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.selection-actions {
+  display: flex;
+  gap: 4px;
+}
+.selection-actions button {
+  border: 0;
+  padding: 10px 8px;
+  font-size: 0.8rem;
+}
+.group-heading {
+  font-size: 0.9rem;
+  margin: 24px 0 8px;
+}
+.ingredient-choices,
+.recipe-choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ingredient-choices li,
+.recipe-choices li {
+  border-bottom: 1px solid var(--color-border);
+}
+.ingredient-choices label {
+  min-height: 52px;
+  padding-block: 10px;
+  font-weight: 400;
+  align-items: flex-start;
+}
+.ingredient-choices app-checkbox-mark,
+.ingredient-choices input {
+  margin-top: 1px;
+}
+.ingredient-choices label span {
+  overflow-wrap: anywhere;
+}
+.picker-footer {
+  justify-content: space-between;
+  border-top: 1px solid var(--color-border);
+}
+.picker-footer p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+.add-selected {
+  min-width: 150px;
+}
+.duplicate-confirmation {
+  border-top: 1px solid var(--color-border);
+  padding-top: 24px;
+}
+.duplicate-confirmation h3 {
+  font-size: 1.2rem;
+  margin: 0 0 12px;
+}
+.duplicate-confirmation p,
+.empty-copy,
+.loading-copy {
+  color: var(--color-muted);
+}
+.recipe-choices {
+  margin-top: 20px;
+}
+.recipe-choice {
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 0;
+  gap: 16px;
+}
+.recipe-thumbnail {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex: 0 0 56px;
+}
+.recipe-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.recipe-choice-title {
+  flex: 1;
+  font:
+    400 1.1rem/1.3 Georgia,
+    'Times New Roman',
+    serif;
+  overflow-wrap: anywhere;
+}
+.recipe-choice > app-icon {
+  flex: 0 0 20px;
+}
+.error {
+  color: var(--color-danger);
+  margin-bottom: 0;
+}
+.empty-copy {
+  padding-block: 8px;
+}
+.loading-lines {
+  display: grid;
+  gap: 20px;
+  padding-block: 12px;
+}
+.loading-lines span {
+  display: block;
+  height: 48px;
+  background: var(--color-canvas);
+  border-radius: 6px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@keyframes picker-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (max-width: 600px) {
+  dialog {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100dvh - 16px);
+    margin: auto 0 0;
+    border-radius: 14px 14px 0 0;
+    border-bottom: 0;
+  }
+  .picker-sheet {
+    min-height: min(680px, calc(100dvh - 18px));
+    max-height: calc(100dvh - 18px);
+  }
+  .picker-header,
+  .picker-footer {
+    padding-inline: 20px;
+  }
+  .picker-body {
+    padding: 20px;
+    flex: 1 1 auto;
+  }
+  .picker-footer {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .selection-tools {
+    align-items: flex-start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog[open] {
+    animation: none;
+  }
+}

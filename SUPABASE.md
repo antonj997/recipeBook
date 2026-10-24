@@ -2,9 +2,9 @@
 
 Project: `qlveyumspzdlscsgudex` — `https://qlveyumspzdlscsgudex.supabase.co`
 
-Recipes and collections belong to the signed-in user. Every exposed table has an ownership policy. Photos live in a private Storage bucket. The browser only receives the project URL and a **publishable** key; a service-role or secret key must never be included in the app.
+Recipes, collections and shopping items belong to the signed-in user. Every exposed table has an ownership policy. Photos live in a private Storage bucket. The browser only receives the project URL and a **publishable** key; a service-role or secret key must never be included in the app.
 
-Dexie remains the offline cache. Each account gets a separate database; the original `RecipebookDB` stays intact. Use **Settings → Copy to my account** after signing in to copy the original cookbook to an account. Copying skips existing IDs and does not remove the device copy. Downloads and backup imports still include photos.
+Dexie remains the offline cache. Each account gets a separate database; the original `RecipebookDB` stays intact. After signing in, a device-data prompt offers to add signed-out recipes, categories and shopping items to the account or discard them. Originals are removed only after an idempotent account copy and queued writes are durable. Downloads and backup imports still include photos.
 
 Edits are saved locally with an outbox entry in the same transaction. Reconnect or use **Sync now** to upload them and fetch the cloud cookbook. Changing an item on two devices uses the last successful upload; this is not collaborative editing. Deletion markers tell other devices which cached items to remove. Signing out returns to the original device cookbook; pending account edits remain in that account's cache until it signs in again.
 
@@ -73,3 +73,12 @@ deno test --allow-read --allow-env --allow-net --config supabase/functions/timer
 ```
 
 The migration tests use an isolated PostgreSQL WASM database and never touch hosted user data. Check a real installed device after deployment: enable alerts, start a short timer, close the app, and confirm notification arrival and recipe navigation. Also check pause/reset/completion cancellation before relying on alerts.
+
+
+## Private shopping list
+
+Deploy `20261024230433_shopping_items.sql` before publishing a frontend that syncs shopping entries. It creates `public.shopping_items` with an owner-first primary key, payload validation, RLS and owner-only SELECT/INSERT/UPDATE policies. Anonymous callers have no table access; clients mark deletions with durable tombstones instead of DELETE. Recipe source titles and quantities are snapshots, with no cascading recipe foreign key.
+
+Device schema3 and account schema2 add a `shoppingItems` store without altering existing tables. Each entry and its outbox change commit together. Overlapping recipe additions and missing-only Undo restores are checked in the same local write transaction. Individual contribution IDs preserve unrelated additions across devices; edits to the same entry follow the existing last-successful-upload conflict rule. If the new table is temporarily absent, shopping stays queued while recipe/category sync continues.
+
+Backup format2 includes shopping items and validates them before any writes. Version1 remains importable and leaves the current list intact. Sign-out retains shopping outbox records inside the account's private device cache. Verify two-account isolation, guest-only shopping migration, offline reconnect, source snapshots after recipe deletion, conditional Undo, and repeated backup imports after deployment.
