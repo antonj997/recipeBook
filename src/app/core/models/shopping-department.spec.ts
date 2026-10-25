@@ -74,7 +74,7 @@ describe('shopping department recognition', () => {
     ['Pannkakor', 'ready-meals'],
     ['Barnmat med kyckling', 'baby'],
     ['Blöjor', 'baby'],
-    ['Vaniljglass', 'treats'],
+    ['Vaniljglass', 'frozen'],
     ['1 påse chips', 'treats'],
     ['100 g mörk choklad', 'treats'],
     ['2 l apelsinjuice', 'drinks'],
@@ -302,4 +302,74 @@ describe('common Swedish groceries', () => {
   for (const [name, department] of cases) {
     it(`places ${name} in ${department}`, () => expect(shoppingDepartment(name)).toBe(department));
   }
+});
+
+describe('a Swedish supermarket shopping circuit', () => {
+  it.each(['Chokladglass', 'Sorbet', 'ice cream', 'strawberry ice cream'])(
+    'keeps %s with frozen products',
+    (name) => {
+      expect(shoppingDepartment(name)).toBe('frozen');
+    },
+  );
+  it.each(['glasspulver', 'glassmix', 'ice cream powder', 'ice cream mix'])(
+    'keeps shelf-stable %s in the pantry',
+    (name) => {
+      expect(shoppingDepartment(name)).toBe('pantry');
+    },
+  );
+  it.each(['glass noodle', 'glass noodles', 'glasnudlar'])('keeps %s in the pantry', (name) => {
+    expect(shoppingDepartment(name)).toBe('pantry');
+  });
+  it('orders a mixed list like a general store circuit while preserving each saved group', () => {
+    const names = [
+      'Batterier',
+      'Vaniljglass',
+      'Ostbågar',
+      'Kattmat',
+      'Plastfolie',
+      'Diskmedel',
+      'Tandkräm',
+      'Blöjor',
+      'Kaffe',
+      'Ris',
+      'Mjölk',
+      'Pannkakor',
+      'Tofu',
+      'Lax',
+      'Blodpudding',
+      'Bröd',
+      'Bananer',
+    ];
+    const groups: ShoppingGroup[] = names.map((text, index) => ({
+      key: String(index),
+      text,
+      checked: false,
+      items: [],
+      sources: [],
+    }));
+    const result = groupByShoppingDepartment(groups);
+    expect(result.map((section) => section.id)).toEqual([
+      'produce',
+      'bakery',
+      'meat',
+      'fish',
+      'vegetarian',
+      'ready-meals',
+      'dairy',
+      'pantry',
+      'drinks',
+      'baby',
+      'beauty',
+      'household',
+      'kitchen',
+      'pets',
+      'treats',
+      'frozen',
+      'other',
+    ]);
+    expect(
+      result.flatMap((section) => section.groups).every((group) => groups.includes(group)),
+    ).toBe(true);
+    expect(result.find((section) => section.id === 'treats')?.label).toBe('Godis & snacks');
+  });
 });

@@ -18,7 +18,7 @@ const roots = {
   vegetarian: ['en:meat-analogues'],
   'ready-meals': ['en:meals', 'en:soups', 'en:sandwiches', 'en:fresh-pasta'],
   baby: ['en:baby-foods'],
-  treats: ['en:snacks', 'en:confectioneries', 'en:chocolates', 'en:ice-creams'],
+  treats: ['en:snacks', 'en:confectioneries', 'en:chocolates'],
   drinks: ['en:beverages', 'en:coffees', 'en:teas'],
   pantry: [
     'en:condiments',
@@ -39,7 +39,7 @@ const roots = {
     'en:chickpeas',
     'en:lentils',
   ],
-  frozen: ['en:frozen-foods'],
+  frozen: ['en:frozen-foods', 'en:ice-creams'],
 };
 // These source names need product context; alone they describe unrelated groceries.
 const contextOnlyNames = new Set(['english', 'welsh', 'sweet']);
@@ -94,7 +94,7 @@ export function buildCatalog(taxonomy, localAliases = {}, options = {}) {
         }
     }
     let department = null;
-    if (ancestors.has('en:frozen-foods')) department = 'frozen';
+    if (ancestors.has('en:frozen-foods') || ancestors.has('en:ice-creams')) department = 'frozen';
     else if (ancestors.has('en:canned-foods')) department = 'pantry';
     else if (
       ['en:fresh-vegetables', 'en:fresh-fruits', 'en:fresh-mushrooms'].some((root) =>

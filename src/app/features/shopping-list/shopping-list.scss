@@ -1,29 +1,58 @@
 :host {
   display: block;
 }
-.add-tools {
+.shopping-page {
+  padding-top: 24px;
+}
+.shopping-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 32px;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.shopping-toolbar .back-link {
+  flex: 0 0 44px;
+  width: 44px;
+  justify-content: center;
+  margin: 0;
+}
+.shopping-toolbar h1 {
+  flex: 1 1 8ch;
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(1.375rem, 3.3vw, 2rem);
+}
+.add-tools {
+  margin-bottom: 16px;
 }
 .add-item {
   display: flex;
   gap: 8px;
-  flex: 1 1 280px;
   min-width: 0;
 }
 .add-item input {
   flex: 1;
+  min-width: 0;
+  padding-block: 10px;
 }
 .add-item button {
-  width: 48px;
-  flex: 0 0 48px;
+  width: 44px;
+  flex: 0 0 44px;
   padding: 10px;
 }
 .add-recipe {
   flex: 0 0 auto;
+  margin-inline-start: auto;
+  gap: 6px;
+  padding: 6px 0 6px 8px;
+  border: 0;
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+.add-recipe app-icon {
+  width: 18px;
+  height: 18px;
 }
 .shopping-items,
 .item-sources {
@@ -31,21 +60,20 @@
   padding: 0;
   margin: 0;
 }
-.shopping-items {
-  border-top: 1px solid var(--color-border);
-}
 .shopping-department + .shopping-department {
-  margin-top: 28px;
+  margin-top: 4px;
 }
 .department-heading {
-  margin: 0 0 10px;
-  font-size: 0.875rem;
+  margin: 0;
+  padding: 8px 0 2px 36px;
+  font-size: 0.75rem;
   line-height: 1.4;
-  font-weight: 650;
-  color: var(--color-ink);
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--color-muted);
 }
 .shopping-row {
-  padding: 8px 0 12px;
+  padding: 4px 0;
   border-bottom: 1px solid var(--color-border);
 }
 .item-main {
@@ -190,8 +218,7 @@
   color: var(--color-muted);
 }
 .sync-status {
-  margin-top: -12px;
-  margin-bottom: 24px;
+  margin: 0 0 12px;
   font-size: 0.875rem;
 }
 .list-error {
@@ -257,16 +284,8 @@
   white-space: nowrap;
 }
 @media (max-width: 600px) {
-  .add-tools {
-    gap: 8px;
-    margin-bottom: 24px;
-  }
-  .add-item {
-    flex-basis: 100%;
-  }
-  .add-recipe {
-    padding-inline: 0;
-    border-color: transparent;
+  .shopping-page {
+    padding-top: 16px;
   }
   .item-main {
     flex-wrap: wrap;

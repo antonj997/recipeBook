@@ -1,6 +1,19 @@
 <section class="shopping-page page page--narrow" aria-labelledby="shopping-heading">
-  <a routerLink="/" class="back-link"><app-icon name="chevron" />Back to home</a>
-  <h1 id="shopping-heading">Shopping list</h1>
+  <div class="shopping-toolbar">
+    <a routerLink="/" class="back-link" aria-label="Back to home" title="Back to home">
+      <app-icon name="chevron" />
+    </a>
+    <h1 id="shopping-heading">Shopping list</h1>
+    <button
+      type="button"
+      class="add-recipe"
+      aria-label="Add from recipe"
+      [disabled]="busy() || shopping.loading()"
+      (click)="openPicker()"
+    >
+      <app-icon name="book" /><span>From recipe</span>
+    </button>
+  </div>
   <div class="add-tools">
     <form class="add-item" (submit)="$event.preventDefault(); addItems()">
       <label for="shopping-add" class="sr-only">Add an item</label>
@@ -25,14 +38,6 @@
         <app-icon name="plus" />
       </button>
     </form>
-    <button
-      type="button"
-      class="add-recipe"
-      [disabled]="busy() || shopping.loading()"
-      (click)="openPicker()"
-    >
-      <app-icon name="book" />Add from recipe
-    </button>
   </div>
   @if (!shopping.cloud.online()) {
     <p class="sync-status" role="status">You’re offline. Your list is saved on this device.</p>

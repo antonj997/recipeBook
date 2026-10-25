@@ -3,24 +3,24 @@ import { matchShoppingRule } from './shopping-department-rules';
 import { ShoppingProductIndex } from './shopping-product-index';
 import catalog from '../data/shopping-products.json';
 
-// ICA's broad online departments, not a claim about any individual store's aisle order.
+// A general Swedish supermarket circuit; individual stores have different layouts.
 export const shoppingDepartments = [
   { id: 'produce', label: 'Frukt & grönt' },
+  { id: 'bakery', label: 'Bröd & kakor' },
   { id: 'meat', label: 'Kött, chark & fågel' },
   { id: 'fish', label: 'Fisk & skaldjur' },
-  { id: 'dairy', label: 'Mejeri, ost & ägg' },
-  { id: 'bakery', label: 'Bröd & kakor' },
   { id: 'vegetarian', label: 'Vegetariskt' },
   { id: 'ready-meals', label: 'Färdigmat & såser' },
-  { id: 'baby', label: 'Barn' },
-  { id: 'treats', label: 'Glass, godis & snacks' },
-  { id: 'drinks', label: 'Dryck' },
+  { id: 'dairy', label: 'Mejeri, ost & ägg' },
   { id: 'pantry', label: 'Skafferi' },
-  { id: 'frozen', label: 'Fryst' },
-  { id: 'beauty', label: 'Skönhet' },
-  { id: 'pets', label: 'Djur' },
+  { id: 'drinks', label: 'Dryck' },
+  { id: 'baby', label: 'Barn' },
+  { id: 'beauty', label: 'Hygien' },
   { id: 'household', label: 'Städ, tvätt & papper' },
   { id: 'kitchen', label: 'Kök' },
+  { id: 'pets', label: 'Djur' },
+  { id: 'treats', label: 'Godis & snacks' },
+  { id: 'frozen', label: 'Fryst' },
   { id: 'other', label: 'Övrigt' },
 ] as const;
 

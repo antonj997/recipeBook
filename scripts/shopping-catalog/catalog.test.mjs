@@ -134,3 +134,18 @@ test('allows verified two-letter local foods without admitting short upstream la
   const local = buildCatalog(t, { fish: ['Ål'] }, options);
   assert.ok(local.departments.fish?.includes('al'));
 });
+
+test('places ice cream ancestry with frozen goods rather than a closer dairy ingredient', () => {
+  const t = {
+    ...base(),
+    'en:dairies': node('Dairies'),
+    'en:ice-creams': node('Ice creams'),
+    'en:fruit-ice-creams': node('Fruit ice creams', ['en:ice-creams']),
+    'en:berry-dairy-ice-creams': node('Berry dairy ice creams', [
+      'en:fruit-ice-creams',
+      'en:dairies',
+    ]),
+  };
+  const c = buildCatalog(t, {}, options);
+  assert.ok(c.departments.frozen?.includes('berry dairy ice cream'));
+});
