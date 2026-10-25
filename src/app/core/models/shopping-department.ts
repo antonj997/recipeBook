@@ -527,15 +527,24 @@ function classifyProduct(text: string): ShoppingDepartmentId {
   return chosen;
 }
 
+function storageHint(note: string): string {
+  if (/^\s*(?:fryst[ae]?|frus(?:en|na|et)|djupfryst[ae]?|frozen)\b/.test(note)) return 'frozen';
+  if (/^\s*(?:konservera(?:d|de|t)|canned|tinned|pa burk|i burk)\b/.test(note)) return 'canned';
+  return '';
+}
+
 export function shoppingDepartment(text: string): ShoppingDepartmentId {
-  const normalized = text
+  const description = text
     .toLocaleLowerCase('sv-SE')
     .normalize('NFKD')
     .replace(/\p{M}/gu, '')
-    .replace(/\(([^)]*)\)/g, (_match, note: string) =>
-      /^(?:fryst[ae]?|frusen|frozen)$/.test(note.trim()) ? ' ' + note + ' ' : ' ',
-    )
-    .split(/,(?!\d)|;|\b(?:eller|or)\b/)[0]
+    // Ignore the alternative or serving dish before inspecting its storage words.
+    .split(/\b(?:eller|or|till|for|servera(?:s)?|serve(?:d)?)\b/)[0]
+    .replace(/\(([^)]*)\)/g, (_match, note: string) => ' ' + storageHint(note) + ' ');
+  const parts = description.split(/,(?!\d)|;/);
+  // Preparation notes do not name the product, but explicit storage still determines its aisle.
+  const normalized = [parts[0], ...parts.slice(1).map(storageHint)]
+    .join(' ')
     .replace(/&|\+/g, ' och ')
     .replace(/[^a-z0-9 ]/g, ' ')
     .replace(/\s+/g, ' ')

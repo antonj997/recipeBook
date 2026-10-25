@@ -111,6 +111,19 @@ describe('shopping department recognition', () => {
     expect(shoppingDepartment('1,5 dl grädde, till kycklingen')).toBe('dairy');
   });
 
+  it.each([
+    ['200 g tomater (konserverade)', 'pantry'],
+    ['200 g tomater (canned)', 'pantry'],
+    ['200 g broccoli, fryst', 'frozen'],
+    ['200 g broccoli (fryst, i buketter)', 'frozen'],
+    ['200 g tomater (eller konserverade)', 'produce'],
+    ['1 dl mjölk till pannkakor', 'dairy'],
+    ['2 dl milk for pancakes', 'dairy'],
+    ['2 dl milk for frozen pancakes', 'dairy'],
+  ])('keeps the product and its storage clues, not serving notes: %s', (text, expected) => {
+    expect(shoppingDepartment(text)).toBe(expected);
+  });
+
   it('keeps unrelated products separate from ingredient substrings', () => {
     expect(shoppingDepartment('osthyvel')).toBe('kitchen');
     expect(shoppingDepartment('saltvattenspray')).toBe('beauty');

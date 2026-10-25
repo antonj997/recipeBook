@@ -44,6 +44,7 @@ describe('shopping list', () => {
   let manual: string[];
   let restored: boolean;
   let removeUpdatesList: boolean;
+  let checkUpdatesList: boolean;
   let feedback: FeedbackService;
 
   beforeEach(() => {
@@ -52,6 +53,7 @@ describe('shopping list', () => {
     manual = [];
     restored = false;
     removeUpdatesList = false;
+    checkUpdatesList = false;
     accountVersion.set(0);
     items.set([item('a'), item('b')]);
     groups.set([
@@ -98,7 +100,20 @@ describe('shopping list', () => {
             edit: async (ids: readonly string[], text: string) => {
               edits.push({ ids, text });
             },
-            setChecked: async () => {},
+            setChecked: async (ids: readonly string[], checked: boolean) => {
+              if (checkUpdatesList) {
+                items.update((current) =>
+                  current.map((entry) => (ids.includes(entry.id) ? { ...entry, checked } : entry)),
+                );
+                groups.update((current) =>
+                  current.map((group) =>
+                    group.items.some((entry) => ids.includes(entry.id))
+                      ? { ...group, checked }
+                      : group,
+                  ),
+                );
+              }
+            },
             remove: async (ids: readonly string[]) => {
               removed = [...removed, [...ids]];
               if (removeUpdatesList) {
@@ -267,6 +282,44 @@ describe('shopping list', () => {
     ).toBe(2);
     expect(host.nativeElement.querySelector('#shopping-bought-items')).not.toBeNull();
   });
+
+  it.each(['complete', 'delete'] as const)(
+    'keeps keyboard focus on the next department after %s removes its last row',
+    async (action) => {
+      const frames: FrameRequestCallback[] = [];
+      vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+        frames.push(callback);
+        return frames.length;
+      });
+      vi.stubGlobal('cancelAnimationFrame', () => {});
+      checkUpdatesList = true;
+      removeUpdatesList = true;
+      items.set([
+        { ...item('apple'), text: '2 äpplen' },
+        { ...item('milk'), text: '1 l mjölk' },
+      ]);
+      groups.set(
+        items().map((entry) => ({
+          key: entry.id,
+          text: entry.text,
+          checked: false,
+          items: [entry],
+          sources: [],
+        })),
+      );
+      const host = await fixture();
+      const trigger = host.nativeElement.querySelector(
+        action === 'complete' ? '#shopping-item-apple' : 'button[aria-label="Delete 2 äpplen"]',
+      ) as HTMLElement;
+      trigger.focus();
+      trigger.click();
+      await host.whenStable();
+      host.detectChanges();
+      for (const frame of frames) frame(0);
+      expect(document.activeElement).toBe(host.nativeElement.querySelector('#shopping-item-milk'));
+      expect(host.nativeElement.querySelector('#shopping-to-buy-produce')).toBeNull();
+    },
+  );
 
   it('keeps deleted source recipes readable without linking to a missing recipe', async () => {
     const host = await fixture();

@@ -196,9 +196,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
     if (this.busy()) return;
     const ids = group.items.map((item) => item.id);
     const input = event?.target instanceof HTMLElement ? event.target : null;
-    const row = input?.closest('.shopping-row');
-    const next =
-      row?.nextElementSibling?.querySelector<HTMLInputElement>('input[type="checkbox"]') ?? null;
+    const next = this.nextItem(input);
     const account = this.shopping.accountVersion();
     this.busy.set(true);
     this.localError.set('');
@@ -242,10 +240,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
   }
   async removeGroup(group: ShoppingGroup, event?: Event): Promise<void> {
     const origin = event?.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-    const next =
-      origin
-        ?.closest('.shopping-row')
-        ?.nextElementSibling?.querySelector<HTMLInputElement>('input[type="checkbox"]') ?? null;
+    const next = this.nextItem(origin);
     await this.removeItems(
       group.items.map((item) => item.id),
       'Item deleted',
@@ -339,6 +334,14 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
         preventScroll: true,
       });
     });
+  }
+  private nextItem(origin: HTMLElement | null): HTMLInputElement | null {
+    const row = origin?.closest('.shopping-row');
+    if (!row) return null;
+    const rows = Array.from(row.closest('section')?.querySelectorAll('.shopping-row') ?? []);
+    return (
+      rows[rows.indexOf(row) + 1]?.querySelector<HTMLInputElement>('input[type="checkbox"]') ?? null
+    );
   }
   private focusAfterRemoval(origin: HTMLElement, next: HTMLElement | null): void {
     cancelAnimationFrame(this.focusFrame);
