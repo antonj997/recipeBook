@@ -18,7 +18,7 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 - Paste ingredient and instruction lists into the editor to split them into rows.
 - Store photos, cooking time and available nutrition information.
 - Keep a private shopping list: add your own items or select scaled recipe ingredients, check purchases off, and undo deletions. Clear matching quantities combine for display while their individual recipe sources remain saved.
-- Shopping items automatically group into departments based on ICA’s online categories. Common Swedish and English names work offline; unrecognized items remain under Övrigt. Store layouts differ, so these groups are not an aisle route.
+- Shopping items automatically group into departments based on ICA’s online categories. A compact Swedish and English product-name catalogue works offline; unrecognized items remain under Övrigt. Store layouts differ, so these groups are not an aisle route.
 - Sign in with email and password for a private cookbook and shopping list across devices.
 - Use saved recipes offline and install the app as a PWA.
 - Export and restore backups including photos and shopping items; older recipe-only backups remain supported.
@@ -43,6 +43,27 @@ Each signed-in account has a private cloud cookbook and offline cache. Recipes, 
 Passwords require at least eight characters, without character-composition rules. Email confirmation and password recovery use Supabase. Its default email sender only supports project team addresses and has a low sending limit; configure custom SMTP before offering accounts to friends outside the project team.
 
 Signing out attempts to synchronize first and keeps queued changes on the device. Browser storage can be cleared by the browser or device owner, so keep exported backups. Offline copies are not encrypted; use a trusted browser profile. See [security and privacy](SECURITY.md) for storage limitations.
+
+## Shopping product catalogue
+
+Department suggestions combine local rules with an offline index of product names and synonyms derived from the [Open Food Facts taxonomy](https://openfoodfacts.github.io/search-a-licious/users/explain-taxonomies/), supplemented with reviewed Swedish grocery names from [Livsmedelsverkets Livsmedelsdatabas, version 2026-07-01](https://dataportal.livsmedelsverket.se/livsmedel/swagger/index.html) and Swedish cheese names. This is a dictionary of product types, not ICA’s live inventory. Unrecognized or ambiguous products remain in Övrigt. Brand names alone do not determine a department.
+
+The shopping page loads the catalogue with its own code; no product searches or shopping-list contents go to a third party. Names such as Prästost, Grevé and international cheese varieties are matched locally. Explicit storage and product-form rules retain priority. The source dump is not shipped with the app. The PWA may cache the shopping-page code in the background for offline use.
+
+The committed snapshot lives in `src/app/core/data/shopping-products.json`. Its source date, hash and licences are recorded inside it. Refresh it manually with Node.js 24 or newer:
+
+```sh
+npm run catalog:update
+npm run catalog:test
+npm run catalog:benchmark
+npm test -- --watch=false
+```
+
+The update command downloads the public taxonomy once. It validates its size, resolves category ancestry, excludes conflicting aliases and removes names already handled correctly by the rules. Review changes before committing: category ancestry is not always the same as supermarket placement. Add verified local names to `scripts/shopping-catalog/local-aliases.json`. The reviewed Swedish supplement in `swedish-aliases.json` preserves food IDs, original names and source provenance. It is maintained explicitly; refreshing Open Food Facts retains it. Shop-department assignments and shortened/plural names are our adaptations. The Swedish source is under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); nutritional values are not imported. To regenerate an archived download, pass `--source=/absolute/path/categories.full.json --date=YYYY-MM-DD` after `npm run catalog:update --`.
+
+The generator caps the compressed dictionary at 64 KiB. The desktop benchmark checks index initialization and 1,000 mixed lookups against a 10 ms budget each; it is a development check, not a phone benchmark. Compare the production build before release to keep this data out of the initial application bundle. No build or app startup automatically downloads updated taxonomy data.
+
+Contains information from Open Food Facts, made available under [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/); individual contents are under [DbCL 1.0](https://opendatacommons.org/licenses/dbcl/1-0/). The derived dictionary, including local additions, is available under ODbL 1.0. See the [data and licence notice](public/data/shopping-products-notice.txt) and [download the derived database](https://antonj997.github.io/recipeBook/data/shopping-products.json). This applies to the public dictionary; private recipes and shopping items are not part of it.
 
 ## Build and deployment
 

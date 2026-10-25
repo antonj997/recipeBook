@@ -1,0 +1,1954 @@
+{
+  "source": {
+    "name": "Livsmedelsverkets Livsmedelsdatabas",
+    "version": "2026-07-01",
+    "url": "https://dataportal.livsmedelsverket.se/livsmedel/api/v1/livsmedel?offset=0&limit=4000&sprak=1",
+    "documentation": "https://dataportal.livsmedelsverket.se/livsmedel/swagger/index.html",
+    "retrievedAt": "2026-10-25",
+    "sha256": "7641c6096fa3609505c50b912ca51f5c337ea32221fa2853c8b59c0b8ea03cf8",
+    "licence": "CC-BY-4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "changes": "Selected grocery names, shortened product names and plural aliases; supermarket departments assigned by Recipebook. Original source names retained below. No nutritional values imported."
+  },
+  "references": [
+    "https://www.ica.se/icas-egna-varor/produkter/icas-ost/",
+    "https://www.icabostrom.se/avdelningar/kott-och-chark",
+    "https://handla.ica.se/kategori/4651",
+    "https://handla.ica.se/produkt/2088713",
+    "https://handla.ica.se/produkt/2053741"
+  ],
+  "entries": [
+    {
+      "sourceId": 287,
+      "sourceName": "Jordärtskocka",
+      "department": "produce",
+      "aliases": ["Jordärtskocka", "Jordärtskockor"]
+    },
+    {
+      "sourceId": 288,
+      "sourceName": "Kålrot",
+      "department": "produce",
+      "aliases": ["Kålrot", "Kålrötter"]
+    },
+    {
+      "sourceId": 291,
+      "sourceName": "Pepparrot",
+      "department": "produce",
+      "aliases": ["Pepparrot"]
+    },
+    {
+      "sourceId": 294,
+      "sourceName": "Rödbeta",
+      "department": "produce",
+      "aliases": ["Rödbeta", "Rödbetor"]
+    },
+    {
+      "sourceId": 295,
+      "sourceName": "Rättika",
+      "department": "produce",
+      "aliases": ["Rättika"]
+    },
+    {
+      "sourceId": 296,
+      "sourceName": "Rotpersilja",
+      "department": "produce",
+      "aliases": ["Rotpersilja"]
+    },
+    {
+      "sourceId": 298,
+      "sourceName": "Svartrot",
+      "department": "produce",
+      "aliases": ["Svartrot", "Svartrötter"]
+    },
+    {
+      "sourceId": 321,
+      "sourceName": "Stjälkselleri",
+      "department": "produce",
+      "aliases": ["Stjälkselleri"]
+    },
+    {
+      "sourceId": 327,
+      "sourceName": "Brysselkål",
+      "department": "produce",
+      "aliases": ["Brysselkål"]
+    },
+    {
+      "sourceId": 329,
+      "sourceName": "Mungbönsgroddar",
+      "department": "produce",
+      "aliases": ["Mungbönsgroddar"]
+    },
+    {
+      "sourceId": 330,
+      "sourceName": "Sojabönsgroddar",
+      "department": "produce",
+      "aliases": ["Sojabönsgroddar"]
+    },
+    {
+      "sourceId": 334,
+      "sourceName": "Friséesallat",
+      "department": "produce",
+      "aliases": ["Friséesallat"]
+    },
+    {
+      "sourceId": 335,
+      "sourceName": "Endivesallat",
+      "department": "produce",
+      "aliases": ["Endivesallat"]
+    },
+    {
+      "sourceId": 336,
+      "sourceName": "Fänkål",
+      "department": "produce",
+      "aliases": ["Fänkål"]
+    },
+    {
+      "sourceId": 342,
+      "sourceName": "Kronärtskocka",
+      "department": "produce",
+      "aliases": ["Kronärtskocka", "Kronärtskockor"]
+    },
+    {
+      "sourceId": 343,
+      "sourceName": "Kålrabbi",
+      "department": "produce",
+      "aliases": ["Kålrabbi"]
+    },
+    {
+      "sourceId": 345,
+      "sourceName": "Majskolv",
+      "department": "produce",
+      "aliases": ["Majskolv", "Majskolvar"]
+    },
+    {
+      "sourceId": 353,
+      "sourceName": "Pumpa",
+      "department": "produce",
+      "aliases": ["Pumpa"]
+    },
+    {
+      "sourceId": 357,
+      "sourceName": "Savojkål",
+      "department": "produce",
+      "aliases": ["Savojkål"]
+    },
+    {
+      "sourceId": 358,
+      "sourceName": "Salladskål",
+      "department": "produce",
+      "aliases": ["Salladskål"]
+    },
+    {
+      "sourceId": 359,
+      "sourceName": "Sockerärtor",
+      "department": "produce",
+      "aliases": ["Sockerärtor"]
+    },
+    {
+      "sourceId": 366,
+      "sourceName": "Trädgårdskrasse",
+      "department": "produce",
+      "aliases": ["Trädgårdskrasse"]
+    },
+    {
+      "sourceId": 367,
+      "sourceName": "Vattenkrasse",
+      "department": "produce",
+      "aliases": ["Vattenkrasse"]
+    },
+    {
+      "sourceId": 368,
+      "sourceName": "Vaxbönor",
+      "department": "produce",
+      "aliases": ["Vaxbönor"]
+    },
+    {
+      "sourceId": 376,
+      "sourceName": "Alfalfagroddar",
+      "department": "produce",
+      "aliases": ["Alfalfagroddar"]
+    },
+    {
+      "sourceId": 384,
+      "sourceName": "Linsgroddar",
+      "department": "produce",
+      "aliases": ["Linsgroddar"]
+    },
+    {
+      "sourceId": 520,
+      "sourceName": "Granatäpple",
+      "department": "produce",
+      "aliases": ["Granatäpple", "Granatäpplen"]
+    },
+    {
+      "sourceId": 521,
+      "sourceName": "Grapefrukt",
+      "department": "produce",
+      "aliases": ["Grapefrukt"]
+    },
+    {
+      "sourceId": 525,
+      "sourceName": "Hjortron",
+      "department": "produce",
+      "aliases": ["Hjortron"]
+    },
+    {
+      "sourceId": 549,
+      "sourceName": "Vattenmelon",
+      "department": "produce",
+      "aliases": ["Vattenmelon"]
+    },
+    {
+      "sourceId": 554,
+      "sourceName": "Björnbär",
+      "department": "produce",
+      "aliases": ["Björnbär"]
+    },
+    {
+      "sourceId": 561,
+      "sourceName": "Fikon",
+      "department": "produce",
+      "aliases": ["Fikon"]
+    },
+    {
+      "sourceId": 562,
+      "sourceName": "Fläderbär",
+      "department": "produce",
+      "aliases": ["Fläderbär"]
+    },
+    {
+      "sourceId": 564,
+      "sourceName": "Kaktusfikon",
+      "department": "produce",
+      "aliases": ["Kaktusfikon"]
+    },
+    {
+      "sourceId": 565,
+      "sourceName": "Kiwi grön",
+      "department": "produce",
+      "aliases": ["Kiwi"]
+    },
+    {
+      "sourceId": 567,
+      "sourceName": "Physalis",
+      "department": "produce",
+      "aliases": ["Physalis"]
+    },
+    {
+      "sourceId": 569,
+      "sourceName": "Kvitten",
+      "department": "produce",
+      "aliases": ["Kvitten"]
+    },
+    {
+      "sourceId": 570,
+      "sourceName": "Surkörsbär",
+      "department": "produce",
+      "aliases": ["Surkörsbär"]
+    },
+    {
+      "sourceId": 571,
+      "sourceName": "Sötkörsbär",
+      "department": "produce",
+      "aliases": ["Sötkörsbär"]
+    },
+    {
+      "sourceId": 576,
+      "sourceName": "Nektarin",
+      "department": "produce",
+      "aliases": ["Nektarin", "Nektariner"]
+    },
+    {
+      "sourceId": 579,
+      "sourceName": "Passionsfrukt",
+      "department": "produce",
+      "aliases": ["Passionsfrukt"]
+    },
+    {
+      "sourceId": 581,
+      "sourceName": "Sharon",
+      "department": "produce",
+      "aliases": ["Sharon"]
+    },
+    {
+      "sourceId": 2185,
+      "sourceName": "Galiamelon",
+      "department": "produce",
+      "aliases": ["Galiamelon"]
+    },
+    {
+      "sourceId": 2559,
+      "sourceName": "Romansallat",
+      "department": "produce",
+      "aliases": ["Romansallat"]
+    },
+    {
+      "sourceId": 2561,
+      "sourceName": "Ruccolasallat",
+      "department": "produce",
+      "aliases": ["Ruccolasallat"]
+    },
+    {
+      "sourceId": 2569,
+      "sourceName": "Litchi",
+      "department": "produce",
+      "aliases": ["Litchi"]
+    },
+    {
+      "sourceId": 2570,
+      "sourceName": "Carambole stjärnfrukt",
+      "department": "produce",
+      "aliases": ["Carambole", "Stjärnfrukt"]
+    },
+    {
+      "sourceId": 3938,
+      "sourceName": "Huvudsallat",
+      "department": "produce",
+      "aliases": ["Huvudsallat"]
+    },
+    {
+      "sourceId": 4042,
+      "sourceName": "Vattenkastanj rå",
+      "department": "produce",
+      "aliases": ["Vattenkastanj", "Vattenkastanjer"]
+    },
+    {
+      "sourceId": 4052,
+      "sourceName": "Mâchesallat",
+      "department": "produce",
+      "aliases": ["Mâchesallat"]
+    },
+    {
+      "sourceId": 4456,
+      "sourceName": "Havtorn",
+      "department": "produce",
+      "aliases": ["Havtorn"]
+    },
+    {
+      "sourceId": 4588,
+      "sourceName": "Aronia slånaronia",
+      "department": "produce",
+      "aliases": ["Aronia", "Slånaronia"]
+    },
+    {
+      "sourceId": 4946,
+      "sourceName": "Kruksallat",
+      "department": "produce",
+      "aliases": ["Kruksallat"]
+    },
+    {
+      "sourceId": 7019,
+      "sourceName": "Mullbär",
+      "department": "produce",
+      "aliases": ["Mullbär"]
+    },
+    {
+      "sourceId": 7023,
+      "sourceName": "Wasabirot",
+      "department": "produce",
+      "aliases": ["Wasabirot"]
+    },
+    {
+      "sourceId": 7034,
+      "sourceName": "Shiitakesvamp",
+      "department": "produce",
+      "aliases": ["Shiitakesvamp"]
+    },
+    {
+      "sourceId": 7035,
+      "sourceName": "Ostronskivling",
+      "department": "produce",
+      "aliases": ["Ostronskivling"]
+    },
+    {
+      "sourceId": 7047,
+      "sourceName": "Odon",
+      "department": "produce",
+      "aliases": ["Odon"]
+    },
+    {
+      "sourceId": 7048,
+      "sourceName": "Rönnbär",
+      "department": "produce",
+      "aliases": ["Rönnbär"]
+    },
+    {
+      "sourceId": 7053,
+      "sourceName": "Ärtskott",
+      "department": "produce",
+      "aliases": ["Ärtskott"]
+    },
+    {
+      "sourceId": 1426,
+      "sourceName": "Blodpudding blodkorv fett 19%",
+      "department": "meat",
+      "aliases": ["Blodpudding", "Blodkorv"]
+    },
+    {
+      "sourceId": 1474,
+      "sourceName": "Leverpastej bredbar fett ca 24%",
+      "department": "meat",
+      "aliases": ["Leverpastej"]
+    },
+    {
+      "sourceId": 1006,
+      "sourceName": "Gris kassler kotlettrad rökt",
+      "department": "meat",
+      "aliases": ["Kassler"]
+    },
+    {
+      "sourceId": 1509,
+      "sourceName": "Korv isterband fermenterad kött 59%",
+      "department": "meat",
+      "aliases": ["Isterband"]
+    },
+    {
+      "sourceId": 1496,
+      "sourceName": "Påläggskorv medvurst fett 23%",
+      "department": "meat",
+      "aliases": ["Påläggskorv", "Medvurst"]
+    },
+    {
+      "sourceId": 1553,
+      "sourceName": "Kalvsylta",
+      "department": "meat",
+      "aliases": ["Kalvsylta"]
+    },
+    {
+      "sourceId": 1554,
+      "sourceName": "Pressylta",
+      "department": "meat",
+      "aliases": ["Pressylta"]
+    },
+    {
+      "sourceId": 1555,
+      "sourceName": "Hushållssylta",
+      "department": "meat",
+      "aliases": ["Hushållssylta"]
+    },
+    {
+      "sourceId": 920,
+      "sourceName": "Lamm bog rå",
+      "department": "meat",
+      "aliases": ["Lamm", "Lammkött"]
+    },
+    {
+      "sourceId": 930,
+      "sourceName": "Hjort dovhjort bog rå",
+      "department": "meat",
+      "aliases": ["Hjort", "Hjortkött", "Dovhjort"]
+    },
+    {
+      "sourceId": 934,
+      "sourceName": "Kalv bog rå",
+      "department": "meat",
+      "aliases": ["Kalv", "Kalvkött"]
+    },
+    {
+      "sourceId": 965,
+      "sourceName": "Ren stek rå",
+      "department": "meat",
+      "aliases": ["Renkött"]
+    },
+    {
+      "sourceId": 967,
+      "sourceName": "Ren skav rå frysvara",
+      "department": "frozen",
+      "aliases": ["Renskav"]
+    },
+    {
+      "sourceId": 995,
+      "sourceName": "Älg skav rå frysvara",
+      "department": "frozen",
+      "aliases": ["Älgskav"]
+    },
+    {
+      "sourceId": 3324,
+      "sourceName": "Älg ytterlår",
+      "department": "meat",
+      "aliases": ["Älg", "Älgkött"]
+    },
+    {
+      "sourceId": 5048,
+      "sourceName": "Vildsvin bog rå",
+      "department": "meat",
+      "aliases": ["Vildsvin", "Vildsvinskött"]
+    },
+    {
+      "sourceId": 5050,
+      "sourceName": "Rådjur stek rå",
+      "department": "meat",
+      "aliases": ["Rådjur", "Rådjurskött"]
+    },
+    {
+      "sourceId": 1153,
+      "sourceName": "Anka rå m. skinn",
+      "department": "meat",
+      "aliases": ["Anka"]
+    },
+    {
+      "sourceId": 1154,
+      "sourceName": "Duva rå",
+      "department": "meat",
+      "aliases": ["Duva"]
+    },
+    {
+      "sourceId": 1156,
+      "sourceName": "Fasan rå",
+      "department": "meat",
+      "aliases": ["Fasan"]
+    },
+    {
+      "sourceId": 1158,
+      "sourceName": "Gås rå",
+      "department": "meat",
+      "aliases": ["Gås"]
+    },
+    {
+      "sourceId": 1160,
+      "sourceName": "Höna rå",
+      "department": "meat",
+      "aliases": ["Höna"]
+    },
+    {
+      "sourceId": 1169,
+      "sourceName": "Ripa rå",
+      "department": "meat",
+      "aliases": ["Ripa"]
+    },
+    {
+      "sourceId": 1176,
+      "sourceName": "Struts filé rå",
+      "department": "meat",
+      "aliases": ["Struts"]
+    },
+    {
+      "sourceId": 1200,
+      "sourceName": "Braxen rå",
+      "department": "fish",
+      "aliases": ["Braxen"]
+    },
+    {
+      "sourceId": 1201,
+      "sourceName": "Regnbågslax rå",
+      "department": "fish",
+      "aliases": ["Regnbågslax"]
+    },
+    {
+      "sourceId": 1203,
+      "sourceName": "Hälleflundra vild rå",
+      "department": "fish",
+      "aliases": ["Hälleflundra"]
+    },
+    {
+      "sourceId": 1238,
+      "sourceName": "Kummel rå",
+      "department": "fish",
+      "aliases": ["Kummel"]
+    },
+    {
+      "sourceId": 1240,
+      "sourceName": "Siklöja rå",
+      "department": "fish",
+      "aliases": ["Siklöja"]
+    },
+    {
+      "sourceId": 1242,
+      "sourceName": "Flundra rå",
+      "department": "fish",
+      "aliases": ["Flundra"]
+    },
+    {
+      "sourceId": 1243,
+      "sourceName": "Strömming rå",
+      "department": "fish",
+      "aliases": ["Strömming"]
+    },
+    {
+      "sourceId": 1244,
+      "sourceName": "Röding rå",
+      "department": "fish",
+      "aliases": ["Röding"]
+    },
+    {
+      "sourceId": 1247,
+      "sourceName": "Vitling rå",
+      "department": "fish",
+      "aliases": ["Vitling"]
+    },
+    {
+      "sourceId": 1248,
+      "sourceName": "Ål rå",
+      "department": "fish",
+      "aliases": ["Ål"]
+    },
+    {
+      "sourceId": 1249,
+      "sourceName": "Öring odlad rå",
+      "department": "fish",
+      "aliases": ["Öring"]
+    },
+    {
+      "sourceId": 1250,
+      "sourceName": "Pinklax rå",
+      "department": "fish",
+      "aliases": ["Pinklax"]
+    },
+    {
+      "sourceId": 1251,
+      "sourceName": "Piggvar rå",
+      "department": "fish",
+      "aliases": ["Piggvar"]
+    },
+    {
+      "sourceId": 1253,
+      "sourceName": "Abborre rå",
+      "department": "fish",
+      "aliases": ["Abborre"]
+    },
+    {
+      "sourceId": 1257,
+      "sourceName": "Lake rå",
+      "department": "fish",
+      "aliases": ["Lake"]
+    },
+    {
+      "sourceId": 1258,
+      "sourceName": "Rödspätta rå",
+      "department": "fish",
+      "aliases": ["Rödspätta"]
+    },
+    {
+      "sourceId": 1259,
+      "sourceName": "Sik rå",
+      "department": "fish",
+      "aliases": ["Sik"]
+    },
+    {
+      "sourceId": 1260,
+      "sourceName": "Makrill rå",
+      "department": "fish",
+      "aliases": ["Makrill"]
+    },
+    {
+      "sourceId": 1262,
+      "sourceName": "Gädda rå",
+      "department": "fish",
+      "aliases": ["Gädda"]
+    },
+    {
+      "sourceId": 1263,
+      "sourceName": "Gös rå",
+      "department": "fish",
+      "aliases": ["Gös"]
+    },
+    {
+      "sourceId": 1266,
+      "sourceName": "Böckling varmrökt",
+      "department": "fish",
+      "aliases": ["Böckling"]
+    },
+    {
+      "sourceId": 1273,
+      "sourceName": "Saltsill rå",
+      "department": "fish",
+      "aliases": ["Saltsill"]
+    },
+    {
+      "sourceId": 1274,
+      "sourceName": "Saltströmming rå",
+      "department": "fish",
+      "aliases": ["Saltströmming"]
+    },
+    {
+      "sourceId": 1282,
+      "sourceName": "Marulk rå",
+      "department": "fish",
+      "aliases": ["Marulk"]
+    },
+    {
+      "sourceId": 1297,
+      "sourceName": "Surströmming",
+      "department": "fish",
+      "aliases": ["Surströmming"]
+    },
+    {
+      "sourceId": 1346,
+      "sourceName": "Laxpastej lättrökt",
+      "department": "fish",
+      "aliases": ["Laxpastej"]
+    },
+    {
+      "sourceId": 1347,
+      "sourceName": "Böcklingpastej",
+      "department": "fish",
+      "aliases": ["Böcklingpastej"]
+    },
+    {
+      "sourceId": 1373,
+      "sourceName": "Laxpaté",
+      "department": "fish",
+      "aliases": ["Laxpaté"]
+    },
+    {
+      "sourceId": 1377,
+      "sourceName": "Påläggskaviar orökt",
+      "department": "fish",
+      "aliases": ["Påläggskaviar"]
+    },
+    {
+      "sourceId": 1381,
+      "sourceName": "Stenbitsrom",
+      "department": "fish",
+      "aliases": ["Stenbitsrom"]
+    },
+    {
+      "sourceId": 1382,
+      "sourceName": "Löjrom saltad",
+      "department": "fish",
+      "aliases": ["Löjrom"]
+    },
+    {
+      "sourceId": 1384,
+      "sourceName": "Bläckfisk rå",
+      "department": "fish",
+      "aliases": ["Bläckfisk"]
+    },
+    {
+      "sourceId": 1386,
+      "sourceName": "Ostron",
+      "department": "fish",
+      "aliases": ["Ostron"]
+    },
+    {
+      "sourceId": 1393,
+      "sourceName": "Hummer kokt",
+      "department": "fish",
+      "aliases": ["Hummer"]
+    },
+    {
+      "sourceId": 1394,
+      "sourceName": "Kräfta kokt",
+      "department": "fish",
+      "aliases": ["Kräfta"]
+    },
+    {
+      "sourceId": 1395,
+      "sourceName": "Räka kokt",
+      "department": "fish",
+      "aliases": ["Räka"]
+    },
+    {
+      "sourceId": 1403,
+      "sourceName": "Havskräfta kokt",
+      "department": "fish",
+      "aliases": ["Havskräfta"]
+    },
+    {
+      "sourceId": 4226,
+      "sourceName": "Pangasiusmal rå",
+      "department": "fish",
+      "aliases": ["Pangasiusmal"]
+    },
+    {
+      "sourceId": 4586,
+      "sourceName": "Hoki rå",
+      "department": "fish",
+      "aliases": ["Hoki"]
+    },
+    {
+      "sourceId": 4600,
+      "sourceName": "Pilgrimsmussla",
+      "department": "fish",
+      "aliases": ["Pilgrimsmussla"]
+    },
+    {
+      "sourceId": 4607,
+      "sourceName": "Skarpsill",
+      "department": "fish",
+      "aliases": ["Skarpsill"]
+    },
+    {
+      "sourceId": 4611,
+      "sourceName": "Kapkummel rå",
+      "department": "fish",
+      "aliases": ["Kapkummel"]
+    },
+    {
+      "sourceId": 4612,
+      "sourceName": "Guldsparid rå",
+      "department": "fish",
+      "aliases": ["Guldsparid"]
+    },
+    {
+      "sourceId": 4613,
+      "sourceName": "Havsabborre rå",
+      "department": "fish",
+      "aliases": ["Havsabborre"]
+    },
+    {
+      "sourceId": 1713,
+      "sourceName": "Gräddfil fett 12%",
+      "department": "dairy",
+      "aliases": ["Gräddfil"]
+    },
+    {
+      "sourceId": 95,
+      "sourceName": "Ost hårdost fett 17%",
+      "department": "dairy",
+      "aliases": ["Prästost", "Hushållsost", "Herrgårdsost", "Grevéost"]
+    },
+    {
+      "sourceId": 94,
+      "sourceName": "Salladsost fett 22%",
+      "department": "dairy",
+      "aliases": ["Salladsost"]
+    },
+    {
+      "sourceId": 66,
+      "sourceName": "Mesost fett ca 30%",
+      "department": "dairy",
+      "aliases": ["Mesost"]
+    },
+    {
+      "sourceId": 68,
+      "sourceName": "Messmör fett 5% berikad",
+      "department": "dairy",
+      "aliases": ["Messmör"]
+    },
+    {
+      "sourceId": 120,
+      "sourceName": "Lättfil fett 0,5% berikad",
+      "department": "dairy",
+      "aliases": ["Lättfil"]
+    },
+    {
+      "sourceId": 130,
+      "sourceName": "Mellanfil fett 1,5% berikad",
+      "department": "dairy",
+      "aliases": ["Mellanfil"]
+    },
+    {
+      "sourceId": 136,
+      "sourceName": "Fruktyoghurt fett 2%",
+      "department": "dairy",
+      "aliases": ["Fruktyoghurt"]
+    },
+    {
+      "sourceId": 137,
+      "sourceName": "Fruktyoghurt delikatessyoghurt fett 7%",
+      "department": "dairy",
+      "aliases": ["Delikatessyoghurt"]
+    },
+    {
+      "sourceId": 142,
+      "sourceName": "Kefir fett 3% berikad",
+      "department": "dairy",
+      "aliases": ["Kefir"]
+    },
+    {
+      "sourceId": 152,
+      "sourceName": "Vassle flytande",
+      "department": "dairy",
+      "aliases": ["Vassle"]
+    },
+    {
+      "sourceId": 154,
+      "sourceName": "Filbunke m. grädde",
+      "department": "dairy",
+      "aliases": ["Filbunke"]
+    },
+    {
+      "sourceId": 700,
+      "sourceName": "Havredryck fett 1,5% berikad",
+      "department": "dairy",
+      "aliases": ["Havredryck"]
+    },
+    {
+      "sourceId": 5956,
+      "sourceName": "Havregurt naturell fett 2,2% berikad",
+      "department": "dairy",
+      "aliases": ["Havregurt"]
+    },
+    {
+      "sourceId": 5727,
+      "sourceName": "Minimjölk fett < 0,1% berikad",
+      "department": "dairy",
+      "aliases": ["Minimjölk"]
+    },
+    {
+      "sourceId": 6069,
+      "sourceName": "Drickyoghurt smaksatt fett ca 1%",
+      "department": "dairy",
+      "aliases": ["Drickyoghurt"]
+    },
+    {
+      "sourceId": 1716,
+      "sourceName": "Mellangrädde fett 27%",
+      "department": "dairy",
+      "aliases": ["Mellangrädde"]
+    },
+    {
+      "sourceId": 2041,
+      "sourceName": "Vaniljvisp fett 12%",
+      "department": "dairy",
+      "aliases": ["Vaniljvisp"]
+    },
+    {
+      "sourceId": 6071,
+      "sourceName": "Vaniljsås ätf.",
+      "department": "dairy",
+      "aliases": ["Vaniljsås"]
+    },
+    {
+      "sourceId": 1773,
+      "sourceName": "Ostkaka lätt osötad fett 3%",
+      "department": "dairy",
+      "aliases": ["Ostkaka"]
+    },
+    {
+      "sourceId": 2036,
+      "sourceName": "Matlagningsbas fett 15%",
+      "department": "dairy",
+      "aliases": ["Matlagningsbas"]
+    },
+    {
+      "sourceId": 1226,
+      "sourceName": "Äggula rå",
+      "department": "dairy",
+      "aliases": ["Äggula", "Äggulor"]
+    },
+    {
+      "sourceId": 1227,
+      "sourceName": "Äggvita rå",
+      "department": "dairy",
+      "aliases": ["Äggvita", "Äggvitor"]
+    },
+    {
+      "sourceId": 6,
+      "sourceName": "Matfettsblandning fett 60% berikad",
+      "department": "dairy",
+      "aliases": ["Matfettsblandning"]
+    },
+    {
+      "sourceId": 12,
+      "sourceName": "Hushållsmargarin fett 80% berikad typ Melba",
+      "department": "dairy",
+      "aliases": ["Hushållsmargarin"]
+    },
+    {
+      "sourceId": 17,
+      "sourceName": "Lättmargarin fett 38% berikad typ Becel",
+      "department": "dairy",
+      "aliases": ["Lättmargarin"]
+    },
+    {
+      "sourceId": 2403,
+      "sourceName": "Bordsmargarin mjölkfri fett 70% berikad typ Carlshamn",
+      "department": "dairy",
+      "aliases": ["Bordsmargarin"]
+    },
+    {
+      "sourceId": 5132,
+      "sourceName": "Lättsmör fett ca 60%",
+      "department": "dairy",
+      "aliases": ["Lättsmör"]
+    },
+    {
+      "sourceId": 207,
+      "sourceName": "Bröd fullkorn rågsikt fibrer ca 7% typ kavring",
+      "department": "bakery",
+      "aliases": ["Kavring"]
+    },
+    {
+      "sourceId": 1595,
+      "sourceName": "Skorpor råg",
+      "department": "bakery",
+      "aliases": ["Skorpor"]
+    },
+    {
+      "sourceId": 1601,
+      "sourceName": "Vetebröd osötat",
+      "department": "bakery",
+      "aliases": ["Vetebröd"]
+    },
+    {
+      "sourceId": 1605,
+      "sourceName": "Mandelkubb",
+      "department": "bakery",
+      "aliases": ["Mandelkubb"]
+    },
+    {
+      "sourceId": 1606,
+      "sourceName": "Munk u. fyllning",
+      "department": "bakery",
+      "aliases": ["Munk", "Munkar"]
+    },
+    {
+      "sourceId": 1625,
+      "sourceName": "Spettekaka",
+      "department": "bakery",
+      "aliases": ["Spettekaka"]
+    },
+    {
+      "sourceId": 1626,
+      "sourceName": "Maräng",
+      "department": "bakery",
+      "aliases": ["Maräng", "Maränger"]
+    },
+    {
+      "sourceId": 1645,
+      "sourceName": "Gräddtårta",
+      "department": "bakery",
+      "aliases": ["Gräddtårta"]
+    },
+    {
+      "sourceId": 1649,
+      "sourceName": "Chokladtårta Sachertårta",
+      "department": "bakery",
+      "aliases": ["Chokladtårta", "Sachertårta"]
+    },
+    {
+      "sourceId": 1653,
+      "sourceName": "Mazariner m. mördegsbotten mazarinfyllning glasyr",
+      "department": "bakery",
+      "aliases": ["Mazarin", "Mazariner"]
+    },
+    {
+      "sourceId": 1656,
+      "sourceName": "Punschrulle",
+      "department": "bakery",
+      "aliases": ["Punschrulle", "Punschrullar"]
+    },
+    {
+      "sourceId": 1657,
+      "sourceName": "Chokladboll",
+      "department": "bakery",
+      "aliases": ["Chokladboll", "Chokladbollar"]
+    },
+    {
+      "sourceId": 4,
+      "sourceName": "Kokosfett fullhärdat",
+      "department": "pantry",
+      "aliases": ["Kokosfett"]
+    },
+    {
+      "sourceId": 33,
+      "sourceName": "Druvkärnolja",
+      "department": "pantry",
+      "aliases": ["Druvkärnolja"]
+    },
+    {
+      "sourceId": 34,
+      "sourceName": "Majsolja",
+      "department": "pantry",
+      "aliases": ["Majsolja"]
+    },
+    {
+      "sourceId": 37,
+      "sourceName": "Tistelolja",
+      "department": "pantry",
+      "aliases": ["Tistelolja"]
+    },
+    {
+      "sourceId": 41,
+      "sourceName": "Vetegroddsolja",
+      "department": "pantry",
+      "aliases": ["Vetegroddsolja"]
+    },
+    {
+      "sourceId": 118,
+      "sourceName": "Mjölkpulver fett 1%",
+      "department": "pantry",
+      "aliases": ["Mjölkpulver"]
+    },
+    {
+      "sourceId": 604,
+      "sourceName": "Fikon torkade",
+      "department": "pantry",
+      "aliases": ["Torkade fikon", "Fikon torkade"]
+    },
+    {
+      "sourceId": 605,
+      "sourceName": "Katrinplommon torkade",
+      "department": "pantry",
+      "aliases": ["Katrinplommon"]
+    },
+    {
+      "sourceId": 680,
+      "sourceName": "Rågkross ångprep. fullkorn",
+      "department": "pantry",
+      "aliases": ["Rågkross"]
+    },
+    {
+      "sourceId": 703,
+      "sourceName": "Fiberhavregryn fullkorn havre m. vetekli",
+      "department": "pantry",
+      "aliases": ["Fiberhavregryn"]
+    },
+    {
+      "sourceId": 704,
+      "sourceName": "Havrekli",
+      "department": "pantry",
+      "aliases": ["Havrekli"]
+    },
+    {
+      "sourceId": 705,
+      "sourceName": "Korngryn ångprep. fullkorn",
+      "department": "pantry",
+      "aliases": ["Korngryn"]
+    },
+    {
+      "sourceId": 707,
+      "sourceName": "Vetekross ångprep. fullkorn",
+      "department": "pantry",
+      "aliases": ["Vetekross"]
+    },
+    {
+      "sourceId": 708,
+      "sourceName": "Vetegroddar",
+      "department": "pantry",
+      "aliases": ["Vetegroddar"]
+    },
+    {
+      "sourceId": 709,
+      "sourceName": "Vetekli",
+      "department": "pantry",
+      "aliases": ["Vetekli"]
+    },
+    {
+      "sourceId": 711,
+      "sourceName": "Kruskakli grovt vetekli",
+      "department": "pantry",
+      "aliases": ["Kruskakli"]
+    },
+    {
+      "sourceId": 810,
+      "sourceName": "Rismjöl vitt",
+      "department": "pantry",
+      "aliases": ["Rismjöl"]
+    },
+    {
+      "sourceId": 827,
+      "sourceName": "Hirs hela el. krossade korn fullkorn",
+      "department": "pantry",
+      "aliases": ["Hirs"]
+    },
+    {
+      "sourceId": 828,
+      "sourceName": "Mannagryn",
+      "department": "pantry",
+      "aliases": ["Mannagryn"]
+    },
+    {
+      "sourceId": 886,
+      "sourceName": "Mungbönor torkade",
+      "department": "pantry",
+      "aliases": ["Mungbönor"]
+    },
+    {
+      "sourceId": 906,
+      "sourceName": "Sojamjöl fett ca 20%",
+      "department": "pantry",
+      "aliases": ["Sojamjöl"]
+    },
+    {
+      "sourceId": 1219,
+      "sourceName": "Gelatinblad el. gelatinpulver",
+      "department": "pantry",
+      "aliases": ["Gelatinblad", "Gelatinpulver"]
+    },
+    {
+      "sourceId": 1564,
+      "sourceName": "Kokosflingor",
+      "department": "pantry",
+      "aliases": ["Kokosflingor"]
+    },
+    {
+      "sourceId": 1567,
+      "sourceName": "Linfrö hela",
+      "department": "pantry",
+      "aliases": ["Linfrö", "Linfrön"]
+    },
+    {
+      "sourceId": 1571,
+      "sourceName": "Pumpafrö",
+      "department": "pantry",
+      "aliases": ["Pumpafrö", "Pumpafrön"]
+    },
+    {
+      "sourceId": 1572,
+      "sourceName": "Sesamfrö m. skal",
+      "department": "pantry",
+      "aliases": ["Sesamfrö", "Sesamfrön"]
+    },
+    {
+      "sourceId": 1574,
+      "sourceName": "Solrosfrö",
+      "department": "pantry",
+      "aliases": ["Solrosfrö", "Solrosfrön"]
+    },
+    {
+      "sourceId": 1793,
+      "sourceName": "Apelsinmarmelad",
+      "department": "pantry",
+      "aliases": ["Apelsinmarmelad"]
+    },
+    {
+      "sourceId": 1797,
+      "sourceName": "Marmelad olika smaker",
+      "department": "pantry",
+      "aliases": ["Marmelad"]
+    },
+    {
+      "sourceId": 1798,
+      "sourceName": "Lingonsylt",
+      "department": "pantry",
+      "aliases": ["Lingonsylt"]
+    },
+    {
+      "sourceId": 1801,
+      "sourceName": "Jordgubbssylt",
+      "department": "pantry",
+      "aliases": ["Jordgubbssylt"]
+    },
+    {
+      "sourceId": 1802,
+      "sourceName": "Björnbärssylt",
+      "department": "pantry",
+      "aliases": ["Björnbärssylt"]
+    },
+    {
+      "sourceId": 1803,
+      "sourceName": "Blåbärssylt",
+      "department": "pantry",
+      "aliases": ["Blåbärssylt"]
+    },
+    {
+      "sourceId": 1804,
+      "sourceName": "Hallonsylt",
+      "department": "pantry",
+      "aliases": ["Hallonsylt"]
+    },
+    {
+      "sourceId": 1805,
+      "sourceName": "Hjortronsylt",
+      "department": "pantry",
+      "aliases": ["Hjortronsylt"]
+    },
+    {
+      "sourceId": 1806,
+      "sourceName": "Krusbärssylt",
+      "department": "pantry",
+      "aliases": ["Krusbärssylt"]
+    },
+    {
+      "sourceId": 1808,
+      "sourceName": "Körsbärssylt",
+      "department": "pantry",
+      "aliases": ["Körsbärssylt"]
+    },
+    {
+      "sourceId": 1809,
+      "sourceName": "Äppelmos",
+      "department": "pantry",
+      "aliases": ["Äppelmos"]
+    },
+    {
+      "sourceId": 1886,
+      "sourceName": "Kakaopulver fett 20-22%",
+      "department": "pantry",
+      "aliases": ["Kakaopulver"]
+    },
+    {
+      "sourceId": 1893,
+      "sourceName": "Brun farin",
+      "department": "pantry",
+      "aliases": ["Brun farin"]
+    },
+    {
+      "sourceId": 1897,
+      "sourceName": "Druvsocker",
+      "department": "pantry",
+      "aliases": ["Druvsocker"]
+    },
+    {
+      "sourceId": 1898,
+      "sourceName": "Fruktsocker",
+      "department": "pantry",
+      "aliases": ["Fruktsocker"]
+    },
+    {
+      "sourceId": 1930,
+      "sourceName": "Bovetemjöl",
+      "department": "pantry",
+      "aliases": ["Bovetemjöl"]
+    },
+    {
+      "sourceId": 1932,
+      "sourceName": "Kornmjöl fullkorn",
+      "department": "pantry",
+      "aliases": ["Kornmjöl"]
+    },
+    {
+      "sourceId": 1945,
+      "sourceName": "Majsstärkelse",
+      "department": "pantry",
+      "aliases": ["Majsstärkelse"]
+    },
+    {
+      "sourceId": 1965,
+      "sourceName": "Ättiksprit ättiksyra 12%",
+      "department": "pantry",
+      "aliases": ["Ättiksprit"]
+    },
+    {
+      "sourceId": 1967,
+      "sourceName": "Äppelcidervinäger ättiksyra 7%",
+      "department": "pantry",
+      "aliases": ["Äppelcidervinäger"]
+    },
+    {
+      "sourceId": 1971,
+      "sourceName": "Grillsås",
+      "department": "pantry",
+      "aliases": ["Grillsås"]
+    },
+    {
+      "sourceId": 2006,
+      "sourceName": "Dippmix pulver olika smaker",
+      "department": "pantry",
+      "aliases": ["Dippmix"]
+    },
+    {
+      "sourceId": 2007,
+      "sourceName": "Sweet chilisås",
+      "department": "pantry",
+      "aliases": ["Sweet chilisås"]
+    },
+    {
+      "sourceId": 2012,
+      "sourceName": "Teriyakisås",
+      "department": "pantry",
+      "aliases": ["Teriyakisås"]
+    },
+    {
+      "sourceId": 2557,
+      "sourceName": "Tacoskal",
+      "department": "pantry",
+      "aliases": ["Tacoskal"]
+    },
+    {
+      "sourceId": 3247,
+      "sourceName": "Brödkrutonger ",
+      "department": "pantry",
+      "aliases": ["Brödkrutonger"]
+    },
+    {
+      "sourceId": 3433,
+      "sourceName": "Linfröolja",
+      "department": "pantry",
+      "aliases": ["Linfröolja"]
+    },
+    {
+      "sourceId": 3786,
+      "sourceName": "Dinkelmjöl fullkorn",
+      "department": "pantry",
+      "aliases": ["Dinkelmjöl"]
+    },
+    {
+      "sourceId": 4074,
+      "sourceName": "Hampafröolja",
+      "department": "pantry",
+      "aliases": ["Hampafröolja"]
+    },
+    {
+      "sourceId": 5916,
+      "sourceName": "Tacosås",
+      "department": "pantry",
+      "aliases": ["Tacosås"]
+    },
+    {
+      "sourceId": 5973,
+      "sourceName": "Kryddblandning taco",
+      "department": "pantry",
+      "aliases": ["Tacokrydda"]
+    },
+    {
+      "sourceId": 6154,
+      "sourceName": "Psylliumfröskal",
+      "department": "pantry",
+      "aliases": ["Psylliumfröskal"]
+    },
+    {
+      "sourceId": 6157,
+      "sourceName": "Chiafrö",
+      "department": "pantry",
+      "aliases": ["Chiafrö", "Chiafrön"]
+    },
+    {
+      "sourceId": 6158,
+      "sourceName": "Hampafrö m. skal",
+      "department": "pantry",
+      "aliases": ["Hampafrö", "Hampafrön"]
+    },
+    {
+      "sourceId": 6160,
+      "sourceName": "Vallmofrö",
+      "department": "pantry",
+      "aliases": ["Vallmofrö", "Vallmofrön"]
+    },
+    {
+      "sourceId": 6165,
+      "sourceName": "Kokosolja",
+      "department": "pantry",
+      "aliases": ["Kokosolja"]
+    },
+    {
+      "sourceId": 6468,
+      "sourceName": "Havremjöl fullkorn",
+      "department": "pantry",
+      "aliases": ["Havremjöl"]
+    },
+    {
+      "sourceId": 6480,
+      "sourceName": "Kornflingor ångprep. fullkorn",
+      "department": "pantry",
+      "aliases": ["Kornflingor"]
+    },
+    {
+      "sourceId": 6481,
+      "sourceName": "Rågflingor ångprep. fullkorn",
+      "department": "pantry",
+      "aliases": ["Rågflingor"]
+    },
+    {
+      "sourceId": 6482,
+      "sourceName": "Veteflingor ångprep. fullkorn",
+      "department": "pantry",
+      "aliases": ["Veteflingor"]
+    },
+    {
+      "sourceId": 6553,
+      "sourceName": "Tillskottsnäring för småbarn",
+      "department": "baby",
+      "aliases": ["Tillskottsnäring"]
+    },
+    {
+      "sourceId": 6666,
+      "sourceName": "Muskotnöt malen",
+      "department": "pantry",
+      "aliases": ["Muskotnöt"]
+    },
+    {
+      "sourceId": 6869,
+      "sourceName": "Teffmjöl",
+      "department": "pantry",
+      "aliases": ["Teffmjöl"]
+    },
+    {
+      "sourceId": 6870,
+      "sourceName": "Våffelmix glutenfri",
+      "department": "pantry",
+      "aliases": ["Våffelmix"]
+    },
+    {
+      "sourceId": 6872,
+      "sourceName": "Majsgryn polenta",
+      "department": "pantry",
+      "aliases": ["Majsgryn", "Polenta"]
+    },
+    {
+      "sourceId": 6996,
+      "sourceName": "Gojibär torkade",
+      "department": "pantry",
+      "aliases": ["Torkade gojibär"]
+    },
+    {
+      "sourceId": 6997,
+      "sourceName": "Glykossirap",
+      "department": "pantry",
+      "aliases": ["Glykossirap"]
+    },
+    {
+      "sourceId": 6998,
+      "sourceName": "Näringsjäst",
+      "department": "pantry",
+      "aliases": ["Näringsjäst"]
+    },
+    {
+      "sourceId": 7028,
+      "sourceName": "Arrowrotmjöl",
+      "department": "pantry",
+      "aliases": ["Arrowrotmjöl"]
+    },
+    {
+      "sourceId": 7030,
+      "sourceName": "Hampamjöl avfettat",
+      "department": "pantry",
+      "aliases": ["Hampamjöl"]
+    },
+    {
+      "sourceId": 7031,
+      "sourceName": "Kakaosmör",
+      "department": "pantry",
+      "aliases": ["Kakaosmör"]
+    },
+    {
+      "sourceId": 7052,
+      "sourceName": "Rågkli",
+      "department": "pantry",
+      "aliases": ["Rågkli"]
+    },
+    {
+      "sourceId": 7196,
+      "sourceName": "Kryddnejlika torkad malen",
+      "department": "pantry",
+      "aliases": ["Kryddnejlika"]
+    },
+    {
+      "sourceId": 649,
+      "sourceName": "Grapefruktjuice färskpressad",
+      "department": "drinks",
+      "aliases": ["Grapefruktjuice"]
+    },
+    {
+      "sourceId": 664,
+      "sourceName": "Aprikosnektar pastöriserad drickf.",
+      "department": "drinks",
+      "aliases": ["Aprikosnektar"]
+    },
+    {
+      "sourceId": 665,
+      "sourceName": "Persikonektar pastöriserad drickf.",
+      "department": "drinks",
+      "aliases": ["Persikonektar"]
+    },
+    {
+      "sourceId": 1814,
+      "sourceName": "Apelsinsaft konc. berikad",
+      "department": "drinks",
+      "aliases": ["Apelsinsaft"]
+    },
+    {
+      "sourceId": 1818,
+      "sourceName": "Måltidsdryck drickf.",
+      "department": "drinks",
+      "aliases": ["Måltidsdryck"]
+    },
+    {
+      "sourceId": 1821,
+      "sourceName": "Svartvinbärssaft konc. berikad",
+      "department": "drinks",
+      "aliases": ["Svartvinbärssaft"]
+    },
+    {
+      "sourceId": 1827,
+      "sourceName": "Fruktdryck u. kolsyra",
+      "department": "drinks",
+      "aliases": ["Fruktdryck"]
+    },
+    {
+      "sourceId": 1832,
+      "sourceName": "Sportdryck drickf.",
+      "department": "drinks",
+      "aliases": ["Sportdryck"]
+    },
+    {
+      "sourceId": 1837,
+      "sourceName": "Hallonsaft drickf.",
+      "department": "drinks",
+      "aliases": ["Hallonsaft"]
+    },
+    {
+      "sourceId": 1840,
+      "sourceName": "Lingondricka drickf. berikad",
+      "department": "drinks",
+      "aliases": ["Lingondricka"]
+    },
+    {
+      "sourceId": 1841,
+      "sourceName": "Äppeldricka drickf. berikad",
+      "department": "drinks",
+      "aliases": ["Äppeldricka"]
+    },
+    {
+      "sourceId": 1847,
+      "sourceName": "Chokladdryck drickf.",
+      "department": "drinks",
+      "aliases": ["Chokladdryck"]
+    },
+    {
+      "sourceId": 1900,
+      "sourceName": "Svagdricka vol. % 2,3",
+      "department": "drinks",
+      "aliases": ["Svagdricka"]
+    },
+    {
+      "sourceId": 1914,
+      "sourceName": "Starkvin vol. % 18 typ Madeira",
+      "department": "drinks",
+      "aliases": ["Starkvin"]
+    },
+    {
+      "sourceId": 1917,
+      "sourceName": "Glögg starkvin vol. % 16",
+      "department": "drinks",
+      "aliases": ["Glögg"]
+    },
+    {
+      "sourceId": 1919,
+      "sourceName": "Likör söt vol. % 24",
+      "department": "drinks",
+      "aliases": ["Likör"]
+    },
+    {
+      "sourceId": 1922,
+      "sourceName": "Punsch vol. % 26",
+      "department": "drinks",
+      "aliases": ["Punsch"]
+    },
+    {
+      "sourceId": 1924,
+      "sourceName": "Brännvin kryddat vol. % 40 ",
+      "department": "drinks",
+      "aliases": ["Brännvin"]
+    },
+    {
+      "sourceId": 1955,
+      "sourceName": "Snabbkaffe pulver",
+      "department": "drinks",
+      "aliases": ["Snabbkaffe"]
+    },
+    {
+      "sourceId": 1960,
+      "sourceName": "Tepulver",
+      "department": "drinks",
+      "aliases": ["Tepulver"]
+    },
+    {
+      "sourceId": 1963,
+      "sourceName": "Örtte drickf.",
+      "department": "drinks",
+      "aliases": ["Örtte"]
+    },
+    {
+      "sourceId": 5147,
+      "sourceName": "Julmust påskmust",
+      "department": "drinks",
+      "aliases": ["Julmust", "Påskmust"]
+    },
+    {
+      "sourceId": 5184,
+      "sourceName": "Tranbärsdryck drickf. berikad",
+      "department": "drinks",
+      "aliases": ["Tranbärsdryck"]
+    },
+    {
+      "sourceId": 1580,
+      "sourceName": "Jordnötsbågar jordnötsringar",
+      "department": "treats",
+      "aliases": ["Jordnötsbågar", "Jordnötsringar"]
+    },
+    {
+      "sourceId": 1582,
+      "sourceName": "Ostbågar",
+      "department": "treats",
+      "aliases": ["Ostbågar"]
+    },
+    {
+      "sourceId": 1585,
+      "sourceName": "Salta pinnar",
+      "department": "treats",
+      "aliases": ["Salta pinnar"]
+    },
+    {
+      "sourceId": 1849,
+      "sourceName": "Mjölkchoklad fylld m. mandelkrokant",
+      "department": "treats",
+      "aliases": ["Mjölkchoklad"]
+    },
+    {
+      "sourceId": 1858,
+      "sourceName": "Chokladpralin",
+      "department": "treats",
+      "aliases": ["Chokladpralin", "Chokladpraliner"]
+    },
+    {
+      "sourceId": 1863,
+      "sourceName": "Gelégodis",
+      "department": "treats",
+      "aliases": ["Gelégodis"]
+    },
+    {
+      "sourceId": 1864,
+      "sourceName": "Karameller",
+      "department": "treats",
+      "aliases": ["Karamell", "Karameller"]
+    },
+    {
+      "sourceId": 1865,
+      "sourceName": "Kola",
+      "department": "treats",
+      "aliases": ["Kola"]
+    },
+    {
+      "sourceId": 1867,
+      "sourceName": "Marmeladkonfekt",
+      "department": "treats",
+      "aliases": ["Marmeladkonfekt"]
+    },
+    {
+      "sourceId": 1868,
+      "sourceName": "Skumgodis",
+      "department": "treats",
+      "aliases": ["Skumgodis"]
+    },
+    {
+      "sourceId": 1869,
+      "sourceName": "Polkagris",
+      "department": "treats",
+      "aliases": ["Polkagris", "Polkagrisar"]
+    },
+    {
+      "sourceId": 1870,
+      "sourceName": "Tuggummi",
+      "department": "treats",
+      "aliases": ["Tuggummi"]
+    },
+    {
+      "sourceId": 1875,
+      "sourceName": "Chokladkola mörk m. chokladöverdrag",
+      "department": "treats",
+      "aliases": ["Chokladkola"]
+    },
+    {
+      "sourceId": 1877,
+      "sourceName": "Fruktkola",
+      "department": "treats",
+      "aliases": ["Fruktkola"]
+    },
+    {
+      "sourceId": 1879,
+      "sourceName": "Skumboll m. chokladöverdrag kokos",
+      "department": "treats",
+      "aliases": ["Skumboll", "Skumbollar"]
+    },
+    {
+      "sourceId": 2963,
+      "sourceName": "Godisklubba ",
+      "department": "treats",
+      "aliases": ["Godisklubba", "Godisklubbor"]
+    },
+    {
+      "sourceId": 3069,
+      "sourceName": "Chilinötter",
+      "department": "treats",
+      "aliases": ["Chilinötter"]
+    },
+    {
+      "sourceId": 3522,
+      "sourceName": "Bananchips ",
+      "department": "treats",
+      "aliases": ["Bananchips"]
+    },
+    {
+      "sourceId": 4011,
+      "sourceName": "Majskrokar",
+      "department": "treats",
+      "aliases": ["Majskrokar"]
+    },
+    {
+      "sourceId": 6767,
+      "sourceName": "Linskaka smaksatt",
+      "department": "treats",
+      "aliases": ["Linskaka", "Linskakor"]
+    },
+    {
+      "sourceId": 6858,
+      "sourceName": "Linsbågar fett 28%",
+      "department": "treats",
+      "aliases": ["Linsbågar"]
+    },
+    {
+      "sourceId": 7000,
+      "sourceName": "Lakritsgodis",
+      "department": "treats",
+      "aliases": ["Lakritsgodis"]
+    },
+    {
+      "sourceId": 7190,
+      "sourceName": "Räkchips friterade",
+      "department": "treats",
+      "aliases": ["Räkchips"]
+    },
+    {
+      "sourceId": 2069,
+      "sourceName": "Veteprotein grytbitar",
+      "department": "vegetarian",
+      "aliases": ["Veteprotein"]
+    },
+    {
+      "sourceId": 6171,
+      "sourceName": "Tångkaviar röd",
+      "department": "vegetarian",
+      "aliases": ["Tångkaviar"]
+    },
+    {
+      "sourceId": 6264,
+      "sourceName": "Sojaprotein bitar kylvara el. frysvara typ Tzay®",
+      "department": "vegetarian",
+      "aliases": ["Sojaprotein"]
+    },
+    {
+      "sourceId": 6266,
+      "sourceName": "Havreprotein pulled havre strimlor kylvara el. frysvara",
+      "department": "vegetarian",
+      "aliases": ["Havreprotein"]
+    },
+    {
+      "sourceId": 6273,
+      "sourceName": "Mykoprotein nugget kylvara el. frysvara",
+      "department": "vegetarian",
+      "aliases": ["Mykoprotein"]
+    },
+    {
+      "sourceId": 6240,
+      "sourceName": "Barngröt pulver naturell fullkorn osötad berikad",
+      "department": "baby",
+      "aliases": ["Barngröt"]
+    },
+    {
+      "sourceId": 24,
+      "sourceName": "Gravlaxsås kylvara",
+      "department": "ready-meals",
+      "aliases": ["Gravlaxsås"]
+    },
+    {
+      "sourceId": 51,
+      "sourceName": "Gurkmajonnäs gurksallad gatukök",
+      "department": "ready-meals",
+      "aliases": ["Gurkmajonnäs", "Gurksallad"]
+    },
+    {
+      "sourceId": 256,
+      "sourceName": "Sjömansbiff frysvara",
+      "department": "ready-meals",
+      "aliases": ["Sjömansbiff"]
+    },
+    {
+      "sourceId": 266,
+      "sourceName": "Potatispalt",
+      "department": "ready-meals",
+      "aliases": ["Potatispalt"]
+    },
+    {
+      "sourceId": 271,
+      "sourceName": "Raggmunk potatisplätt potatispannkaka hemlagad",
+      "department": "ready-meals",
+      "aliases": ["Raggmunk", "Potatisplätt", "Potatispannkaka"]
+    },
+    {
+      "sourceId": 302,
+      "sourceName": "Rotmos hemlagad",
+      "department": "ready-meals",
+      "aliases": ["Rotmos"]
+    },
+    {
+      "sourceId": 417,
+      "sourceName": "Ajvar relish",
+      "department": "pantry",
+      "aliases": ["Ajvar relish"]
+    },
+    {
+      "sourceId": 488,
+      "sourceName": "Bostongurka",
+      "department": "pantry",
+      "aliases": ["Bostongurka"]
+    },
+    {
+      "sourceId": 840,
+      "sourceName": "Rismål fett 6%",
+      "department": "dairy",
+      "aliases": ["Rismål"]
+    },
+    {
+      "sourceId": 873,
+      "sourceName": "Nudelsoppa olika smaker kryddad",
+      "department": "ready-meals",
+      "aliases": ["Nudelsoppa"]
+    },
+    {
+      "sourceId": 1103,
+      "sourceName": "Pannbiff rå frysvara",
+      "department": "ready-meals",
+      "aliases": ["Pannbiff"]
+    },
+    {
+      "sourceId": 1107,
+      "sourceName": "Köttfärslimpa ugnsstekt hemlagad",
+      "department": "ready-meals",
+      "aliases": ["Köttfärslimpa"]
+    },
+    {
+      "sourceId": 1108,
+      "sourceName": "Köttfärssås i gjutjärn hemlagad",
+      "department": "ready-meals",
+      "aliases": ["Köttfärssås"]
+    },
+    {
+      "sourceId": 1543,
+      "sourceName": "Pölsa",
+      "department": "ready-meals",
+      "aliases": ["Pölsa"]
+    },
+    {
+      "sourceId": 2228,
+      "sourceName": "Bearnaisesås fett 8%",
+      "department": "ready-meals",
+      "aliases": ["Bearnaisesås"]
+    },
+    {
+      "sourceId": 2229,
+      "sourceName": "Klassisk gräddsås fett 6%",
+      "department": "ready-meals",
+      "aliases": ["Gräddsås"]
+    },
+    {
+      "sourceId": 2230,
+      "sourceName": "Ostsås fett 8%",
+      "department": "ready-meals",
+      "aliases": ["Ostsås"]
+    },
+    {
+      "sourceId": 2232,
+      "sourceName": "Rödvinssås fett 1,5%",
+      "department": "ready-meals",
+      "aliases": ["Rödvinssås"]
+    },
+    {
+      "sourceId": 2233,
+      "sourceName": "Kebabsås vit fett 30%",
+      "department": "ready-meals",
+      "aliases": ["Kebabsås"]
+    },
+    {
+      "sourceId": 2234,
+      "sourceName": "Svampsås fett 8,5%",
+      "department": "ready-meals",
+      "aliases": ["Svampsås"]
+    },
+    {
+      "sourceId": 2658,
+      "sourceName": "Potatisgratäng kylvara",
+      "department": "ready-meals",
+      "aliases": ["Potatisgratäng"]
+    },
+    {
+      "sourceId": 1294,
+      "sourceName": "Fiskpinnar stekta",
+      "department": "frozen",
+      "aliases": ["Fiskpinnar"]
+    }
+  ]
+}

@@ -27,6 +27,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "shopping-products.json",
+                "input": "src/app/core/data",
+                "output": "data"
               }
             ],
             "styles": ["src/styles.scss"]
@@ -47,7 +52,10 @@
               ],
               "optimization": {
                 "scripts": true,
-                "styles": { "minify": true, "inlineCritical": false },
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
                 "fonts": false
               },
               "outputHashing": "all",

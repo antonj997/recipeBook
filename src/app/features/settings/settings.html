@@ -188,6 +188,22 @@
         <button type="button" (click)="app.install()">Install Recipebook</button>
       }
     }
+    <p class="hint catalog-credit">
+      Product categories:
+      <a href="https://world.openfoodfacts.org/" target="_blank" rel="noopener noreferrer"
+        >Open Food Facts</a
+      >
+      and
+      <a
+        href="https://soknaringsinnehall.livsmedelsverket.se/"
+        target="_blank"
+        rel="noopener noreferrer"
+        >Livsmedelsverket</a
+      >.
+      <a href="data/shopping-products-notice.txt" target="_blank" rel="noopener"
+        >Data &amp; licence</a
+      >
+    </p>
     @if (app.offlineReady()) {
       <p class="hint" role="status">
         Ready for offline use. Saved recipes are available without a connection.

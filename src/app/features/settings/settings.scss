@@ -224,3 +224,9 @@ h3 {
     transition: none;
   }
 }
+
+.catalog-credit a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}

@@ -1,0 +1,34 @@
+Recipebook shopping product catalogue
+
+Contains information from Open Food Facts contributors, available under the Open Database License (ODbL 1.0).
+Individual contents are available under the Database Contents License (DbCL 1.0).
+
+Source: https://static.openfoodfacts.org/data/taxonomies/categories.full.json
+The retrieval date, source checksum and provenance are included in the derived data file.
+
+Changes: Swedish/English selection, normalization, shop-department mapping,
+singular and cheese-compound aliases, conflict filtering, pruning of names
+already recognized by Recipebook rules, and reviewed Swedish product names.
+The derived catalogue and its additions are available under ODbL 1.0.
+This catalogue is not a complete ICA stock list or an ICA integration.
+
+Derived data: https://antonj997.github.io/recipeBook/data/shopping-products.json
+Source and generation scripts: https://github.com/antonj997/recipeBook/tree/main/scripts/shopping-catalog
+
+ODbL: https://opendatacommons.org/licenses/odbl/1-0/
+DbCL: https://opendatacommons.org/licenses/dbcl/1-0/
+Open Food Facts: https://world.openfoodfacts.org/
+
+The licence applies to the public category dictionary, not to your private recipes or shopping lists.
+
+Swedish supplement: Livsmedelsverkets Livsmedelsdatabas version 2026-07-01.
+Retrieved 2026-10-25 under CC BY 4.0.
+Source API: https://dataportal.livsmedelsverket.se/livsmedel/swagger/index.html
+Licence: https://creativecommons.org/licenses/by/4.0/
+Selected grocery names were shortened and given plural aliases. Department
+assignments are Recipebook's own supermarket mapping, not official nutrition
+classifications. Original source names and food IDs are retained in
+scripts/shopping-catalog/swedish-aliases.json in the public repository.
+No nutritional values were imported or modified. Source checksum and attribution
+are included in the derived database. The existing Open Food Facts catalogue
+and the separately maintained Swedish cheese names remain in place.

@@ -4,6 +4,32 @@ import type { ShoppingGroup } from './shopping-item';
 
 describe('shopping department recognition', () => {
   it.each([
+    'Prästost',
+    'Arla Präst 31%',
+    'Allerum Grevéost 28%',
+    'Herrgård',
+    'Gorgonzola',
+    'Pecorino',
+    'Gruyère',
+    'Manchego',
+    'Stilton',
+    'Provolone',
+    'Svecia',
+    'Wrångebäcksost',
+    '150 g riven prästost',
+    'Goudaost',
+  ])('recognizes a named cheese through the offline catalogue: %s', (name) => {
+    expect(shoppingDepartment(name)).toBe('dairy');
+  });
+
+  it('does not classify a brand or a word fragment as cheese', () => {
+    expect(shoppingDepartment('Arla')).toBe('other');
+    expect(shoppingDepartment('Falbygdens')).toBe('other');
+    expect(shoppingDepartment('prästosthyvel')).toBe('other');
+    expect(shoppingDepartment('prästost och broccoli')).toBe('other');
+  });
+
+  it.each([
     ['2 röda lökar, finhackade', 'produce'],
     ['½ gurka', 'produce'],
     ['1 kruka färsk basilika', 'produce'],
@@ -133,6 +159,7 @@ describe('shopping department recognition', () => {
   it('keeps a mixed entry in Övrigt when it crosses departments', () => {
     expect(shoppingDepartment('mjölk & bröd')).toBe('other');
     expect(shoppingDepartment('salt och peppar')).toBe('pantry');
+    expect(shoppingDepartment('rye and wheat bread and milk')).toBe('other');
   });
 });
 
@@ -186,4 +213,93 @@ describe('shopping department sections', () => {
     expect(section[0].id).toBe('dairy');
     expect(milk.sources[0].recipeTitle).toBe('Kyckling med ris');
   });
+});
+
+describe('catalogue and existing-rule interactions', () => {
+  const products = [
+    ['oat milk', 'dairy'],
+    ['almond milk', 'dairy'],
+    ['Arla oat milk', 'dairy'],
+    ['soy milk', 'dairy'],
+    ['soy yogurt', 'dairy'],
+    ['blueberry yogurt', 'dairy'],
+    ['strawberry yogurt', 'dairy'],
+    ['vanilla yogurt', 'dairy'],
+    ['rye bread', 'bakery'],
+    ['oat bread', 'bakery'],
+    ['oyster mushrooms', 'produce'],
+    ['sandwich bread', 'bakery'],
+    ['vegetable oil', 'pantry'],
+    ['wheat beer', 'drinks'],
+    ['English cheddar', 'dairy'],
+    ['English Stilton', 'dairy'],
+    ['Welsh cheddar', 'dairy'],
+    ['sweet apples', 'produce'],
+  ] as const;
+  for (const [name, department] of products) {
+    it(`keeps ${name} in ${department} when catalogue aliases overlap`, () => {
+      expect(shoppingDepartment(name)).toBe(department);
+    });
+  }
+});
+
+describe('named compound products', () => {
+  for (const [name, department] of [
+    ['cookies with chocolate and coconut', 'bakery'],
+    ['rye and wheat bread', 'bakery'],
+    ['200 g frozen cakes and pastries', 'frozen'],
+    ['canned leek and potato soups', 'pantry'],
+    ['fruit and vegetable juice', 'drinks'],
+  ] as const) {
+    it(`recognizes ${name} as one product before splitting mixed entries`, () => {
+      expect(shoppingDepartment(name)).toBe(department);
+    });
+  }
+});
+
+describe('common Swedish groceries', () => {
+  const cases = [
+    ['Ål', 'fish'],
+    ['Renskav', 'frozen'],
+    ['Älgskav', 'frozen'],
+    ['Blodpudding', 'meat'],
+    ['Geas blodpudding 500 g', 'meat'],
+    ['Isterband', 'meat'],
+    ['Kassler', 'meat'],
+    ['Leverpastej', 'meat'],
+    ['Gräddfil', 'dairy'],
+    ['Arla gräddfil 12%', 'dairy'],
+    ['Prästost', 'dairy'],
+    ['Hushållsost', 'dairy'],
+    ['Havredryck', 'dairy'],
+    ['Äggvita', 'dairy'],
+    ['Jordärtskockor', 'produce'],
+    ['Rödbetor', 'produce'],
+    ['Kålrot', 'produce'],
+    ['Fänkål', 'produce'],
+    ['Hjortron', 'produce'],
+    ['Ostronskivling', 'produce'],
+    ['Kavring', 'bakery'],
+    ['Regnbågslax', 'fish'],
+    ['Röding', 'fish'],
+    ['Stenbitsrom', 'fish'],
+    ['Lingonsylt', 'pantry'],
+    ['Bostongurka', 'pantry'],
+    ['Torkade fikon', 'pantry'],
+    ['Fikon torkade', 'pantry'],
+    ['Fikon', 'produce'],
+    ['Rågkross', 'pantry'],
+    ['Ättiksprit', 'pantry'],
+    ['Julmust', 'drinks'],
+    ['Örtte', 'drinks'],
+    ['Ostbågar', 'treats'],
+    ['Tångkaviar', 'vegetarian'],
+    ['Fiskpinnar', 'frozen'],
+    ['fryst blodpudding', 'frozen'],
+    ['Barngröt', 'baby'],
+    ['Tillskottsnäring', 'baby'],
+  ] as const;
+  for (const [name, department] of cases) {
+    it(`places ${name} in ${department}`, () => expect(shoppingDepartment(name)).toBe(department));
+  }
 });

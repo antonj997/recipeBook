@@ -10,7 +10,10 @@
     "test": "ng test",
     "prebuild": "node scripts/configure-supabase.mjs",
     "prestart": "node scripts/configure-supabase.mjs",
-    "predev": "node scripts/configure-supabase.mjs"
+    "predev": "node scripts/configure-supabase.mjs",
+    "catalog:update": "node scripts/shopping-catalog/generate.mjs",
+    "catalog:test": "node --test scripts/shopping-catalog/catalog.test.mjs",
+    "catalog:benchmark": "node scripts/shopping-catalog/benchmark.mjs"
   },
   "private": true,
   "packageManager": "npm@12.0.2",
