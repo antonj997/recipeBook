@@ -24,7 +24,7 @@
   font-size: clamp(1.375rem, 3.3vw, 2rem);
 }
 .add-tools {
-  margin-bottom: 16px;
+  margin-bottom: 1rem;
 }
 .add-item {
   display: flex;
@@ -59,20 +59,30 @@
   padding: 0;
   margin: 0;
 }
-.shopping-department + .shopping-department {
-  margin-top: 4px;
+.shopping-department {
+  position: relative;
 }
 .department-heading {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 30px;
+  transform: translateY(-50%);
+  max-inline-size: calc(100% - 42px);
   margin: 0;
-  padding: 8px 0 2px 36px;
+  padding: 0 6px;
+  background: var(--color-canvas);
   font-size: 0.75rem;
-  line-height: 1.4;
-  font-weight: 500;
+  line-height: 1.2;
+  font-weight: 400;
   letter-spacing: 0;
   color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 .shopping-row {
-  padding: 4px 0;
+  padding: 0.25rem 0;
   border-bottom: 1px solid var(--color-border);
 }
 .item-main {
@@ -86,7 +96,7 @@
   min-width: 0;
   font-weight: 400;
   align-items: flex-start;
-  padding-top: 10px;
+  padding-block: 0.625rem;
 }
 .item-main app-checkbox-mark,
 .item-main input {
@@ -182,7 +192,7 @@
   font-size: 1rem;
 }
 .bought-disclosure {
-  padding: 10px 0;
+  padding: 0.625rem 0;
   border: 0;
 }
 .bought-disclosure span {
