@@ -110,6 +110,8 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
   private active = true;
   private loadVersion = 0;
   private focusFrame = 0;
+  private cancelItemHold = () => {};
+  private allowItemClick = () => {};
   private clearOrigin: HTMLElement | null = null;
   private clearAccount: number | null = null;
   private clearBackdropPressed = false;
@@ -120,6 +122,8 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
       const next = this.shopping.accountVersion();
       if (next !== account) {
         account = next;
+        this.cancelItemHold();
+        this.allowItemClick();
         this.draft.set('');
         this.editor.set(null);
         this.clearing.set(null);
@@ -150,6 +154,8 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
     });
     inject(DestroyRef).onDestroy(() => {
       this.active = false;
+      this.cancelItemHold();
+      this.allowItemClick();
       cancelAnimationFrame(this.focusFrame);
       this.clearDialog()?.nativeElement.close();
     });
@@ -239,6 +245,93 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
     } finally {
       if (this.current(account)) this.busy.set(false);
     }
+  }
+  holdItem(group: ShoppingGroup, event: PointerEvent): void {
+    this.cancelItemHold();
+    if (this.busy() || !event.isPrimary || event.button !== 0) return;
+    const account = this.shopping.accountVersion();
+    const move = (next: PointerEvent) => {
+      if (
+        next.pointerId === event.pointerId &&
+        Math.hypot(next.clientX - event.clientX, next.clientY - event.clientY) > 10
+      )
+        cancel();
+    };
+    const release = (next: PointerEvent) => {
+      if (next.pointerId === event.pointerId) cancel();
+    };
+    const cancel = () => {
+      clearTimeout(timer);
+      document.removeEventListener('pointermove', move, true);
+      document.removeEventListener('pointerup', release, true);
+      document.removeEventListener('pointercancel', release, true);
+      document.removeEventListener('pointerdown', cancel, true);
+      document.removeEventListener('scroll', cancel, true);
+      window.removeEventListener('blur', cancel);
+      this.cancelItemHold = () => {};
+    };
+    const timer = setTimeout(() => {
+      cancel();
+      if (!this.current(account) || this.busy()) return;
+      this.suppressHoldClick();
+      this.startEdit(group);
+    }, 500);
+    // Track only the active hold; scrolling and normal taps keep their native behavior.
+    document.addEventListener('pointermove', move, { capture: true, passive: true });
+    document.addEventListener('pointerup', release, true);
+    document.addEventListener('pointercancel', release, true);
+    document.addEventListener('pointerdown', cancel, true);
+    document.addEventListener('scroll', cancel, { capture: true, passive: true });
+    window.addEventListener('blur', cancel);
+    this.cancelItemHold = cancel;
+  }
+  editItemContext(group: ShoppingGroup, event: MouseEvent): void {
+    event.preventDefault();
+    this.cancelItemHold();
+    if (this.busy()) return;
+    this.suppressHoldClick();
+    this.startEdit(group);
+  }
+  editItemKey(group: ShoppingGroup, event: KeyboardEvent): void {
+    if (
+      event.key === 'F2' ||
+      event.key === 'ContextMenu' ||
+      (event.shiftKey && event.key === 'F10')
+    ) {
+      event.preventDefault();
+      this.cancelItemHold();
+      this.startEdit(group);
+    }
+  }
+  private suppressHoldClick(): void {
+    this.allowItemClick();
+    const consume = (event: MouseEvent) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      clear();
+    };
+    const released = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(clear, 1200);
+    };
+    const clear = () => {
+      clearTimeout(timeout);
+      document.removeEventListener('click', consume, true);
+      document.removeEventListener('pointerup', released, true);
+      document.removeEventListener('pointercancel', released, true);
+      document.removeEventListener('pointerdown', clear, true);
+      document.removeEventListener('keydown', clear, true);
+      this.allowItemClick = () => {};
+    };
+    // The held label is replaced by the editor. Catch the release click even if
+    // the browser retargets it to the editor or another row; a fresh tap is allowed.
+    let timeout = setTimeout(clear, 30_000);
+    document.addEventListener('click', consume, true);
+    document.addEventListener('pointerup', released, true);
+    document.addEventListener('pointercancel', released, true);
+    document.addEventListener('pointerdown', clear, true);
+    document.addEventListener('keydown', clear, true);
+    this.allowItemClick = clear;
   }
   startEdit(group: ShoppingGroup): void {
     if (this.busy()) return;

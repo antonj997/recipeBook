@@ -95,6 +95,9 @@
     @if (!toBuy().length) {
       <p class="all-bought">Everything on your list is bought.</p>
     }
+    <p id="shopping-edit-hint" class="sr-only">
+      Hold item text to edit. With a keyboard, press F2.
+    </p>
     @for (section of sections(); track section.key) {
       @if (section.groups.length) {
         <section
@@ -179,18 +182,24 @@
                           </form>
                         } @else {
                           <div class="item-main">
-                            <label class="check-control">
+                            <label class="check-control" (keydown)="editItemKey(group, $event)">
                               <input
                                 type="checkbox"
                                 [id]="'shopping-item-' + group.items[0].id"
                                 [checked]="group.checked"
+                                aria-keyshortcuts="F2 Shift+F10"
                                 [attr.aria-describedby]="
-                                  sources.length ? 'shopping-sources-' + group.items[0].id : null
+                                  'shopping-edit-hint' +
+                                  (sources.length ? ' shopping-sources-' + group.items[0].id : '')
                                 "
                                 [disabled]="busy()"
                                 (change)="toggleGroup(group, $event)"
                               />
-                              <app-checkbox-mark /><span class="item-name"
+                              <app-checkbox-mark /><span
+                                class="item-name"
+                                title="Hold to edit"
+                                (pointerdown)="holdItem(group, $event)"
+                                (contextmenu)="editItemContext(group, $event)"
                                 >{{ group.text
                                 }}<span class="source-dots" aria-hidden="true">
                                   @for (source of sources; track source.recipeId) {
@@ -205,21 +214,12 @@
                             <div class="row-actions">
                               <button
                                 type="button"
-                                class="text-action"
-                                [attr.aria-label]="'Edit ' + group.text"
-                                [disabled]="busy()"
-                                (click)="startEdit(group)"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
                                 class="text-action delete-item"
                                 [attr.aria-label]="'Delete ' + group.text"
                                 [disabled]="busy()"
                                 (click)="removeGroup(group, $event)"
                               >
-                                Delete
+                                <app-icon name="minus" />
                               </button>
                             </div>
                           </div>

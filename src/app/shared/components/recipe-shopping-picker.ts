@@ -160,7 +160,7 @@ export class RecipeShoppingPickerComponent {
     this.selectedServings.set(
       this.validServings(servings) ?? this.validServings(recipe.servings) ?? 4,
     );
-    this.selected.set(new Set(recipe.ingredients.map((_, index) => index)));
+    this.selected.set(new Set());
     this.confirming.set(false);
     this.error.set('');
   }

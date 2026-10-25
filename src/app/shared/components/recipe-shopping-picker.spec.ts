@@ -99,8 +99,45 @@ describe('recipe shopping picker', () => {
     return host;
   }
 
+  it.each([true, false])('starts with no products selected (direct recipe: %s)', async (direct) => {
+    const host = await fixture(direct ? recipe : null);
+    if (!direct) {
+      (host.nativeElement.querySelector('.recipe-choice') as HTMLButtonElement).click();
+      host.detectChanges();
+    }
+    const inputs = Array.from(
+      host.nativeElement.querySelectorAll('input[type="checkbox"]'),
+    ) as HTMLInputElement[];
+    expect(inputs).toHaveLength(3);
+    expect(inputs.every((input) => !input.checked)).toBe(true);
+    expect((host.nativeElement.querySelector('.add-selected') as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    await host.componentInstance.submit();
+    expect(saved).toEqual([]);
+    inputs[1].click();
+    host.detectChanges();
+    await host.componentInstance.submit();
+    expect(saved).toEqual([{ servings: direct ? 8 : 4, indices: [1], again: false }]);
+  });
+
+  it('clears selections when choosing another recipe but preserves them when changing servings', async () => {
+    const host = await fixture();
+    host.componentInstance.toggle(1);
+    host.componentInstance.changeServings('6');
+    expect([...host.componentInstance.selected()]).toEqual([1]);
+    host.componentInstance.chooseRecipe({ ...recipe, id: 'other' });
+    host.detectChanges();
+    expect(host.componentInstance.selectedCount()).toBe(0);
+    host.componentInstance.selectAll();
+    await host.componentInstance.submit();
+    expect(saved).toEqual([{ servings: 4, indices: [0, 1, 2], again: false }]);
+  });
+
   it('scales original ingredients and saves the selected original indices', async () => {
     const host = await fixture();
+    host.componentInstance.selectAll();
+    host.detectChanges();
     expect(host.nativeElement.textContent).toContain('4 kg tomatoes');
     expect(host.nativeElement.textContent).toContain('Soup');
     const inputs = host.nativeElement.querySelectorAll(
@@ -117,6 +154,7 @@ describe('recipe shopping picker', () => {
   it('requires an inline confirmation before saving the same recipe selection again', async () => {
     duplicate = true;
     const host = await fixture();
+    host.componentInstance.selectAll();
     await host.componentInstance.submit();
     host.detectChanges();
     expect(saved).toEqual([]);
@@ -128,6 +166,8 @@ describe('recipe shopping picker', () => {
 
   it('keeps the selected ingredients when saving fails', async () => {
     const host = await fixture();
+    host.componentInstance.selectAll();
+    host.detectChanges();
     error = true;
     const inputs = host.nativeElement.querySelectorAll(
       'input[type="checkbox"]',
@@ -179,6 +219,7 @@ describe('recipe shopping picker', () => {
         finish = resolve;
       });
     const host = await fixture();
+    host.componentInstance.selectAll();
     const pending = host.componentInstance.submit();
     host.componentInstance.close();
     finish(3);
@@ -197,6 +238,7 @@ describe('recipe shopping picker', () => {
 
     body.scrollTop = 240;
     duplicate = true;
+    host.componentInstance.selectAll();
     await host.componentInstance.submit();
     host.detectChanges();
     await host.whenStable();

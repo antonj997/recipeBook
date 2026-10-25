@@ -104,6 +104,8 @@
 }
 .item-name {
   overflow-wrap: anywhere;
+  user-select: none;
+  -webkit-touch-callout: none;
   transition: color var(--motion-reveal);
 }
 .row-actions {
@@ -330,10 +332,10 @@
     gap: 0;
   }
   .item-main > label {
-    flex-basis: calc(100% - 88px);
+    flex-basis: calc(100% - 44px);
   }
   .row-actions {
-    width: 88px;
+    width: 44px;
   }
   .row-actions button {
     padding-inline: 5px;

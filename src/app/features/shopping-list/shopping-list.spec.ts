@@ -156,6 +156,7 @@ describe('shopping list', () => {
   afterEach(() => {
     feedback?.dismiss();
     TestBed.resetTestingModule();
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     if (originalShowModal)
@@ -171,6 +172,124 @@ describe('shopping list', () => {
     host.detectChanges();
     return host;
   }
+
+  function pointer(target: EventTarget, type: string, x = 100, y = 100) {
+    const event = new MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y });
+    Object.defineProperties(event, {
+      pointerType: { value: 'touch' },
+      isPrimary: { value: true },
+      pointerId: { value: 7 },
+    });
+    target.dispatchEvent(event);
+    return event;
+  }
+
+  it('edits held item text without checking it or activating the release click', async () => {
+    checkUpdatesList = true;
+    const host = await fixture();
+    vi.useFakeTimers();
+    const text = host.nativeElement.querySelector('.item-name') as HTMLElement;
+    pointer(text, 'pointerdown');
+    await vi.advanceTimersByTimeAsync(450);
+    expect(host.componentInstance.editor()).toBeNull();
+    await vi.advanceTimersByTimeAsync(100);
+    host.detectChanges();
+    expect(host.nativeElement.querySelector('.edit-item-input')?.value).toBe('2 kg tomatoes');
+    pointer(document, 'pointerup');
+    const release = new MouseEvent('click', { bubbles: true, cancelable: true });
+    document.dispatchEvent(release);
+    expect(release.defaultPrevented).toBe(true);
+    expect(groups()[0].checked).toBe(false);
+    expect(host.nativeElement.querySelector('.edit-item-input')).not.toBeNull();
+  });
+
+  it('keeps a normal text tap available for checking the item', async () => {
+    checkUpdatesList = true;
+    const host = await fixture();
+    vi.useFakeTimers();
+    const text = host.nativeElement.querySelector('.item-name') as HTMLElement;
+    pointer(text, 'pointerdown');
+    await vi.advanceTimersByTimeAsync(100);
+    pointer(document, 'pointerup');
+    text.click();
+    expect(groups()[0].checked).toBe(true);
+    expect(host.componentInstance.editor()).toBeNull();
+  });
+
+  it.each(['move', 'scroll', 'pointercancel', 'blur', 'release', 'account', 'busy', 'destroy'])(
+    'cancels a pending text hold on %s',
+    async (reason) => {
+      const host = await fixture();
+      vi.useFakeTimers();
+      pointer(host.nativeElement.querySelector('.item-name'), 'pointerdown');
+      if (reason === 'move') pointer(document, 'pointermove', 100, 125);
+      if (reason === 'scroll') document.dispatchEvent(new Event('scroll'));
+      if (reason === 'pointercancel') pointer(document, 'pointercancel');
+      if (reason === 'blur') window.dispatchEvent(new Event('blur'));
+      if (reason === 'release') pointer(document, 'pointerup');
+      if (reason === 'account') {
+        accountVersion.set(1);
+        host.detectChanges();
+      }
+      if (reason === 'busy') host.componentInstance.busy.set(true);
+      if (reason === 'destroy') host.destroy();
+      await vi.advanceTimersByTimeAsync(600);
+      expect(host.componentInstance.editor()).toBeNull();
+    },
+  );
+
+  it('does not consume the first intentional tap in the editor after a long hold', async () => {
+    const host = await fixture();
+    vi.useFakeTimers();
+    pointer(host.nativeElement.querySelector('.item-name'), 'pointerdown');
+    await vi.advanceTimersByTimeAsync(5000);
+    host.detectChanges();
+    pointer(document, 'pointerup');
+    const release = new MouseEvent('click', { bubbles: true, cancelable: true });
+    document.dispatchEvent(release);
+    expect(release.defaultPrevented).toBe(true);
+    const input = host.nativeElement.querySelector('.edit-item-input') as HTMLElement;
+    pointer(input, 'pointerdown');
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    input.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+  });
+
+  it('supports keyboard and right-click editing with a discoverable checkbox hint', async () => {
+    const host = await fixture();
+    const checkbox = host.nativeElement.querySelector('input[type="checkbox"]') as HTMLElement;
+    expect(checkbox.getAttribute('aria-keyshortcuts')).toContain('F2');
+    const descriptions = checkbox.getAttribute('aria-describedby')?.split(' ') ?? [];
+    expect(
+      descriptions.some((id) => document.getElementById(id)?.textContent?.includes('Hold')),
+    ).toBe(true);
+    checkbox.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'F2', bubbles: true, cancelable: true }),
+    );
+    host.detectChanges();
+    expect(host.nativeElement.querySelector('.edit-item-input')).not.toBeNull();
+    host.componentInstance.cancelEdit();
+    host.detectChanges();
+    const context = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    host.nativeElement.querySelector('.item-name').dispatchEvent(context);
+    host.detectChanges();
+    expect(context.defaultPrevented).toBe(true);
+    expect(host.nativeElement.querySelector('.edit-item-input')).not.toBeNull();
+  });
+
+  it('uses only a minus icon for the accessible delete action and keeps Undo', async () => {
+    const host = await fixture();
+    const actions = host.nativeElement.querySelector('.row-actions') as HTMLElement;
+    expect(actions.querySelectorAll('button')).toHaveLength(1);
+    const remove = actions.querySelector('button') as HTMLButtonElement;
+    expect(remove.getAttribute('aria-label')).toBe('Delete 2 kg tomatoes');
+    expect(remove.textContent?.trim()).toBe('');
+    expect(remove.querySelector('app-icon')).not.toBeNull();
+    remove.click();
+    await host.whenStable();
+    expect(removed).toEqual([['a', 'b']]);
+    expect(feedback.action()?.label).toBe('Undo');
+  });
 
   async function navigationFixture() {
     const shoppingRoute = routes.find((route) => route.path === 'shopping-list');
@@ -257,7 +376,7 @@ describe('shopping list', () => {
     ]);
     const dairy = host.nativeElement.querySelector('[data-department="dairy"]') as HTMLElement;
     expect(dairy.querySelectorAll('.shopping-row')).toHaveLength(2);
-    expect(dairy.querySelector('button[aria-label="Edit 1 l mjölk"]')).not.toBeNull();
+    expect(dairy.querySelector('button[aria-label="Edit 1 l mjölk"]')).toBeNull();
     expect(dairy.querySelector('input[type="checkbox"]')?.id).toBe('shopping-item-milk');
   });
 
@@ -377,11 +496,13 @@ describe('shopping list', () => {
       recipeBackground(savedRecipes[1]),
     );
     const input = row.querySelector('input')!;
-    const description = host.nativeElement.querySelector(
-      '#' + input.getAttribute('aria-describedby'),
-    ) as HTMLElement;
-    expect(description.textContent).toContain('Tomato soup');
-    expect(description.textContent).toContain('Lemon pasta');
+    const description = input
+      .getAttribute('aria-describedby')!
+      .split(' ')
+      .map((id) => document.getElementById(id)?.textContent)
+      .join(' ');
+    expect(description).toContain('Tomato soup');
+    expect(description).toContain('Lemon pasta');
     expect(row.querySelector('.source-dots')?.getAttribute('aria-hidden')).toBe('true');
     expect(JSON.stringify(groups().map((group) => group.sources))).toBe(before);
   });
@@ -411,8 +532,8 @@ describe('shopping list', () => {
     expect(host.nativeElement.querySelector('.recipe-legend')).toBeNull();
     expect(host.nativeElement.querySelector('.source-dot')).toBeNull();
     expect(
-      host.nativeElement.querySelector('input[type="checkbox"]').hasAttribute('aria-describedby'),
-    ).toBe(false);
+      host.nativeElement.querySelector('input[type="checkbox"]').getAttribute('aria-describedby'),
+    ).toBe('shopping-edit-hint');
   });
 
   it('keeps missing recipe snapshots in the legend with a stable color and no broken link', async () => {
