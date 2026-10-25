@@ -11,10 +11,14 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { ShoppingGroup } from '../../core/models/shopping-item';
+import { groupByShoppingDepartment } from '../../core/models/shopping-department';
 import { ShoppingListService } from '../../core/services/shopping-list.service';
 import { RecipeService } from '../../core/services/recipe.service';
 import { FeedbackService } from '../../core/services/feedback.service';
-import { LeaveConfirmationService, type ConfirmBeforeLeaving } from '../../core/services/leave-confirmation.service';
+import {
+  LeaveConfirmationService,
+  type ConfirmBeforeLeaving,
+} from '../../core/services/leave-confirmation.service';
 import { CheckboxMarkComponent } from '../../shared/components/checkbox-mark';
 import { IconComponent } from '../../shared/components/icon';
 import { RecipeShoppingPickerComponent } from '../../shared/components/recipe-shopping-picker';
@@ -59,8 +63,18 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
   readonly toBuy = computed(() => this.shopping.groups().filter((group) => !group.checked));
   readonly bought = computed(() => this.shopping.groups().filter((group) => group.checked));
   readonly sections = computed(() => [
-    { key: 'to-buy', bought: false, groups: this.toBuy() },
-    { key: 'bought', bought: true, groups: this.bought() },
+    {
+      key: 'to-buy',
+      bought: false,
+      groups: this.toBuy(),
+      departments: groupByShoppingDepartment(this.toBuy()),
+    },
+    {
+      key: 'bought',
+      bought: true,
+      groups: this.bought(),
+      departments: groupByShoppingDepartment(this.bought()),
+    },
   ]);
   private active = true;
   private loadVersion = 0;

@@ -192,6 +192,82 @@ describe('shopping list', () => {
     expect(await router.navigateByUrl('/settings')).toBe(true);
   });
 
+  it('renders nonempty shop departments together without changing the item controls', async () => {
+    groups.set([
+      {
+        key: 'flour',
+        text: '500 g vetemjöl',
+        checked: false,
+        items: [{ ...item('flour'), text: '500 g vetemjöl' }],
+        sources: [],
+      },
+      {
+        key: 'milk',
+        text: '1 l mjölk',
+        checked: false,
+        items: [{ ...item('milk'), text: '1 l mjölk' }],
+        sources: [],
+      },
+      {
+        key: 'lemons',
+        text: '2 citroner',
+        checked: false,
+        items: [{ ...item('lemons'), text: '2 citroner' }],
+        sources: [],
+      },
+      {
+        key: 'eggs',
+        text: '6 ägg',
+        checked: false,
+        items: [{ ...item('eggs'), text: '6 ägg' }],
+        sources: [],
+      },
+    ]);
+    const host = await fixture();
+    const headings = Array.from(
+      host.nativeElement.querySelectorAll('.department-heading') as NodeListOf<HTMLElement>,
+    );
+    expect(headings.map((heading) => heading.textContent?.trim())).toEqual([
+      'Frukt & grönt',
+      'Mejeri, ost & ägg',
+      'Skafferi',
+    ]);
+    const dairy = host.nativeElement.querySelector('[data-department="dairy"]') as HTMLElement;
+    expect(dairy.querySelectorAll('.shopping-row')).toHaveLength(2);
+    expect(dairy.querySelector('button[aria-label="Edit 1 l mjölk"]')).not.toBeNull();
+    expect(dairy.querySelector('input[type="checkbox"]')?.id).toBe('shopping-item-milk');
+  });
+
+  it('reclassifies an edited item and omits its now-empty department', async () => {
+    const host = await fixture();
+    groups.update((current) => [{ ...current[0], text: '1 l mjölk' }]);
+    host.detectChanges();
+    expect(host.nativeElement.querySelector('.department-heading')?.textContent?.trim()).toBe(
+      'Mejeri, ost & ägg',
+    );
+    expect(host.nativeElement.querySelector('[data-department="produce"]')).toBeNull();
+  });
+
+  it('keeps Bought collapsed and uses distinct department labels when it is expanded', async () => {
+    items.set([item('a'), item('b', true)]);
+    groups.set([
+      { ...groups()[0], items: [item('a')] },
+      { ...groups()[0], key: 'bought', checked: true, items: [item('b', true)] },
+    ]);
+    const host = await fixture();
+    expect(host.nativeElement.querySelector('.bought-section .department-heading')).toBeNull();
+    host.componentInstance.showBought.set(true);
+    host.detectChanges();
+    const departments = Array.from(
+      host.nativeElement.querySelectorAll('.shopping-department') as NodeListOf<HTMLElement>,
+    );
+    expect(departments).toHaveLength(2);
+    expect(
+      new Set(departments.map((department) => department.getAttribute('aria-labelledby'))).size,
+    ).toBe(2);
+    expect(host.nativeElement.querySelector('#shopping-bought-items')).not.toBeNull();
+  });
+
   it('keeps deleted source recipes readable without linking to a missing recipe', async () => {
     const host = await fixture();
     expect(host.nativeElement.textContent).toContain('Tomato soup');
