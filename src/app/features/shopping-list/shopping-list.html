@@ -38,6 +38,34 @@
         <app-icon name="plus" />
       </button>
     </form>
+    @if (sourceLegend().length) {
+      <ul class="recipe-legend" aria-label="Recipes in this list">
+        @for (source of sourceLegend(); track source.recipeId) {
+          <li>
+            @if (source.exists) {
+              <a class="recipe-reference" [routerLink]="['/recipes', source.recipeId]">
+                <span
+                  class="source-dot"
+                  [style.--source-color]="source.color"
+                  aria-hidden="true"
+                ></span>
+                <span>{{ source.title }}</span>
+              </a>
+            } @else {
+              <span class="recipe-reference">
+                <span
+                  class="source-dot"
+                  [style.--source-color]="source.color"
+                  aria-hidden="true"
+                ></span>
+                <span>{{ source.title }}</span>
+                <span class="sr-only">Recipe no longer available.</span>
+              </span>
+            }
+          </li>
+        }
+      </ul>
+    }
   </div>
   @if (!shopping.cloud.online()) {
     <p class="sync-status" role="status">You’re offline. Your list is saved on this device.</p>
@@ -117,6 +145,7 @@
                   </h3>
                   <ul class="shopping-items">
                     @for (group of department.groups; track group.key) {
+                      @let sources = sourceLabels(group);
                       <li class="shopping-row" [class.is-bought]="group.checked">
                         @if (editor()?.key === group.key) {
                           <form
@@ -155,10 +184,23 @@
                                 type="checkbox"
                                 [id]="'shopping-item-' + group.items[0].id"
                                 [checked]="group.checked"
+                                [attr.aria-describedby]="
+                                  sources.length ? 'shopping-sources-' + group.items[0].id : null
+                                "
                                 [disabled]="busy()"
                                 (change)="toggleGroup(group, $event)"
                               />
-                              <app-checkbox-mark /><span class="item-name">{{ group.text }}</span>
+                              <app-checkbox-mark /><span class="item-name"
+                                >{{ group.text
+                                }}<span class="source-dots" aria-hidden="true">
+                                  @for (source of sources; track source.recipeId) {
+                                    <span
+                                      class="source-dot"
+                                      [style.--source-color]="source.color"
+                                      [attr.title]="source.title"
+                                    ></span>
+                                  }</span
+                              ></span>
                             </label>
                             <div class="row-actions">
                               <button
@@ -181,23 +223,12 @@
                               </button>
                             </div>
                           </div>
-                          @if (group.sources.length) {
-                            <ul class="item-sources" aria-label="Source recipes">
-                              @for (source of sourceLabels(group); track $index) {
-                                <li>
-                                  @if (source.exists) {
-                                    <a [routerLink]="['/recipes', source.recipeId]">{{
-                                      source.title
-                                    }}</a>
-                                  } @else {
-                                    <span>{{ source.title }}</span>
-                                  }
-                                  <span class="source-servings">
-                                    · {{ source.servings }} servings</span
-                                  >
-                                </li>
+                          @if (sources.length) {
+                            <span class="sr-only" [id]="'shopping-sources-' + group.items[0].id">
+                              @for (source of sources; track source.recipeId) {
+                                <span>From {{ source.title }}. </span>
                               }
-                            </ul>
+                            </span>
                           }
                         }
                       </li>

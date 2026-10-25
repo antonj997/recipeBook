@@ -54,8 +54,7 @@
   width: 18px;
   height: 18px;
 }
-.shopping-items,
-.item-sources {
+.shopping-items {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -115,25 +114,54 @@
 .clear-bought {
   color: var(--color-danger);
 }
-.item-sources {
-  margin: 0 0 0 36px;
+.recipe-legend {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 16px;
+  row-gap: 0;
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
   color: var(--color-muted);
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
 }
-.item-sources li {
-  overflow-wrap: anywhere;
+.recipe-legend li {
+  min-width: 0;
+  max-width: 100%;
 }
-.item-sources a {
+.recipe-reference {
   display: inline-flex;
   align-items: center;
-  min-width: 44px;
-  max-width: 100%;
+  gap: 6px;
   min-height: 44px;
+  max-width: 100%;
+  padding-block: 2px;
   color: inherit;
+  text-decoration: none;
   text-underline-offset: 3px;
 }
-.source-servings {
-  white-space: nowrap;
+.recipe-reference > span:not(.source-dot) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.source-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border: 1px solid color-mix(in srgb, var(--source-color) 52%, var(--color-ink));
+  border-radius: 50%;
+  background: var(--source-color);
+  vertical-align: middle;
+}
+.source-dots .source-dot {
+  margin-inline-start: 4px;
+}
+@media (hover: hover) {
+  a.recipe-reference:hover {
+    color: var(--color-ink);
+    text-decoration: underline;
+  }
 }
 .is-bought .item-name {
   color: var(--color-muted);

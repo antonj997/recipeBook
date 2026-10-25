@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { recipeBackground } from '../../core/models/recipe-color';
 import type { ShoppingGroup } from '../../core/models/shopping-item';
 import { groupByShoppingDepartment } from '../../core/models/shopping-department';
 import { ShoppingListService } from '../../core/services/shopping-list.service';
@@ -28,10 +29,12 @@ interface ItemEditor {
   ids: string[];
   text: string;
 }
-interface SourceLabel {
-  recipeId: string;
+interface SourceRecipeInfo {
   title: string;
-  servings: number;
+  color: string;
+}
+interface SourceLabel extends SourceRecipeInfo {
+  recipeId: string;
   exists: boolean;
 }
 
@@ -58,7 +61,35 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
   readonly showBought = signal(false);
   readonly pickerOpen = signal(false);
   readonly clearing = signal<string[] | null>(null);
-  private readonly recipeIds = signal<Set<string>>(new Set());
+  private readonly sourceRecipes = signal<ReadonlyMap<string, SourceRecipeInfo>>(new Map());
+  private readonly labelsByGroup = computed(() => {
+    const recipes = this.sourceRecipes();
+    return new Map(
+      this.shopping.groups().map((group) => {
+        const labels = new Map<string, SourceLabel>();
+        for (const source of group.sources) {
+          if (labels.has(source.recipeId)) continue;
+          const recipe = recipes.get(source.recipeId);
+          labels.set(source.recipeId, {
+            recipeId: source.recipeId,
+            title: recipe?.title ?? source.recipeTitle,
+            color: recipe?.color ?? recipeBackground({ id: source.recipeId }),
+            exists: !!recipe,
+          });
+        }
+        return [group.key, [...labels.values()]] as const;
+      }),
+    );
+  });
+  readonly sourceLegend = computed(() => {
+    const sources = new Map<string, SourceLabel>();
+    for (const labels of this.labelsByGroup().values()) {
+      for (const source of labels) {
+        if (!sources.has(source.recipeId)) sources.set(source.recipeId, source);
+      }
+    }
+    return [...sources.values()];
+  });
   readonly error = computed(() => this.localError() || this.shopping.error());
   readonly toBuy = computed(() => this.shopping.groups().filter((group) => !group.checked));
   readonly bought = computed(() => this.shopping.groups().filter((group) => group.checked));
@@ -97,10 +128,10 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
         this.localError.set('');
         this.busy.set(false);
         this.adding.set(false);
-        this.recipeIds.set(new Set());
+        this.sourceRecipes.set(new Map());
       }
       this.recipeService.revision();
-      untracked(() => void this.loadRecipeIds());
+      untracked(() => void this.loadSourceRecipes());
     });
     effect(() => {
       if (this.editor()) {
@@ -135,31 +166,31 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
   private current(account: number): boolean {
     return this.active && account === this.shopping.accountVersion();
   }
-  private async loadRecipeIds(): Promise<void> {
+  private async loadSourceRecipes(): Promise<void> {
     const request = ++this.loadVersion;
     const account = this.shopping.accountVersion();
     try {
       const recipes = await this.recipeService.getRecipes();
       if (this.current(account) && request === this.loadVersion)
-        this.recipeIds.set(new Set(recipes.map((recipe) => recipe.id)));
+        // Keep only the metadata needed here; do not retain recipe photos.
+        this.sourceRecipes.set(
+          new Map(
+            recipes.map((recipe) => [
+              recipe.id,
+              {
+                title: recipe.title,
+                color: recipeBackground(recipe),
+              },
+            ]),
+          ),
+        );
     } catch {
       // Source snapshots remain readable even when the recipe lookup is unavailable.
-      if (this.current(account) && request === this.loadVersion) this.recipeIds.set(new Set());
+      if (this.current(account) && request === this.loadVersion) this.sourceRecipes.set(new Map());
     }
   }
-  sourceLabels(group: ShoppingGroup): SourceLabel[] {
-    const labels = new Map<string, SourceLabel>();
-    for (const source of group.sources) {
-      const key = source.recipeId + ':' + source.servings + ':' + source.recipeTitle;
-      if (!labels.has(key))
-        labels.set(key, {
-          recipeId: source.recipeId,
-          title: source.recipeTitle,
-          servings: source.servings,
-          exists: this.recipeIds().has(source.recipeId),
-        });
-    }
-    return [...labels.values()];
+  sourceLabels(group: ShoppingGroup): readonly SourceLabel[] {
+    return this.labelsByGroup().get(group.key) ?? [];
   }
   onDraft(event: Event): void {
     this.draft.set((event.target as HTMLInputElement).value);

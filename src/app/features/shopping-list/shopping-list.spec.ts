@@ -5,6 +5,8 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { LeaveConfirmationService } from '../../core/services/leave-confirmation.service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Recipe } from '../../core/models/recipe.model';
+import { recipeBackground } from '../../core/models/recipe-color';
 import type { ShoppingGroup, ShoppingItem } from '../../core/models/shopping-item';
 import { ShoppingListService } from '../../core/services/shopping-list.service';
 import { RecipeService } from '../../core/services/recipe.service';
@@ -22,6 +24,9 @@ describe('shopping list', () => {
   const originalClose = Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'close');
   const accountVersion = signal(0);
   const groups = signal<ShoppingGroup[]>([]);
+  const recipeRevision = signal(0);
+  let savedRecipes: Recipe[];
+  let readRecipes: () => Promise<Recipe[]>;
   const items = signal<ShoppingItem[]>([]);
   const item = (id: string, checked = false): ShoppingItem => ({
     id,
@@ -48,6 +53,9 @@ describe('shopping list', () => {
   let feedback: FeedbackService;
 
   beforeEach(() => {
+    savedRecipes = [];
+    readRecipes = async () => savedRecipes;
+    recipeRevision.set(0);
     edits = [];
     removed = [];
     manual = [];
@@ -139,7 +147,7 @@ describe('shopping list', () => {
         },
         {
           provide: RecipeService,
-          useValue: { accountVersion, revision: signal(0), getRecipes: async () => [] },
+          useValue: { accountVersion, revision: recipeRevision, getRecipes: () => readRecipes() },
         },
       ],
     });
@@ -325,6 +333,151 @@ describe('shopping list', () => {
     const host = await fixture();
     expect(host.nativeElement.textContent).toContain('Tomato soup');
     expect(host.nativeElement.querySelector('a[href="/recipes/soup"]')).toBeNull();
+  });
+
+  it('shows one colored dot and legend entry per recipe, without visible per-item recipe text or servings', async () => {
+    savedRecipes = [
+      { id: 'soup', title: 'Tomato soup', color: 'rose', ingredients: [], instructions: [] },
+      { id: 'pasta', title: 'Lemon pasta', color: 'blue', ingredients: [], instructions: [] },
+    ];
+    const source = groups()[0].sources[0];
+    groups.set([
+      {
+        ...groups()[0],
+        sources: [
+          source,
+          { ...source, servings: 2 },
+          { ...source, recipeId: 'pasta', recipeTitle: 'Lemon pasta' },
+        ],
+      },
+      {
+        key: 'onion',
+        text: '1 onion',
+        checked: false,
+        items: [{ ...item('onion'), text: '1 onion' }],
+        sources: [source],
+      },
+    ]);
+    const before = JSON.stringify(groups().map((group) => group.sources));
+    const host = await fixture();
+    const legend = host.nativeElement.querySelector('.recipe-legend') as HTMLElement;
+    expect(legend.querySelectorAll('li')).toHaveLength(2);
+    expect(legend.textContent).toContain('Tomato soup');
+    expect(legend.textContent).toContain('Lemon pasta');
+    expect(legend.querySelector('a[href="/recipes/soup"]')).not.toBeNull();
+    expect(host.nativeElement.querySelector('.item-sources')).toBeNull();
+    expect(host.nativeElement.textContent).not.toContain('servings');
+    const row = host.nativeElement.querySelector('.shopping-row') as HTMLElement;
+    const dots = row.querySelectorAll('.source-dot');
+    expect(dots).toHaveLength(2);
+    expect((dots[0] as HTMLElement).style.getPropertyValue('--source-color')).toBe(
+      recipeBackground(savedRecipes[0]),
+    );
+    expect((dots[1] as HTMLElement).style.getPropertyValue('--source-color')).toBe(
+      recipeBackground(savedRecipes[1]),
+    );
+    const input = row.querySelector('input')!;
+    const description = host.nativeElement.querySelector(
+      '#' + input.getAttribute('aria-describedby'),
+    ) as HTMLElement;
+    expect(description.textContent).toContain('Tomato soup');
+    expect(description.textContent).toContain('Lemon pasta');
+    expect(row.querySelector('.source-dots')?.getAttribute('aria-hidden')).toBe('true');
+    expect(JSON.stringify(groups().map((group) => group.sources))).toBe(before);
+  });
+
+  it('matches the automatic recipe color including the photo-based default', async () => {
+    savedRecipes = [
+      {
+        id: 'soup',
+        title: 'Tomato soup',
+        imageDataUrl: 'data:image/jpeg;base64,preview',
+        ingredients: [],
+        instructions: [],
+      },
+    ];
+    const host = await fixture();
+    const dot = host.nativeElement.querySelector('.shopping-row .source-dot') as HTMLElement;
+    expect(dot.style.getPropertyValue('--source-color')).toBe(recipeBackground(savedRecipes[0]));
+    const legendDot = host.nativeElement.querySelector('.recipe-legend .source-dot') as HTMLElement;
+    expect(legendDot.style.getPropertyValue('--source-color')).toBe(
+      dot.style.getPropertyValue('--source-color'),
+    );
+  });
+
+  it('omits source decoration for manual items', async () => {
+    groups.set([{ ...groups()[0], sources: [] }]);
+    const host = await fixture();
+    expect(host.nativeElement.querySelector('.recipe-legend')).toBeNull();
+    expect(host.nativeElement.querySelector('.source-dot')).toBeNull();
+    expect(
+      host.nativeElement.querySelector('input[type="checkbox"]').hasAttribute('aria-describedby'),
+    ).toBe(false);
+  });
+
+  it('keeps missing recipe snapshots in the legend with a stable color and no broken link', async () => {
+    const host = await fixture();
+    const legend = host.nativeElement.querySelector('.recipe-legend') as HTMLElement;
+    expect(legend.textContent).toContain('Tomato soup');
+    expect(legend.querySelector('a')).toBeNull();
+    const color = (
+      host.nativeElement.querySelector('.shopping-row .source-dot') as HTMLElement
+    ).style.getPropertyValue('--source-color');
+    expect(color).toBe(recipeBackground({ id: 'soup' }));
+    expect(
+      (legend.querySelector('.source-dot') as HTMLElement).style.getPropertyValue('--source-color'),
+    ).toBe(color);
+  });
+
+  it('updates legend names and dots when the saved recipe changes', async () => {
+    savedRecipes = [
+      { id: 'soup', title: 'Tomato soup', color: 'blue', ingredients: [], instructions: [] },
+    ];
+    const host = await fixture();
+    savedRecipes = [{ ...savedRecipes[0], title: 'Roasted tomato soup', color: 'rose' }];
+    recipeRevision.update((value) => value + 1);
+    host.detectChanges();
+    await host.whenStable();
+    host.detectChanges();
+    const legend = host.nativeElement.querySelector('.recipe-legend') as HTMLElement;
+    expect(legend.textContent).toContain('Roasted tomato soup');
+    expect(
+      (
+        host.nativeElement.querySelector('.shopping-row .source-dot') as HTMLElement
+      ).style.getPropertyValue('--source-color'),
+    ).toBe(recipeBackground(savedRecipes[0]));
+    expect(groups()[0].sources[0].recipeTitle).toBe('Tomato soup');
+  });
+
+  it('ignores a previous account recipe lookup after switching accounts', async () => {
+    let completeOld!: (recipes: Recipe[]) => void;
+    readRecipes = () =>
+      new Promise((resolve) => {
+        completeOld = resolve;
+      });
+    const host = TestBed.createComponent(ShoppingListComponent);
+    host.detectChanges();
+    savedRecipes = [
+      { id: 'new', title: 'New account recipe', color: 'green', ingredients: [], instructions: [] },
+    ];
+    readRecipes = async () => savedRecipes;
+    accountVersion.set(1);
+    groups.set([
+      {
+        ...groups()[0],
+        sources: [
+          { ...groups()[0].sources[0], recipeId: 'new', recipeTitle: 'New account recipe' },
+        ],
+      },
+    ]);
+    host.detectChanges();
+    await host.whenStable();
+    completeOld([{ ...savedRecipes[0], title: 'Old account private title', color: 'rose' }]);
+    await host.whenStable();
+    host.detectChanges();
+    expect(host.nativeElement.textContent).not.toContain('Old account private title');
+    const dot = host.nativeElement.querySelector('.shopping-row .source-dot') as HTMLElement;
+    expect(dot.style.getPropertyValue('--source-color')).toBe(recipeBackground(savedRecipes[0]));
   });
 
   it('edits captured contributions without including items added while the editor is open', async () => {
