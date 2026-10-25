@@ -14,6 +14,7 @@ import type { ShoppingGroup } from '../../core/models/shopping-item';
 import { ShoppingListService } from '../../core/services/shopping-list.service';
 import { RecipeService } from '../../core/services/recipe.service';
 import { FeedbackService } from '../../core/services/feedback.service';
+import { LeaveConfirmationService, type ConfirmBeforeLeaving } from '../../core/services/leave-confirmation.service';
 import { CheckboxMarkComponent } from '../../shared/components/checkbox-mark';
 import { IconComponent } from '../../shared/components/icon';
 import { RecipeShoppingPickerComponent } from '../../shared/components/recipe-shopping-picker';
@@ -36,10 +37,11 @@ interface SourceLabel {
   templateUrl: './shopping-list.html',
   styleUrl: './shopping-list.scss',
 })
-export class ShoppingListComponent {
+export class ShoppingListComponent implements ConfirmBeforeLeaving {
   readonly shopping = inject(ShoppingListService);
   private readonly recipeService = inject(RecipeService);
   private readonly feedback = inject(FeedbackService);
+  private readonly confirmation = inject(LeaveConfirmationService);
   private readonly addInput = viewChild<ElementRef<HTMLInputElement>>('addInput');
   private readonly editInput = viewChild<ElementRef<HTMLInputElement>>('editInput');
   private readonly clearDialog = viewChild<ElementRef<HTMLDialogElement>>('clearDialog');
@@ -106,6 +108,14 @@ export class ShoppingListComponent {
       cancelAnimationFrame(this.focusFrame);
       this.clearDialog()?.nativeElement.close();
     });
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    if (this.busy() || this.adding()) return false;
+    return (
+      (!this.draft().trim() && !this.editor()) ||
+      this.confirmation.confirm('Your shopping list changes have not been saved. Discard them?')
+    );
   }
 
   private current(account: number): boolean {

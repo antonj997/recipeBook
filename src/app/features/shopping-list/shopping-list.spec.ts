@@ -1,12 +1,18 @@
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { routes } from '../../app.routes';
+import { LeaveConfirmationService } from '../../core/services/leave-confirmation.service';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ShoppingGroup, ShoppingItem } from '../../core/models/shopping-item';
 import { ShoppingListService } from '../../core/services/shopping-list.service';
 import { RecipeService } from '../../core/services/recipe.service';
 import { FeedbackService } from '../../core/services/feedback.service';
 import { ShoppingListComponent } from './shopping-list';
+
+@Component({ template: '<h1>Settings destination</h1>' })
+class NavigationDestination {}
 
 describe('shopping list', () => {
   const originalShowModal = Object.getOwnPropertyDescriptor(
@@ -142,6 +148,49 @@ describe('shopping list', () => {
     host.detectChanges();
     return host;
   }
+
+  async function navigationFixture() {
+    const shoppingRoute = routes.find((route) => route.path === 'shopping-list');
+    if (!shoppingRoute) throw new Error('Shopping route is missing');
+    TestBed.inject(Router).resetConfig([
+      { ...shoppingRoute, loadComponent: undefined, component: ShoppingListComponent },
+      { path: 'settings', component: NavigationDestination },
+    ]);
+    const harness = await RouterTestingHarness.create();
+    const page = await harness.navigateByUrl('/shopping-list', ShoppingListComponent);
+    return { harness, page, router: TestBed.inject(Router) };
+  }
+
+  it('allows navigation away from the registered shopping route after items are saved', async () => {
+    const { router } = await navigationFixture();
+    expect(await router.navigateByUrl('/settings')).toBe(true);
+    expect(router.url).toBe('/settings');
+  });
+
+  it('keeps a pending item draft until the user confirms leaving', async () => {
+    const { page, router } = await navigationFixture();
+    page.draft.set('2 onions');
+    const confirmation = TestBed.inject(LeaveConfirmationService);
+    const leaving = router.navigateByUrl('/settings');
+    await vi.waitFor(() => expect(confirmation.message()).not.toBe(''));
+    confirmation.answer(false);
+    expect(await leaving).toBe(false);
+    expect(router.url).toBe('/shopping-list');
+    expect(page.draft()).toBe('2 onions');
+    const retry = router.navigateByUrl('/settings');
+    await vi.waitFor(() => expect(confirmation.message()).not.toBe(''));
+    confirmation.answer(true);
+    expect(await retry).toBe(true);
+  });
+
+  it('blocks navigation while a shopping write is in progress', async () => {
+    const { page, router } = await navigationFixture();
+    page.adding.set(true);
+    expect(await router.navigateByUrl('/settings')).toBe(false);
+    expect(router.url).toBe('/shopping-list');
+    page.adding.set(false);
+    expect(await router.navigateByUrl('/settings')).toBe(true);
+  });
 
   it('keeps deleted source recipes readable without linking to a missing recipe', async () => {
     const host = await fixture();
