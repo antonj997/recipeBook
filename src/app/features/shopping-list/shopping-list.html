@@ -93,155 +93,126 @@
     </div>
   } @else {
     @if (!toBuy().length) {
-      <p class="all-bought">Everything on your list is bought.</p>
+      <p class="all-checked">Everything on your list is checked.</p>
     }
     <p id="shopping-edit-hint" class="sr-only">
       Hold item text to edit. With a keyboard, press F2.
     </p>
-    @for (section of sections(); track section.key) {
-      @if (section.groups.length) {
-        <section
-          [class.bought-section]="section.bought"
-          [attr.aria-labelledby]="'shopping-' + section.key + '-heading'"
+    @for (department of departments(); track department.id) {
+      @if (department.groups.length) {
+        <div
+          class="shopping-department"
+          [attr.role]="department.label ? 'group' : null"
+          [attr.data-department]="department.id"
+          [attr.aria-labelledby]="department.label ? 'shopping-to-buy-' + department.id : null"
         >
-          @if (section.bought) {
-            <div class="bought-heading">
-              <h2 id="shopping-bought-heading">
-                <button
-                  #boughtButton
-                  type="button"
-                  class="bought-disclosure"
-                  [attr.aria-expanded]="showBought()"
-                  aria-controls="shopping-bought-items"
-                  (click)="showBought.set(!showBought())"
-                >
-                  <app-icon name="chevron" [class.is-open]="showBought()" />Bought
-                  <span>{{ bought().length }}</span>
-                </button>
-              </h2>
-              <button
-                type="button"
-                class="text-action clear-bought"
-                [disabled]="busy()"
-                (click)="clearBought()"
-              >
-                Clear bought
-              </button>
-            </div>
-          } @else {
-            <h2 id="shopping-to-buy-heading" class="sr-only">To buy</h2>
+          @if (department.label) {
+            <h2 class="department-heading" [id]="'shopping-to-buy-' + department.id">
+              {{ department.label }}
+            </h2>
           }
-          @if (!section.bought || showBought()) {
-            <div [id]="section.bought ? 'shopping-bought-items' : 'shopping-to-buy-items'">
-              @for (department of section.departments; track department.id) {
-                <div
-                  class="shopping-department"
-                  role="group"
-                  [attr.data-department]="department.id"
-                  [attr.aria-labelledby]="'shopping-' + section.key + '-' + department.id"
-                >
-                  <h3
-                    class="department-heading"
-                    [id]="'shopping-' + section.key + '-' + department.id"
+          <ul class="shopping-items">
+            @for (group of department.groups; track group.key) {
+              @let sources = sourceLabels(group);
+              <li class="shopping-row" [class.is-checked]="group.checked">
+                @if (editor()?.key === group.key) {
+                  <form
+                    class="item-editor"
+                    (submit)="$event.preventDefault(); saveEdit()"
+                    (keydown.escape)="cancelEdit()"
                   >
-                    {{ department.label }}
-                  </h3>
-                  <ul class="shopping-items">
-                    @for (group of department.groups; track group.key) {
-                      @let sources = sourceLabels(group);
-                      <li class="shopping-row" [class.is-bought]="group.checked">
-                        @if (editor()?.key === group.key) {
-                          <form
-                            class="item-editor"
-                            (submit)="$event.preventDefault(); saveEdit()"
-                            (keydown.escape)="cancelEdit()"
-                          >
-                            <label [for]="'shopping-edit-' + group.items[0].id">Edit item</label>
-                            <input
-                              #editInput
-                              class="edit-item-input"
-                              [id]="'shopping-edit-' + group.items[0].id"
-                              type="text"
-                              autocomplete="off"
-                              [value]="editor()?.text"
-                              [disabled]="busy()"
-                              (input)="onEdit($event)"
-                            />
-                            <div class="edit-actions">
-                              <button type="button" [disabled]="busy()" (click)="cancelEdit()">
-                                Cancel
-                              </button>
-                              <button
-                                type="submit"
-                                class="primary"
-                                [disabled]="busy() || !editor()?.text?.trim()"
-                              >
-                                Save
-                              </button>
-                            </div>
-                          </form>
-                        } @else {
-                          <div class="item-main">
-                            <label class="check-control" (keydown)="editItemKey(group, $event)">
-                              <input
-                                type="checkbox"
-                                [id]="'shopping-item-' + group.items[0].id"
-                                [checked]="group.checked"
-                                aria-keyshortcuts="F2 Shift+F10"
-                                [attr.aria-describedby]="
-                                  'shopping-edit-hint' +
-                                  (sources.length ? ' shopping-sources-' + group.items[0].id : '')
-                                "
-                                [disabled]="busy()"
-                                (change)="toggleGroup(group, $event)"
-                              />
-                              <app-checkbox-mark /><span
-                                class="item-name"
-                                title="Hold to edit"
-                                (pointerdown)="holdItem(group, $event)"
-                                (contextmenu)="editItemContext(group, $event)"
-                                >{{ group.text
-                                }}<span class="source-dots" aria-hidden="true">
-                                  @for (source of sources; track source.recipeId) {
-                                    <span
-                                      class="source-dot"
-                                      [style.--source-color]="source.color"
-                                      [attr.title]="source.title"
-                                    ></span>
-                                  }</span
-                              ></span>
-                            </label>
-                            <div class="row-actions">
-                              <button
-                                type="button"
-                                class="text-action delete-item"
-                                [attr.aria-label]="'Delete ' + group.text"
-                                [disabled]="busy()"
-                                (click)="removeGroup(group, $event)"
-                              >
-                                <app-icon name="minus" />
-                              </button>
-                            </div>
-                          </div>
-                          @if (sources.length) {
-                            <span class="sr-only" [id]="'shopping-sources-' + group.items[0].id">
-                              @for (source of sources; track source.recipeId) {
-                                <span>From {{ source.title }}. </span>
-                              }
-                            </span>
-                          }
-                        }
-                      </li>
-                    }
-                  </ul>
-                </div>
-              }
-            </div>
-          }
-        </section>
+                    <label [for]="'shopping-edit-' + group.items[0].id">Edit item</label>
+                    <input
+                      #editInput
+                      class="edit-item-input"
+                      [id]="'shopping-edit-' + group.items[0].id"
+                      type="text"
+                      autocomplete="off"
+                      [value]="editor()?.text"
+                      [disabled]="busy()"
+                      (input)="onEdit($event)"
+                    />
+                    <div class="edit-actions">
+                      <button type="button" [disabled]="busy()" (click)="cancelEdit()">
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        class="primary"
+                        [disabled]="busy() || !editor()?.text?.trim()"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  </form>
+                } @else {
+                  <div class="item-main">
+                    <label class="check-control" (keydown)="editItemKey(group, $event)">
+                      <input
+                        type="checkbox"
+                        [id]="'shopping-item-' + group.items[0].id"
+                        [checked]="group.checked"
+                        aria-keyshortcuts="F2 Shift+F10"
+                        [attr.aria-describedby]="
+                          'shopping-edit-hint' +
+                          (sources.length ? ' shopping-sources-' + group.items[0].id : '')
+                        "
+                        [disabled]="busy()"
+                        (change)="toggleGroup(group, $event)"
+                      />
+                      <app-checkbox-mark /><span
+                        class="item-name"
+                        title="Hold to edit"
+                        (pointerdown)="holdItem(group, $event)"
+                        (contextmenu)="editItemContext(group, $event)"
+                        >{{ group.text
+                        }}<span class="source-dots" aria-hidden="true">
+                          @for (source of sources; track source.recipeId) {
+                            <span
+                              class="source-dot"
+                              [style.--source-color]="source.color"
+                              [attr.title]="source.title"
+                            ></span>
+                          }</span
+                      ></span>
+                    </label>
+                    <div class="row-actions">
+                      <button
+                        type="button"
+                        class="text-action delete-item"
+                        [attr.aria-label]="'Delete ' + group.text"
+                        [disabled]="busy()"
+                        (click)="removeGroup(group, $event)"
+                      >
+                        <app-icon name="minus" />
+                      </button>
+                    </div>
+                  </div>
+                  @if (sources.length) {
+                    <span class="sr-only" [id]="'shopping-sources-' + group.items[0].id">
+                      @for (source of sources; track source.recipeId) {
+                        <span>From {{ source.title }}. </span>
+                      }
+                    </span>
+                  }
+                }
+              </li>
+            }
+          </ul>
+        </div>
       }
     }
     <div class="list-actions">
+      @if (checked().length) {
+        <button
+          type="button"
+          class="text-action clear-checked"
+          [disabled]="busy()"
+          (click)="clearChecked()"
+        >
+          Clear checked
+        </button>
+      }
       <button
         type="button"
         class="text-action clear-list"

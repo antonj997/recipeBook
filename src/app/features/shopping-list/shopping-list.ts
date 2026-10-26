@@ -52,13 +52,11 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
   private readonly addInput = viewChild<ElementRef<HTMLInputElement>>('addInput');
   private readonly editInput = viewChild<ElementRef<HTMLInputElement>>('editInput');
   private readonly clearDialog = viewChild<ElementRef<HTMLDialogElement>>('clearDialog');
-  private readonly boughtButton = viewChild<ElementRef<HTMLButtonElement>>('boughtButton');
   readonly draft = signal('');
   readonly adding = signal(false);
   readonly busy = signal(false);
   readonly localError = signal('');
   readonly editor = signal<ItemEditor | null>(null);
-  readonly showBought = signal(false);
   readonly pickerOpen = signal(false);
   readonly clearing = signal<string[] | null>(null);
   private readonly sourceRecipes = signal<ReadonlyMap<string, SourceRecipeInfo>>(new Map());
@@ -92,20 +90,11 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
   });
   readonly error = computed(() => this.localError() || this.shopping.error());
   readonly toBuy = computed(() => this.shopping.groups().filter((group) => !group.checked));
-  readonly bought = computed(() => this.shopping.groups().filter((group) => group.checked));
-  readonly sections = computed(() => [
-    {
-      key: 'to-buy',
-      bought: false,
-      groups: this.toBuy(),
-      departments: groupByShoppingDepartment(this.toBuy()),
-    },
-    {
-      key: 'bought',
-      bought: true,
-      groups: this.bought(),
-      departments: groupByShoppingDepartment(this.bought()),
-    },
+  readonly checked = computed(() => this.shopping.groups().filter((group) => group.checked));
+  readonly departments = computed(() => [
+    ...groupByShoppingDepartment(this.toBuy()),
+    // Checked items stay visible after all departments, without repeating their headings.
+    { id: 'checked', label: '', groups: this.checked() },
   ]);
   private active = true;
   private loadVersion = 0;
@@ -128,7 +117,6 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
         this.editor.set(null);
         this.clearing.set(null);
         this.pickerOpen.set(false);
-        this.showBought.set(false);
         this.localError.set('');
         this.busy.set(false);
         this.adding.set(false);
@@ -393,8 +381,8 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
       if (this.current(account)) this.busy.set(false);
     }
   }
-  async clearBought(): Promise<void> {
-    if (this.busy() || !this.bought().length) return;
+  async clearChecked(): Promise<void> {
+    if (this.busy() || !this.checked().length) return;
     const account = this.shopping.accountVersion();
     const origin = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.busy.set(true);
@@ -402,7 +390,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
     try {
       const undo = await this.shopping.clear(true);
       if (!this.current(account)) return;
-      this.feedback.show('Bought items cleared', {
+      this.feedback.show('Checked items cleared', {
         label: 'Undo',
         run: undo,
         successMessage: 'Items restored',
@@ -410,7 +398,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
       });
       this.restoreClearFocus(account, origin);
     } catch (error) {
-      if (this.current(account)) this.showError(error, 'Could not clear bought items. Try again.');
+      if (this.current(account)) this.showError(error, 'Could not clear checked items. Try again.');
     } finally {
       if (this.current(account)) this.busy.set(false);
     }
@@ -476,10 +464,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
         (document.activeElement !== document.body && document.activeElement?.isConnected)
       )
         return;
-      (next?.isConnected
-        ? next
-        : (this.boughtButton()?.nativeElement ?? this.addInput()?.nativeElement)
-      )?.focus({ preventScroll: true });
+      (next?.isConnected ? next : this.addInput()?.nativeElement)?.focus({ preventScroll: true });
     });
   }
   private focusRow(id?: string): void {

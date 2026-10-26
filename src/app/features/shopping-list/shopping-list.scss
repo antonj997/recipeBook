@@ -123,7 +123,7 @@
 }
 .delete-item,
 .clear-list,
-.clear-bought {
+.clear-checked {
   color: var(--color-danger);
 }
 .recipe-legend {
@@ -175,45 +175,19 @@
     text-decoration: underline;
   }
 }
-.is-bought .item-name {
+.is-checked .item-name {
   color: var(--color-muted);
   text-decoration: line-through;
   text-decoration-thickness: 1px;
-}
-.bought-section {
-  margin-top: 28px;
-}
-.bought-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.bought-heading h2 {
-  margin: 0;
-  font-size: 1rem;
-}
-.bought-disclosure {
-  padding: 0.625rem 0;
-  border: 0;
-}
-.bought-disclosure span {
-  color: var(--color-muted);
-  font-size: 0.875rem;
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-}
-.bought-disclosure app-icon {
-  transform: rotate(-90deg);
-  transition: transform var(--motion-reveal) var(--motion-ease-out);
-}
-.bought-disclosure app-icon.is-open {
-  transform: rotate(90deg);
 }
 .list-actions {
   margin-top: 24px;
   display: flex;
   justify-content: flex-end;
+  gap: 24px;
+}
+.clear-checked {
+  margin-inline-end: auto;
 }
 .list-actions button {
   padding-inline: 0;
@@ -252,7 +226,7 @@
   margin-inline: auto;
   color: var(--color-muted);
 }
-.all-bought,
+.all-checked,
 .loading-copy,
 .sync-status {
   color: var(--color-muted);
@@ -348,8 +322,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .item-name,
-  .bought-disclosure app-icon {
+  .item-name {
     transition: none;
   }
 }

@@ -390,24 +390,38 @@ describe('shopping list', () => {
     expect(host.nativeElement.querySelector('[data-department="produce"]')).toBeNull();
   });
 
-  it('keeps Bought collapsed and uses distinct department labels when it is expanded', async () => {
-    items.set([item('a'), item('b', true)]);
+  it('keeps checked items visible at the bottom without repeating department headings', async () => {
+    items.set([item('checked', true), item('milk'), item('apple')]);
     groups.set([
-      { ...groups()[0], items: [item('a')] },
-      { ...groups()[0], key: 'bought', checked: true, items: [item('b', true)] },
+      {
+        ...groups()[0],
+        key: 'checked',
+        text: '1 kg tomatoes',
+        checked: true,
+        items: [item('checked', true)],
+      },
+      { ...groups()[0], key: 'milk', text: '1 l mjölk', items: [item('milk')] },
+      { ...groups()[0], key: 'apple', text: '2 äpplen', items: [item('apple')] },
     ]);
     const host = await fixture();
-    expect(host.nativeElement.querySelector('.bought-section .department-heading')).toBeNull();
-    host.componentInstance.showBought.set(true);
-    host.detectChanges();
-    const departments = Array.from(
-      host.nativeElement.querySelectorAll('.shopping-department') as NodeListOf<HTMLElement>,
+    const checkboxes = Array.from(
+      host.nativeElement.querySelectorAll(
+        '.shopping-row input[type="checkbox"]',
+      ) as NodeListOf<HTMLInputElement>,
     );
-    expect(departments).toHaveLength(2);
-    expect(
-      new Set(departments.map((department) => department.getAttribute('aria-labelledby'))).size,
-    ).toBe(2);
-    expect(host.nativeElement.querySelector('#shopping-bought-items')).not.toBeNull();
+    expect(checkboxes.map((checkbox) => checkbox.id)).toEqual([
+      'shopping-item-apple',
+      'shopping-item-milk',
+      'shopping-item-checked',
+    ]);
+    expect(checkboxes.map((checkbox) => checkbox.checked)).toEqual([false, false, true]);
+    const headings = Array.from(
+      host.nativeElement.querySelectorAll('.department-heading') as NodeListOf<HTMLElement>,
+    );
+    expect(headings.map((heading) => heading.textContent?.trim())).toEqual([
+      'Frukt & grönt',
+      'Mejeri, ost & ägg',
+    ]);
   });
 
   it.each(['complete', 'delete'] as const)(
@@ -630,23 +644,31 @@ describe('shopping list', () => {
     expect(restored).toBe(true);
   });
 
-  it('collapses bought items by default and requires confirmation before clearing unbought items', async () => {
-    const host = await fixture();
-    items.set([item('a'), item('b', true)]);
+  it('moves checked items to the bottom and restores unchecked items to their department', async () => {
+    checkUpdatesList = true;
+    items.set([item('milk'), item('apple')]);
     groups.set([
-      { ...groups()[0], text: '1 kg tomatoes', items: [item('a')] },
-      {
-        ...groups()[0],
-        key: 'bought-tomatoes',
-        text: '1 kg tomatoes',
-        checked: true,
-        items: [item('b', true)],
-      },
+      { ...groups()[0], key: 'milk', text: '1 l mjölk', items: [item('milk')] },
+      { ...groups()[0], key: 'apple', text: '2 äpplen', items: [item('apple')] },
     ]);
-    host.detectChanges();
-    const disclosure = host.nativeElement.querySelector('.bought-disclosure') as HTMLButtonElement;
-    expect(disclosure.getAttribute('aria-expanded')).toBe('false');
-    host.componentInstance.requestClear();
+    const host = await fixture();
+    const rowOrder = () =>
+      Array.from(
+        host.nativeElement.querySelectorAll(
+          '.shopping-row input[type="checkbox"]',
+        ) as NodeListOf<HTMLInputElement>,
+      ).map((checkbox) => checkbox.id);
+    const toggle = async () => {
+      const checkbox = host.nativeElement.querySelector('#shopping-item-apple') as HTMLInputElement;
+      checkbox.click();
+      await host.whenStable();
+      host.detectChanges();
+    };
+    await toggle();
+    expect(rowOrder()).toEqual(['shopping-item-milk', 'shopping-item-apple']);
+    await toggle();
+    expect(rowOrder()).toEqual(['shopping-item-apple', 'shopping-item-milk']);
+    await host.componentInstance.requestClear();
     host.detectChanges();
     expect(host.nativeElement.querySelector('dialog').open).toBe(true);
     expect(removed).toEqual([]);
@@ -662,8 +684,8 @@ describe('shopping list', () => {
   });
 
   it.each([false, true])(
-    'returns focus to add item after clearing removes the trigger (bought only: %s)',
-    async (boughtOnly) => {
+    'returns focus to add item after clearing removes the trigger (checked only: %s)',
+    async (checkedOnly) => {
       const frames: FrameRequestCallback[] = [];
       vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
         frames.push(callback);
@@ -671,14 +693,14 @@ describe('shopping list', () => {
       });
       vi.stubGlobal('cancelAnimationFrame', () => {});
       removeUpdatesList = true;
-      if (boughtOnly)
+      if (checkedOnly)
         groups.update((current) => current.map((group) => ({ ...group, checked: true })));
       const host = await fixture();
       const trigger = host.nativeElement.querySelector('.clear-list') as HTMLButtonElement;
       trigger.focus();
       await host.componentInstance.requestClear();
       host.detectChanges();
-      if (!boughtOnly) await host.componentInstance.confirmClear();
+      if (!checkedOnly) await host.componentInstance.confirmClear();
       await host.whenStable();
       host.detectChanges();
       for (const frame of frames) frame(0);
@@ -728,7 +750,7 @@ describe('shopping list', () => {
     expect(document.activeElement).toBe(backLink);
   });
 
-  it('returns focus to add item after clearing removes the bought section', async () => {
+  it('returns focus to add item after clearing removes all checked items', async () => {
     const frames: FrameRequestCallback[] = [];
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
       frames.push(callback);
@@ -741,9 +763,9 @@ describe('shopping list', () => {
       current.map((group) => ({ ...group, checked: true, items: items() })),
     );
     const host = await fixture();
-    const trigger = host.nativeElement.querySelector('.clear-bought') as HTMLButtonElement;
+    const trigger = host.nativeElement.querySelector('.clear-checked') as HTMLButtonElement;
     trigger.focus();
-    await host.componentInstance.clearBought();
+    await host.componentInstance.clearChecked();
     host.detectChanges();
     for (const frame of frames) frame(0);
     expect(trigger.isConnected).toBe(false);
