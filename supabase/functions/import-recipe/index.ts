@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
-import { validateUrl, fetchHtml, parseRecipe } from '../_shared/recipe-parser.mjs';
+import { validateUrl, parseRecipe } from '../_shared/recipe-parser.mjs';
+import { fetchPublicResource, readBounded } from '../_shared/public-fetch.mjs';
 
 const allowedOrigins = new Set([
   'https://antonj997.github.io',
@@ -7,20 +8,6 @@ const allowedOrigins = new Set([
   'http://localhost:4300',
   'http://localhost:4200',
 ]);
-const photoHosts = [
-  'ica.se',
-  'icanet.se',
-  'koket.se',
-  'arla.se',
-  'arla.com',
-  'cookwell.com',
-  'elinaomickesmat.se',
-  'recept.se',
-  'kokaihop.se',
-  'sanity.io',
-  'ctfassets.net',
-];
-
 Deno.serve(async (request: Request) => {
   const origin = request.headers.get('origin') ?? '';
   const headers = {
@@ -50,9 +37,17 @@ Deno.serve(async (request: Request) => {
     return json({ error: 'Sign in to import recipes.' }, 401);
 
   try {
-    const text = new TextDecoder().decode(await limitedBody(request, 8192));
+    const bodySignal = AbortSignal.any([request.signal, AbortSignal.timeout(5000)]);
+    const text = new TextDecoder().decode(await readBounded(request.body, 8192, bodySignal));
     if (text.length > 8192) return json({ error: 'Request too large.' }, 413);
     const body = JSON.parse(text);
+    if (
+      !body ||
+      typeof body !== 'object' ||
+      Array.isArray(body) ||
+      (body.action !== undefined && body.action !== 'photo')
+    )
+      return json({ error: 'Invalid import request.' }, 400);
     const photo = body.action === 'photo';
     const { data: permitted, error } = await client.rpc('claim_recipe_import', { photo });
     if (error) return json({ error: 'The importer is not set up yet.' }, 503);
@@ -60,23 +55,21 @@ Deno.serve(async (request: Request) => {
       return json({ error: 'Import limit reached. Try again in the next hour.' }, 429);
 
     if (photo) {
-      const url = new URL(body.url);
-      if (
-        url.protocol !== 'https:' ||
-        url.username ||
-        url.password ||
-        url.port ||
-        !photoHosts.some((host) => url.hostname === host || url.hostname.endsWith('.' + host))
-      )
-        return json({ error: 'This photo host is not supported.' }, 400);
-      const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(10_000) });
-      const type = response.headers.get('content-type')?.split(';')[0] ?? '';
-      if (!response.ok || !['image/jpeg', 'image/png', 'image/webp'].includes(type))
-        return json({ error: 'Photo unavailable.' }, 422);
-      const bytes = await limitedBody(response, 20 * 1024 * 1024);
-      return new Response(bytes, {
-        headers: { ...headers, 'Content-Type': type, 'X-Content-Type-Options': 'nosniff' },
-      });
+      try {
+        const resource = await fetchPublicResource(body.url, {
+          kind: 'photo',
+          signal: request.signal,
+        });
+        return new Response(resource.bytes, {
+          headers: {
+            ...headers,
+            'Content-Type': resource.type,
+            'X-Content-Type-Options': 'nosniff',
+          },
+        });
+      } catch {
+        return json({ error: 'Photo unavailable. Use a public JPEG, PNG or WebP image.' }, 422);
+      }
     }
     let url: URL;
     try {
@@ -86,10 +79,15 @@ Deno.serve(async (request: Request) => {
     }
     let html: string;
     try {
-      html = await fetchHtml(url);
+      const resource = await fetchPublicResource(url, { signal: request.signal });
+      html = new TextDecoder().decode(resource.bytes);
+      url = resource.url;
     } catch {
       return json(
-        { error: 'Could not fetch the website. It may block requests or redirect to another URL.' },
+        {
+          error:
+            'Could not fetch the website. It may block imports, be unavailable, or use an unsupported address.',
+        },
         502,
       );
     }
@@ -105,28 +103,4 @@ Deno.serve(async (request: Request) => {
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : 'Could not import recipe.';
-}
-async function limitedBody(response: Response | Request, limit: number): Promise<ArrayBuffer> {
-  if (Number(response.headers.get('content-length')) > limit || !response.body)
-    throw new Error('The requested content is too large or unavailable.');
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > limit) {
-      await reader.cancel();
-      throw new Error('The requested content is too large.');
-    }
-    chunks.push(value);
-  }
-  const result = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return result.buffer;
 }

@@ -1,4 +1,11 @@
 {
-  "imports": { "cheerio": "npm:cheerio@1.2.0" },
-  "compilerOptions": { "checkJs": false }
+  "imports": {
+    "undici": "npm:undici@7.30.1",
+    "ipaddr.js": "npm:ipaddr.js@2.5.0",
+    "cheerio/slim": "npm:cheerio@1.2.0/slim",
+    "htmlparser2": "npm:htmlparser2@10.1.0"
+  },
+  "compilerOptions": {
+    "checkJs": false
+  }
 }

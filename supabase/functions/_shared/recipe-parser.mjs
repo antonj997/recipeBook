@@ -1,46 +1,7 @@
-import * as cheerio from 'cheerio';
+import { loadRecipeHtml } from './recipe-html.mjs';
 import { extractIngredients, extractInstructions, extractMetadata } from './recipe-metadata.mjs';
 
-// Only these exact domains are permitted in this first version.
-// Add domains here after reviewing them.
-const allowedHosts = new Set([
-  'www.ica.se',
-  'www.koket.se',
-  'www.arla.se',
-  'www.cookwell.com',
-  'www.elinaomickesmat.se',
-  'recept.se',
-  'www.kokaihop.se',
-]);
-
-const MAX_HTML_BYTES = 2 * 1024 * 1024;
-
-// Validate the destination before making a request.
-export function validateUrl(input) {
-  if (typeof input !== 'string' || input.length > 2048) {
-    throw new Error('Invalid URL.');
-  }
-
-  let url;
-
-  try {
-    url = new URL(input);
-  } catch {
-    throw new Error('Invalid URL.');
-  }
-
-  if (url.protocol !== 'https:' || url.username || url.password || url.port) {
-    throw new Error('Only standard HTTPS URLs are supported.');
-  }
-
-  if (!allowedHosts.has(url.hostname)) {
-    throw new Error('This website is not on the supported-sites list.');
-  }
-
-  url.hash = '';
-
-  return url;
-}
+export { validatePublicUrl as validateUrl } from './public-url.mjs';
 
 // Strip HTML markup and normalize whitespace.
 function cleanText(value) {
@@ -48,7 +9,7 @@ function cleanText(value) {
     return '';
   }
 
-  const $ = cheerio.load(value, null, false);
+  const $ = loadRecipeHtml(value, true);
 
   return $.root().text().replace(/\s+/g, ' ').trim();
 }
@@ -95,9 +56,7 @@ function extractServings(value) {
   return match ? Math.max(1, Number(match[0])) : 4;
 }
 
-function extractRecipeImageUrl(recipe, html, sourceUrl) {
-  const $ = cheerio.load(html);
-
+function extractRecipeImageUrl(recipe, $, sourceUrl) {
   // JSON-LD images can be strings, objects or arrays.
   const images = Array.isArray(recipe.image) ? recipe.image : [recipe.image];
 
@@ -143,67 +102,29 @@ function extractRecipeImageUrl(recipe, html, sourceUrl) {
   return undefined;
 }
 
-// Fetch a webpage, with a timeout and size limit.
-export async function fetchHtml(url) {
-  const response = await fetch(url, {
-    redirect: 'error',
-    signal: AbortSignal.timeout(10000),
-    headers: {
-      Accept: 'text/html',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Website returned HTTP ${response.status}.`);
-  }
-
-  const contentType = response.headers.get('content-type') ?? '';
-
-  if (!/html/i.test(contentType)) {
-    throw new Error('The URL did not return an HTML page.');
-  }
-
-  const declaredSize = Number(response.headers.get('content-length') ?? 0);
-
-  if (declaredSize > MAX_HTML_BYTES) {
-    throw new Error('The webpage is too large.');
-  }
-
-  if (!response.body) {
-    throw new Error('The webpage returned no content.');
-  }
-
-  const reader = response.body.getReader();
-
-  const chunks = [];
-  let totalBytes = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-
-    if (done) break;
-
-    totalBytes += value.byteLength;
-
-    if (totalBytes > MAX_HTML_BYTES) {
-      await reader.cancel();
-      throw new Error('The webpage is too large.');
+// Bound nested structured data before HTML-cleaning every ingredient or step.
+function assertRecipeSize(recipe) {
+  const pending = [[recipe, 0]];
+  let count = 0;
+  let characters = 0;
+  while (pending.length) {
+    const [value, depth] = pending.pop();
+    if (typeof value === 'string') characters += value.length;
+    if (characters > 256 * 1024)
+      throw new Error('The recipe contains too much data to import safely.');
+    if (++count > 10_000 || depth > 32 || (typeof value === 'string' && value.length > 32_000))
+      throw new Error('The recipe contains too much data to import safely.');
+    if (value && typeof value === 'object') {
+      const values = Object.values(value);
+      if (values.length + pending.length > 10_000)
+        throw new Error('The recipe contains too much data to import safely.');
+      for (const child of values) pending.push([child, depth + 1]);
     }
-
-    chunks.push(value);
   }
-
-  const bytes = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return new TextDecoder().decode(bytes);
 }
 
 export function parseRecipe(html, url) {
-  const $ = cheerio.load(html);
+  const $ = loadRecipeHtml(html);
 
   let recipe = null;
 
@@ -227,24 +148,37 @@ export function parseRecipe(html, url) {
     throw new Error('No structured recipe data was found.');
   }
 
+  assertRecipeSize(recipe);
   const ingredientItems = extractIngredients(recipe.recipeIngredient);
   const stepItems = extractInstructions(recipe.recipeInstructions, url.toString());
   const ingredients = ingredientItems.map((item) => item.text);
   const instructions = stepItems.map((item) => item.text);
   const title = cleanText(recipe.name);
 
+  if (
+    title.length > 1000 ||
+    ingredients.length > 500 ||
+    instructions.length > 500 ||
+    [...ingredients, ...instructions].some((value) => value.length > 16000)
+  ) {
+    throw new Error('The recipe contains too much data to import safely.');
+  }
+
   if (!title || ingredients.length === 0 || instructions.length === 0) {
     throw new Error('The website provided incomplete recipe data.');
   }
 
-  // Return a recipe draft.
-  return {
-    ...extractMetadata(recipe, html, url.toString(), ingredientItems, stepItems),
-    imageUrl: extractRecipeImageUrl(recipe, html, url.toString()),
+  // Revalidate the extracted result: nested section labels are repeated for
+  // every step and must not amplify a small source into a huge JSON response.
+  const draft = {
+    ...extractMetadata(recipe, $, url.toString(), ingredientItems, stepItems),
+    imageUrl: extractRecipeImageUrl(recipe, $, url.toString()),
     title,
     servings: extractServings(recipe.recipeYield),
     ingredients,
     instructions,
     sourceUrl: url.toString(),
   };
+  assertRecipeSize(draft);
+  return draft;
 }

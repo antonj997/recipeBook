@@ -12,6 +12,7 @@ import { downloadRecipePhoto } from './recipe-photo';
 
 export type RecipeDraft = Recipe & { imageUrl?: string };
 const legacyKey = 'recipebook:review-draft';
+const maxAutomaticPhotos = 12;
 
 // Drafts live in this tab, never in Dexie, until the user approves the preview.
 @Service()
@@ -122,7 +123,9 @@ export class RecipeDraftService {
       : undefined;
     this.photoNotice.set('');
     let failed = 0;
+    let remainingPhotos = maxAutomaticPhotos;
     if (draft.imageUrl && !draft.imageDataUrl) {
+      remainingPhotos--;
       try {
         draft.imageDataUrl = await downloadRecipePhoto(draft.imageUrl, 1200, proxy, signal);
       } catch {
@@ -130,7 +133,12 @@ export class RecipeDraftService {
       }
     }
     assertAccount();
-    const steps = draft.stepDetails ?? [];
+    const pendingSteps = (draft.stepDetails ?? []).filter(
+      (step) => step.imageUrl && !step.imageDataUrl,
+    );
+    // Keep skipped source URLs so the user can load those photos individually later.
+    failed += Math.max(0, pendingSteps.length - remainingPhotos);
+    const steps = pendingSteps.slice(0, remainingPhotos);
     for (let i = 0; i < steps.length; i += 2) {
       assertAccount();
       await Promise.all(

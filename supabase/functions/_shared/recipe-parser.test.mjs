@@ -141,3 +141,49 @@ test('keeps existing ICA headings when DOM and schema ingredients match', () => 
     ['Färs'],
   );
 });
+
+test('rejects deeply nested recipe sections before extracting their contents', () => {
+  let instruction = { '@type': 'HowToStep', text: 'Cook.' };
+  for (let i = 0; i < 40; i++)
+    instruction = { '@type': 'HowToSection', itemListElement: [instruction] };
+  assert.throws(
+    () => parseRecipe(html(page, { ...schema, recipeInstructions: [instruction] }), sourceUrl),
+    /too much data/,
+  );
+});
+
+test('rejects excessively nested HTML before constructing the recipe DOM', () => {
+  const wrapped = '<div>'.repeat(5000) + html() + '</div>'.repeat(5000);
+  assert.throws(() => parseRecipe(wrapped, sourceUrl), /webpage is too complex/);
+});
+
+test('cannot bypass HTML depth limits with self-closing non-void tags', () => {
+  const wrapped = '<div/>'.repeat(500) + html();
+  assert.throws(() => parseRecipe(wrapped, sourceUrl), /webpage is too complex/);
+});
+
+test('rejects a very broad HTML DOM before building it', () => {
+  const wrapped = '<span>x</span>'.repeat(20_001) + html();
+  assert.throws(() => parseRecipe(wrapped, sourceUrl), /webpage is too complex/);
+});
+
+test('does not count HTML-like recipe text inside inert JSON as page elements', () => {
+  const recipe = { ...schema, publisher: { name: '<div/>'.repeat(500) } };
+  assert.equal(parseRecipe(html(page, recipe), sourceUrl).title, 'Testbiffar');
+});
+
+for (const labelSize of [250, 30000]) {
+  test('bounds repeated extracted step sections with ' + labelSize + '-character labels', () => {
+    let instruction = Array.from({ length: 500 }, () => ({ '@type': 'HowToStep', text: 'Cook.' }));
+    for (let i = 0; i < 20; i++)
+      instruction = {
+        '@type': 'HowToSection',
+        name: 'a'.repeat(labelSize),
+        itemListElement: instruction,
+      };
+    assert.throws(
+      () => parseRecipe(html(page, { ...schema, recipeInstructions: instruction }), sourceUrl),
+      /too much data/,
+    );
+  });
+}

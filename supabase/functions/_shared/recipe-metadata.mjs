@@ -1,9 +1,8 @@
-import * as cheerio from 'cheerio';
+import { loadRecipeHtml } from './recipe-html.mjs';
 
 const text = (value) =>
   typeof value === 'string'
-    ? cheerio
-        .load(value.replace(/<br\b[^>]*>|<\/p>/gi, ' '), null, false)
+    ? loadRecipeHtml(value.replace(/<br\b[^>]*>|<\/p>/gi, ' '), true)
         .root()
         .text()
         .replace(/\s+/g, ' ')
@@ -222,8 +221,7 @@ function pageExtras($, sourceUrl, ingredients, recipe) {
   return result;
 }
 
-export function extractMetadata(recipe, html, sourceUrl, ingredients, steps) {
-  const $ = cheerio.load(html);
+export function extractMetadata(recipe, $, sourceUrl, ingredients, steps) {
   const nutrition = {};
   for (const key of [
     'servingSize',

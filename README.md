@@ -6,7 +6,7 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 
 ## Features
 
-- Create recipes, import supported recipe links, and review imports before saving.
+- Create recipes, import public HTTPS recipe links, and review imports before saving. Link import works with sites that expose structured recipe data and allow server requests.
 - Create categories, assign several recipes at once, and filter or search your cookbook.
 - Browse a recipe shelf or compact list, with your search, category and place remembered.
 - Group ingredients and instructions, choose default servings, and undo removed editor rows.
@@ -17,7 +17,7 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 - Hold or right-click recipes to change categories, edit or delete; undo accidental deletion.
 - Paste ingredient and instruction lists into the editor to split them into rows.
 - Store photos, cooking time and available nutrition information.
-- Keep a private shopping list: add your own items or select scaled recipe ingredients, check purchases off, and undo deletions. Clear matching quantities combine for display while their individual recipe sources remain saved. Small recipe-color dots beside items match a recipe-name legend beneath the entry field.
+- Keep a private shopping list: add your own items or select scaled recipe ingredients, check items off, and undo deletions. Clear matching quantities combine for display while their individual recipe sources remain saved. Small recipe-color dots beside items match a recipe-name legend beneath the entry field.
 - Shopping items automatically group into departments based on ICA’s online categories. A compact Swedish and English product-name catalogue works offline; unrecognized items remain under Övrigt. A general shopping order starts with fruit/vegetables and bread, continues through fresh food, dairy and pantry, and keeps frozen goods late. Store layouts differ; this is not an exact store map. Ice cream groups with frozen goods.
 - Sign in with email and password for a private cookbook and shopping list across devices.
 - Use saved recipes offline and install the app as a PWA.
