@@ -103,6 +103,7 @@ import { IconComponent } from './icon';
       </div>
       <div class="step-timer" [class.is-timeline]="state().started">
         <app-minute-ruler
+          [rotated]="rotated()"
           [seconds]="state().done ? target().seconds : state().remaining"
           [disabled]="locked()"
           [timeline]="state().started"
@@ -137,6 +138,7 @@ export class StepTimerComponent {
   readonly target = input.required<StepTimerTarget>();
   readonly completed = input(false);
   readonly disabled = input(false);
+  readonly rotated = input(false);
   protected readonly timers = inject(StepTimerService);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);

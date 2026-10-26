@@ -6,6 +6,13 @@
     your copy.
   </p>
 
+  <div class="recipe-search">
+    <a href="https://www.google.com/search?q=recept" target="_blank" rel="noopener noreferrer">
+      <app-icon name="link" />Search with Google
+    </a>
+    <p>Copy the recipe link, then return here and paste it to import.</p>
+  </div>
+
   <form (submit)="importRecipe($event)">
     <label for="recipe-url">Recipe URL</label>
     <input

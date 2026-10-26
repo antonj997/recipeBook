@@ -1,3 +1,4 @@
+import { FeedbackToastComponent } from './shared/components/feedback-toast';
 import { StepTimerService } from './core/services/step-timer.service';
 import {
   captureSnapshotNavigation,
@@ -36,6 +37,7 @@ import { FeedbackService } from './core/services/feedback.service';
 
 @Component({
   imports: [
+    FeedbackToastComponent,
     NgOptimizedImage,
     RecipeActionsOverlayComponent,
     RouterOutlet,
@@ -206,7 +208,8 @@ export class App {
   protected readonly touchInput = signal(false);
 
   private updateHeaderForScroll(): void {
-    if (this.restoringLibrary()) return;
+    // A fixed-body modal temporarily reports scrollY=0; keep the underlying header geometry.
+    if (this.restoringLibrary() || document.body.style.position === 'fixed') return;
     // Shrinking the header changes document height. Separate thresholds avoid flickering.
     this.compactHeader.set(this.compactHeader() ? window.scrollY > 8 : window.scrollY >= 80);
   }

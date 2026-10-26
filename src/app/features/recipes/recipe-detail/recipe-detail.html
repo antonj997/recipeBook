@@ -67,82 +67,116 @@
             />
           </header>
         </div>
-        <app-screen-awake [appRecipeTransition]="selectedRecipe.id" transitionPart="controls" />
+        <div
+          class="cooking-controls"
+          [appRecipeTransition]="selectedRecipe.id"
+          transitionPart="controls"
+        >
+          <app-screen-awake />
+          <button
+            type="button"
+            class="focus-mode-button"
+            aria-haspopup="dialog"
+            (click)="openFocus()"
+          >
+            <app-icon name="focus" />Focus mode
+          </button>
+        </div>
       </div>
-      <div
-        class="recipe-reading"
-        [appRecipeTransition]="selectedRecipe.id"
-        transitionPart="reading"
-      >
-        <div class="recipe-sections">
-          <div class="section-switch">
-            <div
-              class="section-tabs"
-              [class.instructions-selected]="activeSection() === 'instructions'"
-              role="tablist"
-              aria-label="Recipe section"
-              (keydown)="tabKey($event)"
-            >
-              <span #tabIndicator class="tab-indicator" aria-hidden="true"></span>
-              <button
-                type="button"
-                [attr.aria-selected]="activeSection() === 'ingredients'"
-                [attr.tabindex]="activeSection() === 'ingredients' ? 0 : -1"
-                role="tab"
-                id="recipe-ingredients-tab"
-                aria-controls="ingredients-panel"
-                (click)="switchSection('ingredients')"
+      <ng-template #readingSections>
+        <div class="recipe-sections" [class.focus-reading]="focusMode()">
+          @if (!focusMode()) {
+            <div class="section-switch">
+              <div
+                class="section-tabs"
+                [class.instructions-selected]="activeSection() === 'instructions'"
+                role="tablist"
+                aria-label="Recipe section"
+                (keydown)="tabKey($event)"
               >
-                Ingredients
-              </button>
-              <button
-                type="button"
-                [attr.aria-selected]="activeSection() === 'instructions'"
-                [attr.tabindex]="activeSection() === 'instructions' ? 0 : -1"
-                role="tab"
-                id="recipe-instructions-tab"
-                aria-controls="instructions-panel"
-                (click)="switchSection('instructions')"
-              >
-                Instructions
-              </button>
+                <span #tabIndicator class="tab-indicator" aria-hidden="true"></span>
+                <button
+                  type="button"
+                  [attr.aria-selected]="activeSection() === 'ingredients'"
+                  [attr.tabindex]="activeSection() === 'ingredients' ? 0 : -1"
+                  role="tab"
+                  id="recipe-ingredients-tab"
+                  aria-controls="ingredients-panel"
+                  (click)="switchSection('ingredients')"
+                >
+                  Ingredients
+                </button>
+                <button
+                  type="button"
+                  [attr.aria-selected]="activeSection() === 'instructions'"
+                  [attr.tabindex]="activeSection() === 'instructions' ? 0 : -1"
+                  role="tab"
+                  id="recipe-instructions-tab"
+                  aria-controls="instructions-panel"
+                  (click)="switchSection('instructions')"
+                >
+                  Instructions
+                </button>
+              </div>
             </div>
-          </div>
+          }
           <div class="recipe-body">
             <section
               id="ingredients-panel"
-              [class.inactive-panel]="!wideReading() && activeSection() !== 'ingredients'"
-              [attr.inert]="!wideReading() && activeSection() !== 'ingredients' ? '' : null"
+              [class.inactive-panel]="!bothPanels() && activeSection() !== 'ingredients'"
+              [attr.inert]="!bothPanels() && activeSection() !== 'ingredients' ? '' : null"
               [attr.aria-hidden]="
-                !wideReading() && activeSection() !== 'ingredients' ? 'true' : null
+                !bothPanels() && activeSection() !== 'ingredients' ? 'true' : null
               "
               class="ingredients"
-              [attr.role]="wideReading() ? 'region' : 'tabpanel'"
-              [attr.tabindex]="wideReading() ? -1 : 0"
+              [attr.role]="bothPanels() ? 'region' : 'tabpanel'"
+              [attr.tabindex]="focusMode() ? 0 : bothPanels() ? -1 : 0"
               [attr.aria-labelledby]="
-                wideReading() ? 'ingredients-heading' : 'recipe-ingredients-tab'
+                bothPanels() ? 'ingredients-heading' : 'recipe-ingredients-tab'
               "
             >
               <h2 id="ingredients-heading" class="wide-section-heading">Ingredients</h2>
               <div class="ingredients-tools">
-                @if (!isDraft && selectedRecipe.ingredients.length) {
-                  <button
-                    type="button"
-                    class="recipe-shopping-button"
-                    aria-haspopup="dialog"
-                    (click)="shoppingPickerOpen.set(true)"
-                  >
-                    <app-icon name="basket" />Add to shopping list
-                  </button>
+                @if (focusMode()) {
+                  <div class="focus-servings" role="group" aria-label="Servings">
+                    <button
+                      type="button"
+                      aria-label="Decrease servings"
+                      [disabled]="selectedServings() === servingOptions()[0]"
+                      (click)="adjustServings(-1)"
+                    >
+                      <app-icon name="minus" />
+                    </button>
+                    <span aria-live="polite">{{ selectedServings() }} servings</span>
+                    <button
+                      type="button"
+                      aria-label="Increase servings"
+                      [disabled]="selectedServings() === servingOptions().at(-1)"
+                      (click)="adjustServings(1)"
+                    >
+                      <app-icon name="plus" />
+                    </button>
+                  </div>
+                } @else {
+                  <app-select-menu
+                    menuId="recipe-servings-menu"
+                    [dragSelect]="true"
+                    label="Servings"
+                    [value]="selectedServings().toString()"
+                    [options]="servingMenuOptions()"
+                    (valueChange)="changeServings($event)"
+                  />
+                  @if (!isDraft && selectedRecipe.ingredients.length) {
+                    <button
+                      type="button"
+                      class="recipe-shopping-button"
+                      aria-haspopup="dialog"
+                      (click)="shoppingPickerOpen.set(true)"
+                    >
+                      <app-icon name="basket" />Add to shopping list
+                    </button>
+                  }
                 }
-                <app-select-menu
-                  menuId="recipe-servings-menu"
-                  [dragSelect]="true"
-                  label="Servings"
-                  [value]="selectedServings().toString()"
-                  [options]="servingMenuOptions()"
-                  (valueChange)="changeServings($event)"
-                />
               </div>
               @for (group of ingredientGroups(); track $index) {
                 @if (group.section) {
@@ -157,16 +191,16 @@
             </section>
             <section
               id="instructions-panel"
-              [class.inactive-panel]="!wideReading() && activeSection() !== 'instructions'"
-              [attr.inert]="!wideReading() && activeSection() !== 'instructions' ? '' : null"
+              [class.inactive-panel]="!bothPanels() && activeSection() !== 'instructions'"
+              [attr.inert]="!bothPanels() && activeSection() !== 'instructions' ? '' : null"
               [attr.aria-hidden]="
-                !wideReading() && activeSection() !== 'instructions' ? 'true' : null
+                !bothPanels() && activeSection() !== 'instructions' ? 'true' : null
               "
               class="instructions"
-              [attr.role]="wideReading() ? 'region' : 'tabpanel'"
-              [attr.tabindex]="wideReading() ? -1 : 0"
+              [attr.role]="bothPanels() ? 'region' : 'tabpanel'"
+              [attr.tabindex]="focusMode() ? 0 : bothPanels() ? -1 : 0"
               [attr.aria-labelledby]="
-                wideReading() ? 'instructions-heading' : 'recipe-instructions-tab'
+                bothPanels() ? 'instructions-heading' : 'recipe-instructions-tab'
               "
             >
               <h2 id="instructions-heading" class="wide-section-heading">Instructions</h2>
@@ -192,7 +226,7 @@
               @if (hasTimers()) {
                 @if (isDraft) {
                   <p class="timer-help">Save the recipe to start timers.</p>
-                } @else {
+                } @else if (!focusMode()) {
                   <app-timer-alert-preferences [contextual]="true" />
                 }
               }
@@ -255,6 +289,7 @@
                     @if (stepTimers()[$index]; as timer) {
                       <app-step-timer
                         [target]="timer"
+                        [rotated]="focusMode() && focusPortrait()"
                         [completed]="completedSteps().has($index)"
                         [disabled]="isDraft"
                       />
@@ -265,6 +300,26 @@
             </section>
           </div>
         </div>
+      </ng-template>
+      @if (focusMode()) {
+        <app-recipe-focus
+          [title]="selectedRecipe.title"
+          [scrollPosition]="focusScroll"
+          (closed)="focusMode.set(false)"
+        >
+          <ng-container [ngTemplateOutlet]="readingSections" />
+        </app-recipe-focus>
+      }
+      <div
+        #readingSurface
+        class="recipe-reading"
+        [style.min-height.px]="focusMode() ? focusReadingHeight : null"
+        [appRecipeTransition]="selectedRecipe.id"
+        transitionPart="reading"
+      >
+        @if (!focusMode()) {
+          <ng-container [ngTemplateOutlet]="readingSections" />
+        }
         <div class="recipe-footer page">
           @if (stepPhotoNotice()) {
             <p role="status">{{ stepPhotoNotice() }}</p>

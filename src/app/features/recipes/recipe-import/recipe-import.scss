@@ -1,6 +1,26 @@
 .import-page > p {
   max-width: 60ch;
 }
+.recipe-search {
+  margin-top: 24px;
+}
+.recipe-search a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  text-underline-offset: 4px;
+}
+.recipe-search app-icon {
+  width: 18px;
+  height: 18px;
+}
+.recipe-search p {
+  margin: 4px 0 0;
+  max-width: 48ch;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+}
 form {
   display: flex;
   flex-direction: column;

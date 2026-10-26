@@ -6,12 +6,12 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 
 ## Features
 
-- Create recipes, import public HTTPS recipe links, and review imports before saving. Link import works with sites that expose structured recipe data and allow server requests.
+- Create recipes, import public HTTPS recipe links, and review imports before saving. Search with Google from the import screen, copy a recipe link, then return and paste it. Link import works with sites that expose structured recipe data and allow server requests.
 - Create categories, assign several recipes at once, and filter or search your cookbook.
 - Browse a recipe shelf or compact list, with your search, category and place remembered.
 - Group ingredients and instructions, choose default servings, and undo removed editor rows.
 - Scale explicit ingredient quantities for 2, 4, 6, 8 or 10 servings without changing the saved recipe. Written or ambiguous quantities are left unchanged.
-- Cook from ingredient and instruction tabs with remembered step progress and a keep-screen-on toggle where supported. Completed steps always collapse.
+- Cook from ingredient and instruction tabs with remembered step progress and a keep-screen-on toggle where supported. Completed steps always collapse. Mobile focus mode shows both sections side by side with independent scrolling and compact servings controls. It keeps the app view landscape, using a rotated canvas in portrait where device orientation cannot be locked; exiting restores the recipe page.
 - Use step timers up to 60 minutes with a looping minute ruler, swipe momentum, elapsed-time markers, direct MM:SS entry and optional background push alerts.
 - Choose a recipe color shared by its header, card and list marker.
 - Hold or right-click recipes to change categories, edit or delete; undo accidental deletion.

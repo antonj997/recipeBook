@@ -77,6 +77,27 @@ describe('minute ruler gestures', () => {
     await vi.advanceTimersByTimeAsync(milliseconds);
     return trackOffset(f) - before;
   }
+  it.each(['swipe', 'edge'] as const)(
+    'uses the landscape axis for %s gestures on a rotated phone',
+    async (mode) => {
+      const f = setup(1800, mode);
+      f.view.componentRef.setInput('rotated', true);
+      f.view.detectChanges();
+      vi.mocked(f.slider.getBoundingClientRect).mockReturnValue({
+        left: 10,
+        top: 40,
+        width: 30,
+        height: 360,
+      } as DOMRect);
+      pointer(f.slider, 'pointerdown', 20, 220);
+      await vi.advanceTimersByTimeAsync(400);
+      pointer(document, 'pointermove', 20, 274);
+      f.view.detectChanges();
+      expect(f.changes.at(-1)).toBe((mode === 'swipe' ? 27 : 33) * 60);
+      pointer(document, 'pointerup', 20, 274);
+    },
+  );
+
   it.each([0, 60, 1800, 3600])('keeps swipe selection centered at %i seconds', (seconds) => {
     const f = setup(seconds);
     expect(markerX(f)).toBeCloseTo(180, 1);

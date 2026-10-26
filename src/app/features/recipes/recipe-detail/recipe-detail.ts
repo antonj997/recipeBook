@@ -1,3 +1,5 @@
+import { NgTemplateOutlet } from '@angular/common';
+import { RecipeFocusComponent } from './recipe-focus';
 import { RecipeShoppingPickerComponent } from '../../../shared/components/recipe-shopping-picker';
 import { TimerAlertPreferencesComponent } from '../../../shared/components/timer-alert-preferences';
 import { StepTimerService } from '../../../core/services/step-timer.service';
@@ -37,6 +39,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  ElementRef,
   effect,
   inject,
   OnInit,
@@ -44,6 +47,7 @@ import {
   signal,
   untracked,
   viewChildren,
+  viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PageTransitionService } from '../../../core/services/page-transition.service';
@@ -61,6 +65,8 @@ import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
     '(window:beforeunload)': 'onBeforeUnload($event)',
   },
   imports: [
+    NgTemplateOutlet,
+    RecipeFocusComponent,
     StepTimerComponent,
     RecipeShoppingPickerComponent,
     TimerAlertPreferencesComponent,
@@ -77,7 +83,7 @@ import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
     FoodDoodleComponent,
   ],
   templateUrl: './recipe-detail.html',
-  styleUrl: './recipe-detail.scss',
+  styleUrls: ['./recipe-tabs.scss', './recipe-detail.scss', './recipe-focus-content.scss'],
 })
 export class RecipeDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
@@ -149,6 +155,30 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   collectionNames = signal<string[]>([]);
   activeSection = signal<CookingSection>('ingredients');
   wideReading = signal(false);
+  readonly focusMode = signal(false);
+  private readonly readingSurface = viewChild<ElementRef<HTMLElement>>('readingSurface');
+  focusReadingHeight = 0;
+  focusScroll = { left: 0, top: 0 };
+  openFocus(): void {
+    if (!this.recipe() || this.accountChanged() || this.focusMode()) return;
+    // Reserve the old reading surface before moving its template to the dialog.
+    // This prevents long-page scroll positions being clamped on entry or exit.
+    this.focusReadingHeight =
+      this.readingSurface()?.nativeElement.getBoundingClientRect().height ?? 0;
+    this.focusScroll = { left: window.scrollX, top: window.scrollY };
+    this.focusMode.set(true);
+  }
+  readonly focusPortrait = signal(false);
+  readonly bothPanels = computed(() => this.wideReading() || this.focusMode());
+  private focusMedia?: MediaQueryList;
+  private syncFocusOrientation = (): void => {
+    this.focusPortrait.set(this.focusMedia?.matches ?? false);
+  };
+  adjustServings(direction: -1 | 1): void {
+    const options = this.servingOptions();
+    const next = options[options.indexOf(this.selectedServings()) + direction];
+    if (next !== undefined) this.changeServings(String(next));
+  }
   private readingMedia?: MediaQueryList;
   private layoutFocusFrame?: number;
   // Both panels fit from 40rem; keep the selected portrait tab and cooking state intact.
@@ -234,6 +264,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     });
     effect(() => {
       if (this.accountChanged()) {
+        this.focusMode.set(false);
         this.completedSteps.set(new Set());
         this.activeSection.set('ingredients');
       }
@@ -285,6 +316,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.loadRequest++;
     this.readingMedia?.removeEventListener('change', this.syncReadingLayout);
+    this.focusMedia?.removeEventListener('change', this.syncFocusOrientation);
     if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
   }
 
@@ -399,6 +431,9 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   loading = signal(true);
   error = signal('');
   ngOnInit(): void {
+    this.focusMedia = window.matchMedia('(orientation: portrait)');
+    this.syncFocusOrientation();
+    this.focusMedia.addEventListener('change', this.syncFocusOrientation);
     this.readingMedia = window.matchMedia('(min-width: 40rem)');
     this.syncReadingLayout();
     this.readingMedia.addEventListener('change', this.syncReadingLayout);
@@ -412,6 +447,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     const current = () => request === this.loadRequest && !this.accountChanged();
     const id = this.route.snapshot.paramMap.get('id');
     if (!this.isDraft && this.recipe()?.id !== id) {
+      this.focusMode.set(false);
       this.recipe.set(undefined);
       this.loading.set(true);
       this.completedSteps.set(new Set());

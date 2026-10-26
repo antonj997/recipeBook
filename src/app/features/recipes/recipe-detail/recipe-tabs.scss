@@ -1,0 +1,84 @@
+.section-switch {
+  position: sticky;
+  top: var(--app-header-height);
+  z-index: 3;
+  padding: 8px var(--page-gutter-right) 0 var(--page-gutter-left);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--page-background, var(--color-canvas));
+}
+.section-switch::after {
+  content: '';
+  position: absolute;
+  inset: calc(100% + 1px) 0 auto;
+  height: 32px;
+  background: linear-gradient(to bottom, var(--color-surface) 8px, transparent 32px);
+  pointer-events: none;
+}
+.section-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 360px);
+  border-radius: 10px 10px 0 0;
+  background: var(--page-background, var(--color-canvas));
+  isolation: isolate;
+}
+.tab-indicator {
+  position: absolute;
+  inset: 0 auto -1px 0;
+  width: 50%;
+  border: 1px solid var(--color-border);
+  border-bottom-color: var(--color-surface);
+  border-radius: 10px 10px 0 0;
+  background: var(--color-surface);
+  transform: translateX(0);
+  transform-origin: center bottom;
+  transition: transform var(--motion-tabs) var(--motion-ease-out);
+  pointer-events: none;
+}
+/* Concave base joins flare into the content surface, like a browser tab. */
+.tab-indicator::before,
+.tab-indicator::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  width: 13px;
+  height: 13px;
+  background: radial-gradient(
+    circle at var(--join-side, 0%) 0,
+    transparent 12px,
+    var(--color-border) 12px 13px,
+    var(--color-surface) 13px
+  );
+}
+.tab-indicator::before {
+  left: -13px;
+}
+.tab-indicator::after {
+  right: -13px;
+  --join-side: 100%;
+}
+.instructions-selected .tab-indicator {
+  transform: translateX(100%);
+}
+.section-tabs button {
+  position: relative;
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px;
+  border: 0;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  color: var(--color-ink);
+  transform: none;
+}
+.section-tabs button[aria-selected='true'] {
+  font-weight: 600;
+}
+.section-tabs button:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: -3px;
+}
+.recipe-body .inactive-panel {
+  display: none;
+}

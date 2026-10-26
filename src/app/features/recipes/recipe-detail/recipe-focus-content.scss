@@ -1,0 +1,60 @@
+.focus-reading {
+  min-height: 0;
+  height: 100%;
+}
+.focus-reading .recipe-body {
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 0;
+  padding: 0;
+}
+.focus-reading :is(.ingredients, .instructions) {
+  grid-area: auto;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  padding: 12px 20px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-control-border) transparent;
+}
+.focus-reading .instructions {
+  border-left: 1px solid var(--color-border);
+}
+.focus-reading .wide-section-heading {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 1.125rem;
+}
+.focus-reading .recipe-body li {
+  font-size: 1.0625rem;
+}
+.focus-reading .ingredients-tools,
+.focus-reading .instruction-tools {
+  margin-bottom: 12px;
+}
+.focus-reading .ingredients-tools {
+  justify-content: flex-start;
+}
+.focus-reading .cooking-step {
+  scroll-margin-top: 12px;
+}
+.focus-servings {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.focus-servings button {
+  width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+}
+.focus-servings span {
+  font-size: 0.875rem;
+  white-space: nowrap;
+}

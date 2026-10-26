@@ -98,6 +98,7 @@ const flywheelWindow = 300;
 export class MinuteRulerComponent {
   readonly seconds = input.required<number>();
   readonly disabled = input(false);
+  readonly rotated = input(false);
   readonly timeline = input(false);
   readonly elapsedSeconds = input(0);
   readonly totalSeconds = input(0);
@@ -182,6 +183,7 @@ export class MinuteRulerComponent {
   });
   private gesture?: {
     id: number;
+    rotated: boolean;
     element: HTMLElement;
     x: number;
     y: number;
@@ -238,6 +240,7 @@ export class MinuteRulerComponent {
       const unavailable = this.disabled();
       const timeline = this.timeline();
       const mode = this.preferences.mode();
+      this.rotated();
       untracked(() => {
         const changed = this.lastIdentity !== identity;
         if (
@@ -263,7 +266,7 @@ export class MinuteRulerComponent {
     afterNextRender(() => {
       const element = this.host.nativeElement;
       const measure = () => {
-        const fullWidth = element.getBoundingClientRect().width || 360;
+        const fullWidth = element.clientWidth || 360;
         const pickerWidth =
           element.querySelector<HTMLElement>('.minute-ruler')?.clientWidth || fullWidth;
         this.progressWidth.set(fullWidth);
@@ -308,29 +311,33 @@ export class MinuteRulerComponent {
     event.preventDefault();
     const element = event.currentTarget as HTMLElement;
     const bounds = element.getBoundingClientRect();
-    if (bounds.width <= 0) return;
-    this.width.set(bounds.width);
+    const rotated = this.rotated();
+    const width = rotated ? bounds.height : bounds.width;
+    const x = rotated ? event.clientY : event.clientX;
+    if (width <= 0) return;
+    this.width.set(width);
     element.focus({ preventScroll: true });
     this.gesture = {
       id: event.pointerId,
+      rotated,
       element,
-      x: event.clientX,
-      y: event.clientY,
-      clientX: event.clientX,
+      x,
+      y: rotated ? event.clientX : event.clientY,
+      clientX: x,
       position: from,
-      left: bounds.left,
-      width: bounds.width,
+      left: rotated ? bounds.top : bounds.left,
+      width,
       active: false,
       mode,
       mouse: event.pointerType === 'mouse',
-      sampleX: event.clientX,
+      sampleX: x,
       sampleAt: now,
       velocity: 0,
       carry,
       carryAt: now,
     };
     if (mode === 'swipe') this.position.set(from);
-    else this.pointAt(event.clientX, false);
+    else this.pointAt(x, false);
     // Capture from the first contact so a drag can begin anywhere, including the center.
     try {
       element.setPointerCapture(event.pointerId);
@@ -360,18 +367,21 @@ export class MinuteRulerComponent {
     if (!gesture || event.pointerId !== gesture.id) return;
     event.preventDefault();
     const now = performance.now();
+    const x = gesture.rotated ? event.clientY : event.clientX;
     const elapsed = now - gesture.sampleAt;
     if (elapsed > 0)
-      gesture.velocity =
-        ((event.clientX - gesture.sampleX) / elapsed) * (gesture.mode === 'swipe' ? -1 : 1);
+      gesture.velocity = ((x - gesture.sampleX) / elapsed) * (gesture.mode === 'swipe' ? -1 : 1);
     if (gesture.velocity && Math.sign(gesture.velocity) !== Math.sign(gesture.carry))
       gesture.carry = 0;
-    gesture.sampleX = event.clientX;
+    gesture.sampleX = x;
     gesture.sampleAt = now;
-    gesture.clientX = event.clientX;
+    gesture.clientX = x;
     // Swipe moves the scale beneath the center; Edge hold moves the selection with contact.
-    this.pointAt(event.clientX, gesture.active);
-    if (!gesture.active && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 6) {
+    this.pointAt(x, gesture.active);
+    if (
+      !gesture.active &&
+      Math.hypot(x - gesture.x, (gesture.rotated ? event.clientX : event.clientY) - gesture.y) > 6
+    ) {
       clearTimeout(this.hold);
       this.activate();
     }
@@ -441,7 +451,7 @@ export class MinuteRulerComponent {
       this.cancel();
       return;
     }
-    this.pointAt(event.clientX, true);
+    this.pointAt(gesture.rotated ? event.clientY : event.clientX, true);
     const velocity =
       gesture.active && !gesture.mouse && performance.now() - gesture.sampleAt < 120
         ? gesture.velocity

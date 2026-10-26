@@ -5,7 +5,7 @@ import { PageTransitionService } from '../../../core/services/page-transition.se
 import { recipeStepTimers, type StepTimerTarget } from '../../../core/models/step-timer';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RecipeDetailComponent } from './recipe-detail';
 import { RecipeService } from '../../../core/services/recipe.service';
@@ -73,12 +73,13 @@ describe('recipe detail', () => {
             }),
           },
         },
-        { provide: FeedbackService, useValue: {} },
+        { provide: FeedbackService, useFactory: () => new FeedbackService() },
       ],
     });
   });
   afterEach(() => {
     TestBed.resetTestingModule();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
     localStorage.clear();
@@ -154,6 +155,186 @@ describe('recipe detail', () => {
       targets: recipeStepTimers(recipe),
     };
   }
+
+  it('places servings before the shopping action in normal reading', async () => {
+    const f = await fixture();
+    const tools = f.host.nativeElement.querySelector('.ingredients-tools') as HTMLElement;
+    expect(tools.firstElementChild?.tagName.toLowerCase()).toBe('app-select-menu');
+    expect(tools.lastElementChild?.textContent).toContain('Add to shopping list');
+  });
+
+  async function openFocus(f: Awaited<ReturnType<typeof fixture>>, beforeRender?: () => void) {
+    if (!HTMLDialogElement.prototype.showModal)
+      Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+        configurable: true,
+        value() {},
+      });
+    if (!HTMLDialogElement.prototype.close)
+      Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+        configurable: true,
+        value() {},
+      });
+    vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (
+      this: HTMLDialogElement,
+    ) {
+      this.setAttribute('open', '');
+    });
+    vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function (
+      this: HTMLDialogElement,
+    ) {
+      this.removeAttribute('open');
+    });
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    const button = f.host.nativeElement.querySelector('.focus-mode-button') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    button.focus();
+    button.click();
+    beforeRender?.();
+    f.host.detectChanges();
+    await f.host.whenStable();
+    f.host.detectChanges();
+    return f.host.nativeElement.querySelector('dialog.recipe-focus') as HTMLDialogElement;
+  }
+
+  it('shows one copy of both sections in focus and hides shopping and tabs', async () => {
+    const f = await fixture();
+    const dialog = await openFocus(f);
+    expect(dialog.open).toBe(true);
+    expect(document.documentElement.style.overflow).toBe('hidden');
+    expect(f.host.nativeElement.querySelectorAll('#ingredients-panel')).toHaveLength(1);
+    expect(f.host.nativeElement.querySelectorAll('#instructions-panel')).toHaveLength(1);
+    expect(dialog.querySelector('[role="tablist"]')).toBeNull();
+    expect(dialog.querySelector('.recipe-shopping-button')).toBeNull();
+    for (const id of ['ingredients-panel', 'instructions-panel']) {
+      const panel = dialog.querySelector('#' + id)!;
+      expect(panel.getAttribute('role')).toBe('region');
+      expect(panel.getAttribute('tabindex')).toBe('0');
+      expect(panel.hasAttribute('inert')).toBe(false);
+    }
+  });
+
+  it('preserves servings, checkmarks, running clocks and the selected tab on focus exit', async () => {
+    const f = await timerFixture();
+    const c = f.host.componentInstance;
+    c.switchSection('instructions');
+    c.changeServings('6');
+    c.toggleStep(4);
+    f.timers.start(f.targets[0]!);
+    const before = f.timers.state(f.targets[0]!);
+    const dialog = await openFocus(f);
+    (dialog.querySelector('[aria-label="Increase servings"]') as HTMLButtonElement).click();
+    f.host.detectChanges();
+    expect(c.selectedServings()).toBe(8);
+    (dialog.querySelector('[aria-label="Exit focus mode"]') as HTMLButtonElement).click();
+    f.host.detectChanges();
+    await f.host.whenStable();
+    expect(f.host.nativeElement.querySelector('dialog.recipe-focus')).toBeNull();
+    expect(c.activeSection()).toBe('instructions');
+    expect(c.completedSteps().has(4)).toBe(true);
+    expect(c.selectedServings()).toBe(8);
+    expect(f.timers.state(f.targets[0]!)).toMatchObject({
+      running: true,
+      duration: before.duration,
+    });
+    expect(document.activeElement?.classList.contains('focus-mode-button')).toBe(true);
+    expect(f.host.nativeElement.querySelectorAll('#instructions-panel')).toHaveLength(1);
+    expect(document.body.style.position).not.toBe('fixed');
+    expect(document.documentElement.style.overflow).toBe('');
+  });
+
+  it('closes focus and restores body styles when the account changes', async () => {
+    const f = await fixture();
+    document.body.style.overflow = 'clip';
+    await openFocus(f);
+    expect(document.body.style.position).toBe('fixed');
+    (TestBed.inject(RecipeService).accountVersion as ReturnType<typeof signal<number>>).set(1);
+    f.host.detectChanges();
+    await f.host.whenStable();
+    f.host.detectChanges();
+    expect(f.host.nativeElement.querySelector('dialog.recipe-focus')).toBeNull();
+    expect(document.body.style.overflow).toBe('clip');
+    expect(document.body.style.position).toBe('');
+    document.body.style.overflow = '';
+  });
+
+  it('restores the ordinary page when the focus dialog is cancelled', async () => {
+    const f = await fixture();
+    const dialog = await openFocus(f);
+    const cancel = new Event('cancel', { cancelable: true });
+    dialog.dispatchEvent(cancel);
+    f.host.detectChanges();
+    expect(cancel.defaultPrevented).toBe(true);
+    expect(f.host.nativeElement.querySelector('dialog.recipe-focus')).toBeNull();
+    expect(f.host.nativeElement.querySelector('[role="tablist"]')).not.toBeNull();
+    expect(document.documentElement.style.overflow).toBe('');
+  });
+
+  it('closes focus when another recipe is loaded in the same component', async () => {
+    const f = await fixture();
+    await openFocus(f);
+    const route = TestBed.inject(ActivatedRoute);
+    Object.defineProperty(route.snapshot, 'paramMap', {
+      value: convertToParamMap({ id: 'next-recipe' }),
+    });
+    route.snapshot.data['recipePage'] = {
+      accountVersion: 0,
+      revision: 0,
+      recipe: {
+        id: 'next-recipe',
+        title: 'Another recipe',
+        servings: 2,
+        ingredients: ['Salt'],
+        instructions: ['Serve.'],
+      },
+      collections: [],
+    };
+    routeData.next(route.snapshot.data);
+    await f.host.whenStable();
+    f.host.detectChanges();
+    expect(f.host.nativeElement.querySelector('dialog.recipe-focus')).toBeNull();
+    expect(document.body.style.position).toBe('');
+    expect(document.documentElement.style.overflow).toBe('');
+    expect(f.host.componentInstance.recipe()?.id).toBe('next-recipe');
+  });
+
+  it('captures scroll before the reading template moves and restores that exact position', async () => {
+    const f = await fixture();
+    let pageY = 420;
+    vi.spyOn(window, 'scrollY', 'get').mockImplementation(() => pageY);
+    const reading = f.host.nativeElement.querySelector('.recipe-reading') as HTMLElement;
+    vi.spyOn(reading, 'getBoundingClientRect').mockReturnValue({ height: 2000 } as DOMRect);
+    const dialog = await openFocus(f, () => {
+      pageY = 80;
+    });
+    expect(document.body.style.top).toBe('-420px');
+    expect(reading.style.minHeight).toBe('2000px');
+    (dialog.querySelector('[aria-label="Exit focus mode"]') as HTMLButtonElement).click();
+    f.host.detectChanges();
+    expect(window.scrollTo).toHaveBeenCalledWith({ left: 0, top: 420, behavior: 'instant' });
+    expect(reading.style.minHeight).toBe('');
+  });
+
+  it('keeps timer-finished feedback and its View step action inside focus', async () => {
+    const f = await timerFixture();
+    const dialog = await openFocus(f);
+    vi.useFakeTimers();
+    f.timers.setDuration(f.targets[0]!, 1);
+    f.timers.start(f.targets[0]!);
+    await vi.advanceTimersByTimeAsync(1200);
+    f.host.detectChanges();
+    const toast = dialog.querySelector('.toast') as HTMLElement;
+    expect(toast?.textContent).toContain('Step 1');
+    const step = dialog.querySelector('#recipe-step-1') as HTMLElement;
+    step.scrollIntoView = vi.fn();
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const action = toast.querySelector('.undo-action') as HTMLButtonElement;
+    expect(action.textContent).toContain('View step');
+    action.click();
+    await Promise.resolve();
+    await Promise.resolve();
+    f.host.detectChanges();
+    expect(step.scrollIntoView).toHaveBeenCalled();
+  });
 
   it('allows the instructions reset when only a timer has changed, then restores its preset', async () => {
     const f = await timerFixture();
