@@ -25,6 +25,7 @@ jobs:
           cache: npm
       - uses: actions/configure-pages@v5
       - run: npm ci
+      - run: npm run test:importer
       - run: npm run build -- --configuration production,pages --base-href /recipeBook/
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}

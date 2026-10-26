@@ -8,6 +8,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:importer": "node --test supabase/functions/_shared/recipe-parser.test.mjs",
     "prebuild": "node scripts/configure-supabase.mjs",
     "prestart": "node scripts/configure-supabase.mjs",
     "predev": "node scripts/configure-supabase.mjs",

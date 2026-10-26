@@ -119,7 +119,65 @@ function perPortionNutrition(source) {
   return Object.keys(result).length > 1 ? result : undefined;
 }
 
-function pageExtras($, sourceUrl, ingredients) {
+// Recept.se's displayed recipe has headings and numeric kcal that its JSON-LD
+// omits or misformats. Read only that recipe's inert JSON prop, never execute it.
+function receptPageExtras($, sourceUrl, ingredients, recipe) {
+  let page;
+  try {
+    page = JSON.parse($('page-recipe').first().attr(':recipe') ?? 'null');
+  } catch {
+    return {};
+  }
+  if (
+    typeof page?.slug !== 'string' ||
+    new URL(sourceUrl).pathname.replace(/\/+$/, '') !== '/recept/' + page.slug ||
+    text(page.title) !== text(recipe.name)
+  )
+    return {};
+
+  const result = {};
+  const calories = page.nutrition?.calories;
+  if (typeof calories === 'number' && Number.isFinite(calories) && calories >= 0) {
+    result.nutrition = { ...recipe.nutrition, calories: Math.round(calories) + ' kcal' };
+  }
+
+  if (!Array.isArray(page.ingredient_groups)) return result;
+  const rows = [];
+  for (const group of page.ingredient_groups) {
+    if (!Array.isArray(group?.ingredients)) return result;
+    for (const item of group.ingredients) {
+      rows.push({
+        section: text(group.title),
+        names: [item?.ingredient?.name_singular, item?.ingredient?.name_plural],
+      });
+    }
+  }
+  const comparable = (value) =>
+    text(value)
+      .normalize('NFKC')
+      .toLocaleLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim();
+  // Quantities in this prop are per serving. Preserve JSON-LD amounts and order;
+  // attach headings only if every ingredient name matches its corresponding row.
+  if (
+    rows.length === ingredients.length &&
+    rows.every((row, index) =>
+      row.names.some(
+        (name) =>
+          comparable(name) &&
+          (' ' + comparable(ingredients[index].text) + ' ').includes(' ' + comparable(name) + ' '),
+      ),
+    )
+  ) {
+    result.ingredientSections = rows.map((row) => row.section);
+  }
+  return result;
+}
+
+function pageExtras($, sourceUrl, ingredients, recipe) {
+  if (new URL(sourceUrl).hostname === 'recept.se')
+    return receptPageExtras($, sourceUrl, ingredients, recipe);
   const result = {};
   if (new URL(sourceUrl).hostname === 'www.ica.se') {
     const health = $('.health-section').first();
@@ -178,7 +236,7 @@ export function extractMetadata(recipe, html, sourceUrl, ingredients, steps) {
     if (v) nutrition[key] = v;
   }
   const category = list(recipe.recipeCategory).join(', ');
-  const extras = pageExtras($, sourceUrl, ingredients);
+  const extras = pageExtras($, sourceUrl, ingredients, recipe);
   // ICA's conditional allergy substitutions and climate advice are not recipe details.
   // Also guard JSON fields when a publisher appends the same labelled blocks there.
   const recipeText = (value) => {
