@@ -54,6 +54,8 @@ import { FeedbackService } from './core/services/feedback.service';
     '[style.--app-header-height]': 'headerHeight()',
     '[class.recipe-page]': '!!appearance.background()',
     '[class.compact-header]': 'compactHeader()',
+    '[class.focus-surface]': '!!appearance.browserColor()',
+    '[style.--browser-surface]': 'appearance.browserColor()',
     '[class.restoring-library]': 'restoringLibrary()',
     '(document:pointerdown)': 'onPointerDown($event)',
     '(document:click)': 'onNavigationClick($event)',
@@ -86,7 +88,13 @@ export class App {
   private guestRecipes = inject(GuestRecipesService);
   readonly accountChanging = signal(false);
 
+  private syncThemeColor = (): void => {};
+
   constructor() {
+    effect(() => {
+      this.appearance.browserColor();
+      this.syncThemeColor();
+    });
     inject(StepTimerService); // Restore countdowns even when the app opens on the library.
     this.destroyRef.onDestroy(() => {
       this.stopSnapshotGesture?.();
@@ -99,9 +107,10 @@ export class App {
       const originalThemeColor = themeColor?.content;
       let themeFrame = 0;
       const syncThemeColor = () => {
-        const color = getComputedStyle(header).backgroundColor;
+        const color = this.appearance.browserColor() ?? getComputedStyle(header).backgroundColor;
         if (themeColor && themeColor.content !== color) themeColor.content = color;
       };
+      this.syncThemeColor = syncThemeColor;
       const queueThemeColor = () => {
         cancelAnimationFrame(themeFrame);
         themeFrame = requestAnimationFrame(() => {

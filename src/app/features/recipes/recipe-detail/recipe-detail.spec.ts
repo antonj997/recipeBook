@@ -1,3 +1,4 @@
+import { PageAppearanceService } from '../../../core/services/page-appearance.service';
 import { CloudCookbookService } from '../../../core/services/cloud-cookbook.service';
 import { TimerPushService } from '../../../core/services/timer-push.service';
 import { BehaviorSubject } from 'rxjs';
@@ -200,6 +201,7 @@ describe('recipe detail', () => {
     const f = await fixture();
     const dialog = await openFocus(f);
     expect(dialog.open).toBe(true);
+    expect(TestBed.inject(PageAppearanceService).browserColor()).toBe('#faf9f5');
     expect(dialog.getAttribute('aria-label')).toBe('Recipe section test');
     expect(dialog.querySelector('header h2')).toBeNull();
     expect(dialog.querySelector('header')?.textContent?.trim()).toBe('');
@@ -242,6 +244,7 @@ describe('recipe detail', () => {
     expect(document.activeElement?.classList.contains('focus-mode-button')).toBe(true);
     expect(f.host.nativeElement.querySelectorAll('#instructions-panel')).toHaveLength(1);
     expect(document.body.style.position).not.toBe('fixed');
+    expect(TestBed.inject(PageAppearanceService).browserColor()).toBeNull();
     expect(document.documentElement.style.overflow).toBe('');
   });
 
@@ -256,6 +259,7 @@ describe('recipe detail', () => {
     f.host.detectChanges();
     expect(f.host.nativeElement.querySelector('dialog.recipe-focus')).toBeNull();
     expect(document.body.style.overflow).toBe('clip');
+    expect(TestBed.inject(PageAppearanceService).browserColor()).toBeNull();
     expect(document.body.style.position).toBe('');
     document.body.style.overflow = '';
   });

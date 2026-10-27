@@ -168,3 +168,13 @@ main:focus {
     --icon-stroke-width: 2.1;
   }
 }
+
+/* Safari can sample the covered page header for its status-bar tint. Match the
+   focus surface immediately, and let the normal header resume on dismissal. */
+:host(.focus-surface),
+:host(.focus-surface) .app-header {
+  background: var(--browser-surface);
+}
+:host(.focus-surface) .app-header {
+  transition: none;
+}

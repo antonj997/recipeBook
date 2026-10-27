@@ -1,3 +1,4 @@
+import { PageAppearanceService } from '../../../core/services/page-appearance.service';
 import { FeedbackToastComponent } from '../../../shared/components/feedback-toast';
 import { DOCUMENT } from '@angular/common';
 import {
@@ -44,9 +45,16 @@ export class RecipeFocusComponent {
   private readonly document = inject(DOCUMENT);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private restore?: () => void;
+  private restoreBrowserColor?: () => void;
   private finished = false;
 
   constructor() {
+    const surface =
+      this.document
+        .defaultView!.getComputedStyle(this.document.documentElement)
+        .getPropertyValue('--color-surface')
+        .trim() || '#faf9f5';
+    this.restoreBrowserColor = inject(PageAppearanceService).useBrowserColor(surface);
     afterNextRender(() => {
       if (this.finished) return;
       const body = this.document.body;
@@ -105,5 +113,7 @@ export class RecipeFocusComponent {
     const restore = this.restore;
     this.restore = undefined;
     restore?.();
+    this.restoreBrowserColor?.();
+    this.restoreBrowserColor = undefined;
   }
 }
