@@ -3,61 +3,18 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   bytesToDataUrl,
   dataUrlBytes,
+  extractPhotos,
   hasPhoto,
   imageId,
+  inlinePhotos,
   prepareImage,
   putImages,
   type ImageTables,
 } from './recipe-image';
+import { testJpeg } from './recipe-image.testing';
+import type { Recipe } from './recipe.model';
 
-function jpeg(width = 640, height = 480): Uint8Array<ArrayBuffer> {
-  return new Uint8Array([
-    255,
-    216,
-    255,
-    225,
-    0,
-    4,
-    0,
-    0,
-    255,
-    192,
-    0,
-    17,
-    8,
-    height >> 8,
-    height & 255,
-    width >> 8,
-    width & 255,
-    3,
-    1,
-    17,
-    0,
-    2,
-    17,
-    0,
-    3,
-    17,
-    0,
-    255,
-    218,
-    0,
-    12,
-    3,
-    1,
-    0,
-    2,
-    17,
-    3,
-    17,
-    0,
-    63,
-    0,
-    0,
-    255,
-    217,
-  ]);
-}
+const jpeg = testJpeg;
 
 describe('recipe images', () => {
   let database: (Dexie & ImageTables) | undefined;
@@ -130,5 +87,71 @@ describe('recipe images', () => {
     expect(await database.images.count()).toBe(1);
     expect((await database.images.get(first.image.id))?.createdAt).toBe('2026-10-01T00:00:00.000Z');
     expect((await database.thumbs.get(first.image.id))?.width).toBe(320);
+  });
+
+  it('moves data-URL photos into the store once and keeps their ids on the copies', async () => {
+    const cover = bytesToDataUrl(jpeg(640, 480, 1));
+    const step = bytesToDataUrl(jpeg(640, 480, 2));
+    const recipe = {
+      id: 'soup',
+      title: 'Soup',
+      ingredients: [],
+      instructions: ['Cook.', 'Serve.'],
+      imageDataUrl: cover,
+      stepDetails: [{ imageDataUrl: step }, { imageDataUrl: cover }],
+    };
+    const { recipes, images } = await extractPhotos([recipe, { ...recipe, id: 'copy' }], {
+      makeThumb: async () => undefined,
+    });
+    const coverId = await imageId(dataUrlBytes(cover));
+    expect(recipes[0]).toMatchObject({
+      photoId: coverId,
+      stepDetails: [{ photoId: await imageId(dataUrlBytes(step)) }, { photoId: coverId }],
+    });
+    expect(JSON.stringify(recipes)).not.toContain('data:image');
+    expect(images.map((image) => image.image.id).sort()).toEqual(
+      [coverId, await imageId(dataUrlBytes(step))].sort(),
+    );
+    expect(recipe.imageDataUrl).toBe(cover);
+  });
+
+  it('leaves recipes without data-URL photos untouched', async () => {
+    const recipe = {
+      id: 'a',
+      title: 'A',
+      ingredients: [],
+      instructions: [],
+      photoId: 'f'.repeat(64),
+    };
+    const { recipes, images } = await extractPhotos([recipe]);
+    expect(recipes[0]).toBe(recipe);
+    expect(images).toEqual([]);
+  });
+
+  it('turns stored photos back into the same data URLs and drops ids it cannot find', async () => {
+    database = new Dexie('ImageTest') as Dexie & ImageTables;
+    database.version(1).stores({ images: 'id', thumbs: 'id' });
+    const cover = bytesToDataUrl(jpeg(640, 480, 3));
+    const { recipes, images } = await extractPhotos<Recipe>(
+      [
+        {
+          id: 'soup',
+          title: 'Soup',
+          ingredients: [],
+          instructions: ['Cook.'],
+          imageDataUrl: cover,
+          stepDetails: [{ photoId: 'e'.repeat(64) }],
+        },
+      ],
+      { makeThumb: async () => undefined },
+    );
+    await database.transaction('rw', database.images, database.thumbs, () =>
+      putImages(database!, images),
+    );
+    const inlined = await inlinePhotos(database, recipes[0]!);
+    expect(inlined.imageDataUrl).toBe(cover);
+    expect(inlined.photoId).toBeUndefined();
+    expect(inlined.stepDetails).toEqual([{}]);
+    expect(recipes[0]!.photoId).toBeDefined();
   });
 });

@@ -44,7 +44,7 @@ The Edge Function verifies the user, enforces 30 recipe imports and 150 photo re
 
 The hosted function and Express server share the same parser and metadata extraction. Author, ratings, difficulty, separate prep/cook times, and cooking tips remain excluded. Recipes still open in the unsaved review flow before **looks good!** writes them.
 
-Private files use content hashes to avoid duplicate uploads. Unreferenced photos are retained, rather than deleting files that another offline device may still need; a future cleanup process can reclaim them. Account caches are stored on the device, so use a trusted browser profile.
+Private files use content hashes to avoid duplicate uploads. The device image store uses the same SHA-256 names, so sync uploads only photos whose path the recipe has not synced before and never downloads a photo the device already stores; a title-only edit sends no photo. Unreferenced photos are retained, rather than deleting files that another offline device may still need; a future cleanup process can reclaim them. Account caches are stored on the device, so use a trusted browser profile.
 
 ## Verification
 

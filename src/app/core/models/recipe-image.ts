@@ -1,6 +1,7 @@
 import type { EntityTable } from 'dexie';
 import { readRecipePhotoDimensions } from '../services/recipe-photo-header';
 import { isRecipeImage } from './recipe-metadata';
+import type { Recipe } from './recipe.model';
 
 /** A recipe or step photo, stored once per device and named by the SHA-256 of its JPEG bytes. */
 export interface StoredImage {
@@ -97,6 +98,54 @@ export async function putImages(
     if (thumb && !(await database.thumbs.where(':id').equals(thumb.id).count()))
       await database.thumbs.put(thumb);
   }
+}
+
+/** The cover and each step of a recipe, in order. */
+export function photoRefs(recipe: PhotoRef & { stepDetails?: PhotoRef[] }): PhotoRef[] {
+  return [recipe, ...(recipe.stepDetails ?? [])];
+}
+
+/** Copies whose data-URL photos point at prepared images instead; photo-free recipes are reused. */
+export async function extractPhotos<T extends Recipe>(
+  recipes: readonly T[],
+  options: Parameters<typeof prepareImage>[1] = {},
+): Promise<{ recipes: T[]; images: PreparedImage[] }> {
+  const images = new Map<string, PreparedImage>();
+  const ids = new Map<string, string>();
+  const result: T[] = [];
+  for (const recipe of recipes) {
+    if (!photoRefs(recipe).some((ref) => ref.imageDataUrl)) {
+      result.push(recipe);
+      continue;
+    }
+    const copy = structuredClone(recipe);
+    for (const ref of photoRefs(copy)) {
+      if (!ref.imageDataUrl) continue;
+      let id = ids.get(ref.imageDataUrl);
+      if (!id) {
+        const prepared = await prepareImage(dataUrlBytes(ref.imageDataUrl), options);
+        id = prepared.image.id;
+        ids.set(ref.imageDataUrl, id);
+        if (!images.has(id)) images.set(id, prepared);
+      }
+      ref.photoId = id;
+      delete ref.imageDataUrl;
+    }
+    result.push(copy);
+  }
+  return { recipes: result, images: [...images.values()] };
+}
+
+/** A copy that carries its photos as data URLs, for backups; ids without bytes are dropped. */
+export async function inlinePhotos<T extends Recipe>(database: ImageTables, recipe: T): Promise<T> {
+  const copy = structuredClone(recipe);
+  for (const ref of photoRefs(copy)) {
+    if (!ref.photoId) continue;
+    const row = await database.images.get(ref.photoId);
+    if (row && !ref.imageDataUrl) ref.imageDataUrl = bytesToDataUrl(row.bytes);
+    delete ref.photoId;
+  }
+  return copy;
 }
 
 /** Browser-only; returns nothing when the photo is already small or cannot be decoded. */

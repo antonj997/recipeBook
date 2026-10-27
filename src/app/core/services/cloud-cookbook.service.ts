@@ -15,6 +15,7 @@ import { SupabaseService } from './supabase.service';
 import { StorageDurabilityService } from './storage-durability.service';
 import { downloadPhotos, uploadPhotos, type RecipePhotos } from './cloud-photos';
 import { readRecipeMetadata, isRecipeImage, isHttpsUrl } from '../models/recipe-metadata';
+import { extractPhotos, photoRefs, putImages, type PreparedImage } from '../models/recipe-image';
 
 interface CloudRow {
   id: string;
@@ -94,12 +95,16 @@ export class CloudCookbookService {
   }
 
   async put(table: CookbookTable, value: CookbookValue, database = this.database): Promise<void> {
+    if (table === 'recipes') return this.putRecipes([value as Recipe], database);
     await this.write(database, [{ table, id: value.id, value }]);
   }
   async putRecipes(recipes: Recipe[], database = this.database): Promise<void> {
+    // Hashing and scaling happen before the transaction; Web Crypto must not suspend it.
+    const stored = await extractPhotos(recipes);
     await this.write(
       database,
-      recipes.map((value) => ({ table: 'recipes', id: value.id, value })),
+      stored.recipes.map((value) => ({ table: 'recipes', id: value.id, value })),
+      stored.images,
     );
   }
   async remove(table: CookbookTable, id: string, database = this.database): Promise<void> {
@@ -215,11 +220,17 @@ export class CloudCookbookService {
     changes:
       | Pick<PendingChange, 'table' | 'id' | 'value'>[]
       | (() => Promise<Pick<PendingChange, 'table' | 'id' | 'value'>[]>),
+    images: readonly PreparedImage[] = [],
   ): Promise<void> {
     const version = this.auth.accountVersion();
     const current = () => database === this.database && version === this.auth.accountVersion();
     if (!current()) throw new Error('Account changed. Try again.');
-    const tables = [database.recipes, database.collections, database.shoppingItems];
+    const tables = [
+      database.recipes,
+      database.collections,
+      database.shoppingItems,
+      ...(images.length ? [database.images, database.thumbs] : []),
+    ];
     const transactions: Dexie = database;
     await transactions.transaction(
       'rw',
@@ -227,6 +238,18 @@ export class CloudCookbookService {
       async () => {
         if (!current()) throw new Error('Account changed. Try again.');
         const records = typeof changes === 'function' ? await changes() : changes;
+        // Photos commit with the records that reference them; skipped records leave none behind.
+        const used = new Set(
+          records.flatMap((change) =>
+            change.table === 'recipes' && change.value
+              ? photoRefs(change.value as Recipe).flatMap((ref) => ref.photoId ?? [])
+              : [],
+          ),
+        );
+        await putImages(
+          database,
+          images.filter((image) => used.has(image.image.id)),
+        );
         for (const change of records) {
           if (!current()) throw new Error('Account changed. Try again.');
           const table = database.table(change.table);
@@ -262,31 +285,41 @@ export class CloudCookbookService {
   ) {
     const shopping = shoppingItems.map(readShoppingItem);
     let result = { added: 0, skipped: recipes.length, shoppingAdded: 0 };
-    await this.write(database, async () => {
-      const existing = await database.recipes.bulkGet(recipes.map((recipe) => recipe.id));
-      const savedCollections = new Set((await database.collections.toArray()).map((c) => c.id));
-      const existingShopping = new Set(
-        (await database.shoppingItems.toArray()).map((item) => item.id),
-      );
-      const added = recipes.filter((_, index) => !existing[index]);
-      const shoppingAdded = shopping.filter((item) => !existingShopping.has(item.id));
-      result = {
-        added: added.length,
-        skipped: recipes.length - added.length,
-        shoppingAdded: shoppingAdded.length,
-      };
-      return [
-        ...collections
-          .filter((c) => !savedCollections.has(c.id))
-          .map((value) => ({
-            table: 'collections' as const,
+    const stored = await extractPhotos(recipes);
+    recipes = stored.recipes;
+    await this.write(
+      database,
+      async () => {
+        const existing = await database.recipes.bulkGet(recipes.map((recipe) => recipe.id));
+        const savedCollections = new Set((await database.collections.toArray()).map((c) => c.id));
+        const existingShopping = new Set(
+          (await database.shoppingItems.toArray()).map((item) => item.id),
+        );
+        const added = recipes.filter((_, index) => !existing[index]);
+        const shoppingAdded = shopping.filter((item) => !existingShopping.has(item.id));
+        result = {
+          added: added.length,
+          skipped: recipes.length - added.length,
+          shoppingAdded: shoppingAdded.length,
+        };
+        return [
+          ...collections
+            .filter((c) => !savedCollections.has(c.id))
+            .map((value) => ({
+              table: 'collections' as const,
+              id: value.id,
+              value,
+            })),
+          ...added.map((value) => ({ table: 'recipes' as const, id: value.id, value })),
+          ...shoppingAdded.map((value) => ({
+            table: 'shoppingItems' as const,
             id: value.id,
             value,
           })),
-        ...added.map((value) => ({ table: 'recipes' as const, id: value.id, value })),
-        ...shoppingAdded.map((value) => ({ table: 'shoppingItems' as const, id: value.id, value })),
-      ];
-    });
+        ];
+      },
+      stored.images,
+    );
     return result;
   }
 
@@ -341,14 +374,23 @@ export class CloudCookbookService {
           ),
         ),
       );
+      // Account copies reference the same photo ids, so their bytes move with them.
+      const stored = await extractPhotos(source.recipes);
+      const movedRecipes = new Map(stored.recipes.map((recipe) => [recipe.id, recipe]));
+      const images = [...stored.images, ...(await deviceImages(stored.recipes))];
       assertCurrent();
       await database.transaction(
         'rw',
-        database.recipes,
-        database.collections,
-        database.shoppingItems,
-        database.outbox,
+        [
+          database.recipes,
+          database.collections,
+          database.shoppingItems,
+          database.outbox,
+          database.images,
+          database.thumbs,
+        ],
         async () => {
+          await putImages(database, images);
           const remapped = new Map<string, string>();
           const remappedRecipes = new Map<string, string>();
           const save = async (table: CookbookTable, value: CookbookValue) => {
@@ -382,7 +424,7 @@ export class CloudCookbookService {
           for (const recipe of source.recipes) {
             assertCurrent();
             const value = {
-              ...recipe,
+              ...movedRecipes.get(recipe.id)!,
               collectionIds: recipe.collectionIds?.map((id) => remapped.get(id) ?? id),
             };
             const existing = await database.recipes.get(recipe.id);
@@ -430,7 +472,8 @@ export class CloudCookbookService {
     assertCurrent();
     // Account cache and outbox are durable before removing anything from the guest database.
     // Concurrent guest edits and new records stay available for another explicit choice.
-    await db.transaction('rw', db.recipes, db.collections, db.shoppingItems, async () => {
+    const deviceTables = [db.recipes, db.collections, db.shoppingItems, db.images, db.thumbs];
+    await db.transaction('rw', deviceTables, async () => {
       for (const recipe of source.recipes) {
         assertCurrent();
         if (sameDeviceRecord(await db.recipes.get(recipe.id), recipe)) {
@@ -438,6 +481,13 @@ export class CloudCookbookService {
         }
       }
       const remaining = await db.recipes.toArray();
+      // Photos no remaining device recipe uses now live only in the account.
+      const kept = new Set(
+        remaining.flatMap((recipe) => photoRefs(recipe).map((ref) => ref.photoId)),
+      );
+      const unused = (await db.images.toCollection().primaryKeys()).filter((id) => !kept.has(id));
+      await db.images.bulkDelete(unused);
+      await db.thumbs.bulkDelete(unused);
       for (const category of source.collections) {
         assertCurrent();
         if (remaining.some((recipe) => recipe.collectionIds?.includes(category.id))) continue;
@@ -505,8 +555,14 @@ export class CloudCookbookService {
         let payload: CookbookValue | null = change.value;
         let photos: RecipePhotos = {};
         if (change.table === 'recipes' && payload) {
-          const uploaded = await uploadPhotos(client, userId, readCloudRecipe(payload));
-          payload = uploaded.payload;
+          const uploaded = await uploadPhotos(
+            client,
+            userId,
+            payload as Recipe,
+            cache,
+            (await cache.photos.get(change.id))?.paths,
+          );
+          payload = readCloudRecipe(uploaded.payload);
           photos = uploaded.photos;
         }
         if (!current()) return;
@@ -564,16 +620,18 @@ export class CloudCookbookService {
           const key = `${tableName}:${row.id}`;
           if (await cache.outbox.get(key)) continue;
           let value: CookbookValue | null = null;
+          let images: PreparedImage[] = [];
           if (!row.deleted) {
             if (tableName === 'recipes') {
-              value = await downloadPhotos(
+              ({ recipe: value, images } = await downloadPhotos(
                 client,
                 userId,
                 readCloudRecipe(row.payload),
                 row.photos ?? {},
+                cache,
                 await cache.recipes.get(row.id),
                 (await cache.photos.get(row.id))?.paths,
-              );
+              ));
             } else if (tableName === 'shoppingItems') {
               value = readShoppingItem(row.payload);
               if (value.id !== row.id) throw new Error('Invalid cloud shopping item ID.');
@@ -582,11 +640,10 @@ export class CloudCookbookService {
           if (!current()) return;
           await cache.transaction(
             'rw',
-            cache.table(tableName),
-            cache.outbox,
-            cache.photos,
+            [cache.table(tableName), cache.outbox, cache.photos, cache.images, cache.thumbs],
             async () => {
               if (!current() || (await cache.outbox.get(key))) return;
+              await putImages(cache, images);
               if (value) await cache.table(tableName).put(value);
               else await cache.table(tableName).delete(row.id);
               if (tableName === 'recipes')
@@ -633,6 +690,17 @@ export class CloudCookbookService {
       }
     }
   }
+}
+
+/** Bytes of photos the device database already stores for these recipes. */
+async function deviceImages(recipes: readonly Recipe[]): Promise<PreparedImage[]> {
+  const ids = [
+    ...new Set(recipes.flatMap((recipe) => photoRefs(recipe).flatMap((ref) => ref.photoId ?? []))),
+  ];
+  const [images, thumbs] = await Promise.all([db.images.bulkGet(ids), db.thumbs.bulkGet(ids)]);
+  return images.flatMap((image, index) =>
+    image ? [{ image, ...(thumbs[index] ? { thumb: thumbs[index] } : {}) }] : [],
+  );
 }
 
 // Stable IDs preserve different recipes with the same ID and make interrupted transfers retryable.
