@@ -24,6 +24,16 @@ import {
     }
     @if (categories().length || recipe().totalTime != null) {
       <div class="recipe-metadata">
+        @if (recipe().totalTime != null) {
+          <p
+            class="recipe-time"
+            aria-label="Total time"
+            [appRecipeTransition]="recipe().id"
+            transitionPart="time"
+          >
+            <app-icon name="clock" />{{ formatTime(recipe().totalTime!) }}
+          </p>
+        }
         @if (categories().length) {
           <div
             class="recipe-categories"
@@ -34,16 +44,6 @@ import {
               <span class="recipe-category" [title]="category">{{ category }}</span>
             }
           </div>
-        }
-        @if (recipe().totalTime != null) {
-          <p
-            class="recipe-time"
-            aria-label="Total time"
-            [appRecipeTransition]="recipe().id"
-            transitionPart="time"
-          >
-            <app-icon name="clock" />{{ formatTime(recipe().totalTime!) }}
-          </p>
         }
       </div>
     }
