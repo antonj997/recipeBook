@@ -12,7 +12,7 @@ A personal recipe collection for saving independent copies of recipes, browsing 
 
 ## Capabilities and constraints
 
-Existing Angular components, reactive recipe form, website import with photo processing, and Dexie storage are retained. The owner is learning the code and wants small understandable changes. No automated tests or unnecessary dependencies. Preserve saved recipes, backup behavior and imports.
+Existing Angular components, reactive recipe form, website import with photo processing, and Dexie storage are retained. The owner is learning the code and wants small understandable changes. Automated tests cover models, storage, sync, import and motion logic; avoid unnecessary dependencies. The full product description lives in docs/product.md. Preserve saved recipes, backup behavior and imports.
 
 ## Brand commitments
 

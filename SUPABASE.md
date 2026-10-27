@@ -40,7 +40,7 @@ For local development, set the same environment variables before `npm.cmd run de
 
 ## Importer
 
-The Edge Function verifies the user, enforces 30 recipe imports and 150 photo requests per account per hour, and only fetches approved HTTPS hosts. Requests, downloads, and execution have bounds; redirects are rejected. Browser origins are limited to the published app and local development. A photo fallback handles approved image CDNs when browser CORS prevents direct downloads.
+The Edge Function verifies the user, enforces 30 recipe imports and 150 photo requests per account per hour, and fetches public HTTPS pages without a site whitelist. Each connection is pinned to a validated public IP and every one of at most three redirects is checked again; requests, downloads and execution have bounds (see IMPORTING.md). Browser origins are limited to the published app and local development. Photos always pass through this authenticated importer.
 
 The hosted function and Express server share the same parser and metadata extraction. Author, ratings, difficulty, separate prep/cook times, and cooking tips remain excluded. Recipes still open in the unsaved review flow before **looks good!** writes them.
 
