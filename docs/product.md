@@ -199,6 +199,8 @@ Instruktionerna visas som numrerade steg. Numret ligger i samma rundade kvadrati
 
 Steg kan ligga i namngivna avsnitt och kan ha bilder. Bilder som redan finns sparade visas utan att originalwebbplatsen behöver vara tillgänglig. Vissa kvarvarande bildlänkar kan användaren välja att hämta separat.
 
+När första steget är avbockat får nästa steg en tunn kant i receptets ton. Sidan scrollar dit bara om steget ligger dolt bakom sidhuvud och flikar eller nära nederkanten, direkt utan animation när Reduce Motion är på.
+
 Ovanför stegen finns en liten progressangivelse och Reset. Reset återställer receptets avbockade steg och dess timers tillsammans, inklusive larm och schemalagda påminnelser. Portionsantalet och andra recept påverkas inte.
 
 Avbockning, vald sektion och portionsantal är lokal matlagningsstatus. Om ett steg ändrats ska gammal progress inte kopplas på ett nytt steg av misstag.

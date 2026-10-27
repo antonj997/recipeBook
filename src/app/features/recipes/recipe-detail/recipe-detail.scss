@@ -238,9 +238,32 @@ li::marker {
   padding: 0;
 }
 .instructions .cooking-step {
+  position: relative;
   padding: 0;
   margin: 0;
   border-bottom: 1px solid var(--color-border);
+}
+// Once cooking has begun, a quiet edge in the recipe tone marks where to continue.
+.instructions .cooking-step.is-next::before {
+  content: '';
+  position: absolute;
+  inset-block: 12px;
+  inset-inline-start: -10px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--recipe-outline);
+  animation: next-step-edge var(--motion-control) var(--motion-ease-out) both;
+}
+@keyframes next-step-edge {
+  from {
+    opacity: 0;
+    transform: scaleY(0.4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .instructions .cooking-step.is-next::before {
+    animation: none;
+  }
 }
 .cooking-step label {
   --checkbox-size: 32px;

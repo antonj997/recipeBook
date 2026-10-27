@@ -39,12 +39,14 @@ import { IconComponent } from '../../../shared/components/icon';
 import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark';
 import {
   afterRenderEffect,
+  afterNextRender,
   Component,
   computed,
   DestroyRef,
   ElementRef,
   effect,
   inject,
+  Injector,
   OnInit,
   OnDestroy,
   signal,
@@ -228,6 +230,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   private cookingSessions = inject(CookingSessionService);
   private readonly timers = inject(StepTimerService);
   private readonly wakeLock = inject(WakeLockService);
+  private readonly injector = inject(Injector);
   readonly stepTimers = computed(() => {
     const recipe = this.recipe();
     return recipe ? recipeStepTimers(recipe) : [];
@@ -307,14 +310,38 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   }
   // Progress is local to this account and never changes the saved recipe.
   completedSteps = signal<Set<number>>(new Set());
+  /** The first unchecked step once cooking has begun; -1 before the first check or when done. */
+  readonly nextStep = computed(() => {
+    const done = this.completedSteps();
+    const count = this.recipe()?.instructions.length ?? 0;
+    if (!done.size) return -1;
+    for (let index = 0; index < count; index++) if (!done.has(index)) return index;
+    return -1;
+  });
   toggleStep(index: number): void {
     if (this.accountChanged()) return;
+    const checking = !this.completedSteps().has(index);
     this.completedSteps.update((current) => {
       const next = new Set(current);
       next.has(index) ? next.delete(index) : next.add(index);
       return next;
     });
     this.saveCookingSession();
+    // Measure after the checked step has collapsed.
+    if (checking) afterNextRender(() => this.revealNextStep(), { injector: this.injector });
+  }
+  /** Scrolls only when the next step starts above the sticky tabs or near the bottom edge. */
+  private revealNextStep(): void {
+    const index = this.nextStep();
+    const step = index < 0 ? null : document.getElementById('recipe-step-' + (index + 1));
+    if (!step) return;
+    const { top } = step.getBoundingClientRect();
+    const covered = parseFloat(getComputedStyle(step).scrollMarginTop) || 0;
+    if (top >= covered && top <= window.innerHeight - 96) return;
+    step.scrollIntoView({
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start',
+    });
   }
 
   tabKey(event: KeyboardEvent): void {

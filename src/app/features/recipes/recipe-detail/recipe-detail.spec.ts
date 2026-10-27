@@ -221,6 +221,46 @@ describe('recipe detail', () => {
     }
   });
 
+  it('marks the next step once cooking starts and scrolls only when it is out of view', async () => {
+    const f = await timerFixture();
+    const c = f.host.componentInstance;
+    c.switchSection('instructions');
+    f.host.detectChanges();
+    const root = f.host.nativeElement as HTMLElement;
+    expect(root.querySelector('.cooking-step.is-next')).toBeNull();
+    if (!HTMLElement.prototype.scrollIntoView)
+      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+        configurable: true,
+        writable: true,
+        value() {},
+      });
+    const scroll = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
+    const place = (id: string, top: number) =>
+      vi
+        .spyOn(root.querySelector('#' + id)!, 'getBoundingClientRect')
+        .mockReturnValue({ top, bottom: top + 80 } as DOMRect);
+    place('recipe-step-2', 5000);
+    c.toggleStep(0);
+    f.host.detectChanges();
+    await f.host.whenStable();
+    const second = root.querySelector('#recipe-step-2')!;
+    expect(second.classList).toContain('is-next');
+    expect(second.getAttribute('aria-current')).toBe('step');
+    expect(scroll).toHaveBeenCalledOnce();
+    expect(scroll.mock.contexts[0]).toBe(second);
+    scroll.mockClear();
+    place('recipe-step-3', 300);
+    c.toggleStep(1);
+    f.host.detectChanges();
+    await f.host.whenStable();
+    expect(root.querySelector('#recipe-step-3')!.classList).toContain('is-next');
+    expect(scroll).not.toHaveBeenCalled();
+    c.toggleStep(1);
+    f.host.detectChanges();
+    await f.host.whenStable();
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
   it('keeps the screen on while focus mode is open', async () => {
     const f = await timerFixture();
     const wake = TestBed.inject(WakeLockService);

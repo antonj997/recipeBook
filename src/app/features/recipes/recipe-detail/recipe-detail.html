@@ -233,6 +233,8 @@
                     [id]="'recipe-step-' + ($index + 1)"
                     tabindex="-1"
                     [class.completed]="completedSteps().has($index)"
+                    [class.is-next]="nextStep() === $index"
+                    [attr.aria-current]="nextStep() === $index ? 'step' : null"
                   >
                     @if (selectedRecipe.stepDetails?.[$index]?.section; as section) {
                       @if (
