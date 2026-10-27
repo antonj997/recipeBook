@@ -17,6 +17,11 @@ import { uploadPhotos, type RecipePhotos } from './cloud-photos';
 import { pullTable, readCloudRecipe, remoteTable, missingShoppingTable } from './cloud-pull';
 import { extractPhotos, photoRefs, putImages, type PreparedImage } from '../models/recipe-image';
 
+// Server limits stay far away and one request carries a burst of edits.
+const uploadBatchSize = 100;
+const writeSyncDelay = 1500;
+const returnSyncInterval = 30_000;
+
 @Service()
 export class CloudCookbookService {
   readonly auth = inject(SupabaseService);
@@ -31,17 +36,22 @@ export class CloudCookbookService {
   private cache: AccountDatabase | null = null;
   private running = new Map<AccountDatabase, Promise<void>>();
   private caches = new Map<string, AccountDatabase>();
+  private syncTimer?: ReturnType<typeof setTimeout>;
+  private lastSuccess = 0;
 
   constructor() {
     effect(() => this.selectAccount(this.auth.user()?.id ?? null));
     const listeners = new AbortController();
-    inject(DestroyRef).onDestroy(() => listeners.abort());
+    inject(DestroyRef).onDestroy(() => {
+      listeners.abort();
+      clearTimeout(this.syncTimer);
+    });
     const { signal: until } = listeners;
     window.addEventListener(
       'online',
       () => {
         this.online.set(true);
-        void this.initialize().then(() => this.sync());
+        void this.initialize().then(() => this.requestSync('online'));
       },
       { signal: until },
     );
@@ -50,8 +60,8 @@ export class CloudCookbookService {
       'visibilitychange',
       () => {
         // Refresh recipes from other devices, and retry queued changes after returning to the app.
-        if (document.visibilityState === 'visible' && navigator.onLine)
-          void this.initialize().then(() => this.sync());
+        if (document.visibilityState === 'visible' && navigator.onLine && !this.recentlySynced())
+          void this.initialize().then(() => this.requestSync('visible'));
       },
       { signal: until },
     );
@@ -77,6 +87,7 @@ export class CloudCookbookService {
     this.syncing.set(false);
     this.error.set('');
     this.lastSynced.set(null);
+    this.lastSuccess = 0;
     this.revision.update((value) => value + 1);
     const cache = this.cache;
     if (cache) {
@@ -203,7 +214,7 @@ export class CloudCookbookService {
       const pending = await database.outbox.count();
       if (current()) {
         this.pending.set(pending);
-        void this.sync();
+        this.requestSync('write');
       }
     }
   }
@@ -265,7 +276,7 @@ export class CloudCookbookService {
       const pending = await database.outbox.count();
       if (current()) {
         this.pending.set(pending);
-        void this.sync();
+        this.requestSync('write');
       }
     }
   }
@@ -509,7 +520,25 @@ export class CloudCookbookService {
     return cache instanceof AccountDatabase ? cache.outbox.count() : 0;
   }
 
+  /**
+   * Writes wait briefly so a burst of edits uploads together. Returning to the app syncs only
+   * when the last successful sync is older than thirty seconds; coming online syncs at once.
+   */
+  requestSync(reason: 'write' | 'visible' | 'online'): void {
+    if (reason === 'visible' && this.recentlySynced()) return;
+    clearTimeout(this.syncTimer);
+    this.syncTimer = undefined;
+    if (reason === 'write') this.syncTimer = setTimeout(() => void this.sync(), writeSyncDelay);
+    else void this.sync();
+  }
+
+  private recentlySynced(): boolean {
+    return Date.now() - this.lastSuccess < returnSyncInterval;
+  }
+
   sync(): Promise<void> {
+    clearTimeout(this.syncTimer);
+    this.syncTimer = undefined;
     this.selectAccount(this.auth.user()?.id ?? null);
     const cache = this.cache;
     const userId = this.accountId;
@@ -542,56 +571,37 @@ export class CloudCookbookService {
       if (!current()) return;
       this.pending.set(pending);
       if (!navigator.onLine) return;
-      for (const change of await cache.outbox.toArray()) {
-        if (!current()) return;
-        if (change.table === 'shoppingItems' && shoppingUnavailable) continue;
-        let payload: CookbookValue | null = change.value;
-        let photos: RecipePhotos = {};
-        if (change.table === 'recipes' && payload) {
-          const uploaded = await uploadPhotos(
+      const changes = await cache.outbox.toArray();
+      for (const table of ['collections', 'recipes', 'shoppingItems'] as const) {
+        const queued = changes.filter((change) => change.table === table);
+        for (let start = 0; start < queued.length; start += uploadBatchSize) {
+          if (!current()) return;
+          const outcome = await this.upload(
+            cache,
             client,
             userId,
-            payload as Recipe,
-            cache,
-            (await cache.photos.get(change.id))?.paths,
+            current,
+            queued.slice(start, start + uploadBatchSize),
           );
-          payload = readCloudRecipe(uploaded.payload);
-          photos = uploaded.photos;
-        }
-        if (!current()) return;
-        const { error } = await client.from(remoteTable(change.table)).upsert(
-          {
-            user_id: userId,
-            id: change.id,
-            payload,
-            ...(change.table === 'shoppingItems' ? {} : { photos }),
-            deleted: change.value === null,
-          },
-          { onConflict: 'user_id,id' },
-        );
-        if (error) {
-          if (change.table === 'shoppingItems' && missingShoppingTable(error)) {
+          if (outcome === 'stale') return;
+          if (outcome === 'missing') {
             shoppingUnavailable = true;
-            continue;
+            break;
           }
-          throw new Error(error.message);
         }
-        await cache.transaction('rw', cache.outbox, cache.photos, async () => {
-          // An edit made during upload must stay queued, rather than being acknowledged away.
-          if (!current() || (await cache.outbox.get(change.key))?.revision !== change.revision)
-            return;
-          await cache.outbox.delete(change.key);
-          if (change.table === 'recipes') await cache.photos.put({ id: change.id, paths: photos });
-        });
       }
+      let written = 0;
       for (const table of ['collections', 'recipes', 'shoppingItems'] as const) {
         if (table === 'shoppingItems' && shoppingUnavailable) continue;
         const outcome = await pullTable({ cache, client, userId, current }, table);
-        if (outcome === 'stale') return;
-        if (outcome === 'missing') shoppingUnavailable = true;
+        if (outcome.status === 'stale') return;
+        if (outcome.status === 'missing') shoppingUnavailable = true;
+        written += outcome.written;
       }
       if (current()) {
-        this.revision.update((value) => value + 1);
+        // Views reload their records only when this device's copy actually changed.
+        if (written) this.revision.update((value) => value + 1);
+        this.lastSuccess = Date.now();
         if (shoppingUnavailable)
           this.error.set(
             'Shopping list sync is not ready yet. Your items are saved on this device.',
@@ -626,6 +636,61 @@ export class CloudCookbookService {
         }
       }
     }
+  }
+
+  /** One upsert for up to a hundred queued changes of one table, acknowledged together. */
+  private async upload(
+    cache: AccountDatabase,
+    client: NonNullable<SupabaseService['client']>,
+    userId: string,
+    current: () => boolean,
+    changes: readonly PendingChange[],
+  ): Promise<'done' | 'stale' | 'missing'> {
+    const table = changes[0]!.table;
+    const rows: Record<string, unknown>[] = [];
+    const paths = new Map<string, RecipePhotos>();
+    for (const change of changes) {
+      let payload: CookbookValue | null = change.value;
+      let photos: RecipePhotos = {};
+      if (table === 'recipes' && payload) {
+        const uploaded = await uploadPhotos(
+          client,
+          userId,
+          payload as Recipe,
+          cache,
+          (await cache.photos.get(change.id))?.paths,
+        );
+        payload = readCloudRecipe(uploaded.payload);
+        photos = uploaded.photos;
+      }
+      if (!current()) return 'stale';
+      paths.set(change.key, photos);
+      rows.push({
+        user_id: userId,
+        id: change.id,
+        payload,
+        ...(table === 'shoppingItems' ? {} : { photos }),
+        deleted: change.value === null,
+      });
+    }
+    const { error } = await client
+      .from(remoteTable(table))
+      .upsert(rows, { onConflict: 'user_id,id' });
+    if (error) {
+      if (table === 'shoppingItems' && missingShoppingTable(error)) return 'missing';
+      throw new Error(error.message);
+    }
+    await cache.transaction('rw', cache.outbox, cache.photos, async () => {
+      for (const change of changes) {
+        // An edit made during upload must stay queued, rather than being acknowledged away.
+        if (!current() || (await cache.outbox.get(change.key))?.revision !== change.revision)
+          continue;
+        await cache.outbox.delete(change.key);
+        if (table === 'recipes')
+          await cache.photos.put({ id: change.id, paths: paths.get(change.key)! });
+      }
+    });
+    return 'done';
   }
 }
 

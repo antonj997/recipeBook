@@ -136,7 +136,7 @@ describe('pulling only changed cloud rows', () => {
     ];
     // Pull while the local edit is still queued, as when it was made during this sync.
     const context = { cache, client: client as never, userId: 'alice', current: () => true };
-    expect(await pullTable(context, 'recipes')).toBe('done');
+    expect(await pullTable(context, 'recipes')).toMatchObject({ status: 'done' });
     expect((await cache.recipes.get('kept'))?.title).toBe('Renamed elsewhere');
     expect(await cache.recipes.get('gone')).toBeUndefined();
     expect((await cache.recipes.get('mine'))?.title).toBe('Local title');

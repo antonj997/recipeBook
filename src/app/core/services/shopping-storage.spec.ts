@@ -70,8 +70,8 @@ describe('private shopping persistence', () => {
   function enableNetwork() {
     auth.client = {
       from: (table: string) => ({
-        upsert: async (row: Record<string, unknown>) => {
-          writes.push({ table, row });
+        upsert: async (rows: Record<string, unknown>[]) => {
+          for (const row of rows) writes.push({ table, row });
           await onUpload?.();
           return {
             error:

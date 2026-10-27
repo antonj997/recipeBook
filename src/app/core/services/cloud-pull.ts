@@ -22,7 +22,11 @@ export interface PullContext {
   current: () => boolean;
 }
 /** `missing` means the shopping table does not exist on this server yet. */
-export type PullOutcome = 'done' | 'stale' | 'missing';
+export interface PullOutcome {
+  status: 'done' | 'stale' | 'missing';
+  /** Rows written to this device; views only need to reload when this is above zero. */
+  written: number;
+}
 
 export const pullPageSize = 500;
 // now() stamps a row with its transaction's start, so a transaction committing late can land
@@ -41,14 +45,19 @@ const columns: Record<CookbookTable, string> = {
  * Servers without the updated_at migration get the previous full pull.
  */
 export async function pullTable(context: PullContext, table: CookbookTable): Promise<PullOutcome> {
-  const outcome = await pullChanged(context, table);
-  return outcome === 'unsupported' ? pullAll(context, table) : outcome;
+  const tally = { written: 0 };
+  let status = await pullChanged(context, table, tally);
+  if (status === 'unsupported') status = await pullAll(context, table, tally);
+  return { status, written: tally.written };
 }
+
+type Tally = { written: number };
 
 async function pullChanged(
   context: PullContext,
   table: CookbookTable,
-): Promise<PullOutcome | 'unsupported'> {
+  tally: Tally,
+): Promise<PullOutcome['status'] | 'unsupported'> {
   const { cache, client, userId, current } = context;
   const saved = (await cache.syncState.get(table))?.cursor;
   const since = saved ? new Date(Date.parse(saved.at) - cursorOverlap).toISOString() : undefined;
@@ -71,14 +80,18 @@ async function pullChanged(
       throw new Error(error.message);
     }
     const page = (data ?? []) as unknown as CloudRow[];
-    if (!(await applyPage(context, table, page))) return 'stale';
+    if (!(await applyPage(context, table, page, tally))) return 'stale';
     const last = page.at(-1);
     if (page.length < pullPageSize || !last?.updated_at) return 'done';
     after = { at: last.updated_at, id: last.id };
   }
 }
 
-async function pullAll(context: PullContext, table: CookbookTable): Promise<PullOutcome> {
+async function pullAll(
+  context: PullContext,
+  table: CookbookTable,
+  tally: Tally,
+): Promise<PullOutcome['status']> {
   const { client, userId, current } = context;
   for (let offset = 0; ; offset += pullPageSize) {
     if (!current()) return 'stale';
@@ -93,7 +106,7 @@ async function pullAll(context: PullContext, table: CookbookTable): Promise<Pull
       throw new Error(error.message);
     }
     const page = (data ?? []) as unknown as CloudRow[];
-    if (!(await applyPage(context, table, page))) return 'stale';
+    if (!(await applyPage(context, table, page, tally))) return 'stale';
     if (page.length < pullPageSize) return 'done';
   }
 }
@@ -103,6 +116,7 @@ async function applyPage(
   { cache, client, userId, current }: PullContext,
   table: CookbookTable,
   page: readonly CloudRow[],
+  tally: Tally,
 ): Promise<boolean> {
   const keys = page.map((row) => `${table}:${row.id}`);
   const [pending, known] = await Promise.all([
@@ -141,6 +155,7 @@ async function applyPage(
   }
   if (!current()) return false;
   const last = page.at(-1);
+  let written = 0;
   await cache.transaction(
     'rw',
     [
@@ -162,11 +177,13 @@ async function applyPage(
         else await cache.table(table).delete(row.id);
         if (table === 'recipes') await cache.photos.put({ id: row.id, paths: row.photos ?? {} });
         if (row.updated_at) await cache.remote.put({ key, updatedAt: row.updated_at });
+        written++;
       }
       if (last?.updated_at)
         await cache.syncState.put({ table, cursor: { at: last.updated_at, id: last.id } });
     },
   );
+  tally.written += written;
   return true;
 }
 

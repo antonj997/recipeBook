@@ -50,8 +50,8 @@ describe('recipe photos in storage, sync and backups', () => {
   function enableNetwork() {
     auth.client = {
       from: (table: string) => ({
-        upsert: async (row: Record<string, unknown>) => {
-          upserts.push(row);
+        upsert: async (rows: Record<string, unknown>[]) => {
+          upserts.push(...rows);
           return { error: null };
         },
         select: fakeSelect(table, () => ({ rows: table === 'recipes' ? (remote as never) : [] })),
