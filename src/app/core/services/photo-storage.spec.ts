@@ -253,4 +253,35 @@ describe('recipe photos in storage, sync and backups', () => {
     expect(await db.recipes.count()).toBe(0);
     expect(await db.images.count()).toBe(0);
   });
+
+  it('keeps the same stored photo when the editor saves it back as a data URL', async () => {
+    const recipes = TestBed.inject(RecipeService);
+    const saved = await recipes.addRecipe(recipe);
+    const before = (await db.recipes.get(saved.id))!;
+    await recipes.updateRecipe(saved.id, {
+      title: 'Onion soup',
+      imageDataUrl: recipe.imageDataUrl,
+      stepDetails: recipe.stepDetails,
+    });
+    const after = (await db.recipes.get(saved.id))!;
+    expect(after.photoId).toBe(before.photoId);
+    expect(after.imageDataUrl).toBeUndefined();
+    expect(await db.images.count()).toBe(2);
+  });
+
+  it('removes the cover photo when the editor clears it', async () => {
+    const recipes = TestBed.inject(RecipeService);
+    const saved = await recipes.addRecipe(recipe);
+    await recipes.updateRecipe(saved.id, { imageDataUrl: undefined, stepDetails: [{}, {}] });
+    const after = (await db.recipes.get(saved.id))!;
+    expect(after.photoId).toBeUndefined();
+    expect(after.stepDetails).toEqual([{}, {}]);
+  });
+
+  it('keeps the cover photo when a change does not mention it', async () => {
+    const recipes = TestBed.inject(RecipeService);
+    const saved = await recipes.addRecipe(recipe);
+    await recipes.updateRecipe(saved.id, { collectionIds: ['dinner'] });
+    expect((await db.recipes.get(saved.id))!.photoId).toBe(await imageId(cover));
+  });
 });

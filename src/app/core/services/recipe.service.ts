@@ -131,6 +131,8 @@ export class RecipeService {
     const current = await database.recipes.get(id);
     if (!current) throw new Error('Recipe not found');
     const recipe = { ...current, ...changes } as Recipe & Record<string, unknown>;
+    // The editor speaks for the cover as a data URL; leaving it out removes the stored photo.
+    if ('imageDataUrl' in changes && !('photoId' in changes)) delete recipe.photoId;
     for (const key of [
       'sourceRating',
       'difficulty',
