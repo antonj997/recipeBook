@@ -1,6 +1,8 @@
 import { RecipePhotoWarmupService } from './recipe-photo-warmup.service';
 import { prepareTransitionPhotos } from './transition-photos';
 import { expansionOrigin, titleLayout, visibleCorners } from './recipe-transition-layout';
+import { titleWordDetours, type WordBox } from './title-word-paths';
+import { motionMs } from '../motion';
 import { DOCUMENT } from '@angular/common';
 import { Service, computed, inject, signal } from '@angular/core';
 import type { ActivatedRouteSnapshot, ViewTransitionInfo } from '@angular/router';
@@ -168,10 +170,16 @@ export class PageTransitionService {
     const frame = title.getBoundingClientRect();
     const names = new Map<HTMLElement, string>();
     // Batch every word's bounds before assigning snapshot names; avoid a style flush per word.
+    const bounds = new Map([...words].map((word) => [word, word.getBoundingClientRect()]));
     const visible = [...words].filter((word) => {
-      const bounds = word.getBoundingClientRect();
-      return bounds.top >= frame.top - 1 && bounds.bottom <= frame.bottom + 1;
+      const box = bounds.get(word)!;
+      return box.top >= frame.top - 1 && box.bottom <= frame.bottom + 1;
     });
+    // Where each word starts, for line changes once the destination has rendered.
+    this.titleWordBoxes.set(
+      title,
+      new Map(visible.map((word) => [word.getAttribute('data-title-word')!, bounds.get(word)!])),
+    );
     for (const word of visible) {
       names.set(word, word.style.getPropertyValue('view-transition-name'));
       word.style.setProperty(
@@ -190,6 +198,50 @@ export class PageTransitionService {
       else word.style.removeProperty('view-transition-name');
     }
     this.titleWords.delete(title);
+  }
+  private readonly titleWordBoxes = new Map<HTMLElement, Map<string, WordBox>>();
+
+  /**
+   * Words that change line take a two-segment path: the browser's straight flight gets an extra
+   * translate that peaks halfway, with the flight's own duration, delay and easing. Browsers
+   * without pseudo-element animations keep the straight flight.
+   */
+  private bendTitleWords(): void {
+    const root = this.document.documentElement;
+    const from = [...this.titleWordBoxes].find(([title]) => !title.isConnected)?.[1];
+    const title = [...this.parts].find(
+      ([element, part]) =>
+        part.recipeId === this.morphRecipeId && part.part === 'title' && element.isConnected,
+    )?.[0];
+    if (!from || !title || typeof root.animate !== 'function') return;
+    const to = new Map(
+      [...title.querySelectorAll<HTMLElement>('[data-title-word]')].map((word) => [
+        word.getAttribute('data-title-word')!,
+        word.getBoundingClientRect() as WordBox,
+      ]),
+    );
+    const easing =
+      getComputedStyle(root).getPropertyValue('--motion-ease-out').trim() || 'ease-out';
+    const delay = root.hasAttribute('data-expand-list') ? motionMs(100) : 0;
+    for (const [word, detour] of titleWordDetours(from, to)) {
+      try {
+        root.animate(
+          [
+            { translate: '0 0' },
+            { translate: `${detour.x}px ${detour.y}px`, offset: 0.5 },
+            { translate: '0 0' },
+          ],
+          {
+            duration: motionMs(430),
+            delay,
+            easing,
+            pseudoElement: `::view-transition-group(book-title-word-${word})`,
+          },
+        );
+      } catch {
+        return;
+      }
+    }
   }
   private active?: ViewTransition;
   private release?: () => void;
@@ -278,6 +330,7 @@ export class PageTransitionService {
       this.sharedParts.set(new Set());
       this.returningToLibrary = false;
       this.expandOrigin = undefined;
+      this.titleWordBoxes.clear();
       root.style.removeProperty('--book-expand-color');
       root.style.removeProperty('--book-expand-inset');
       root.style.removeProperty('--book-list-strip-inset');
@@ -330,11 +383,15 @@ export class PageTransitionService {
               if (ready) root.setAttribute('data-book-photo-ready', '');
               root.removeAttribute('data-book-photo-preparing');
               this.phase.set(this.direction());
+              this.bendTitleWords();
             })
             .catch(() => {
               if (this.active === transition) this.cancel();
             });
-        } else this.phase.set(this.direction());
+        } else {
+          this.phase.set(this.direction());
+          this.bendTitleWords();
+        }
         // The carousel/list restores its position before capture. Read the landing bounds afterwards.
         if (this.active !== transition || !this.returningToLibrary || !this.morphRecipeId) return;
         if (!this.expandOrigin || !this.parts.has(this.expandOrigin)) {
