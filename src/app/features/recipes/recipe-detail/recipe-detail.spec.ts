@@ -16,6 +16,7 @@ import { FeedbackService } from '../../../core/services/feedback.service';
 import { CookingSessionService } from '../../../core/services/cooking-session.service';
 import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
 import { StorageDurabilityService } from '../../../core/services/storage-durability.service';
+import { WakeLockService } from '../../../core/services/wake-lock.service';
 
 describe('recipe detail', () => {
   const stepToReveal = signal<StepTimerTarget | null>(null);
@@ -218,6 +219,20 @@ describe('recipe detail', () => {
       expect(panel.getAttribute('tabindex')).toBe('0');
       expect(panel.hasAttribute('inert')).toBe(false);
     }
+  });
+
+  it('keeps the screen on while focus mode is open', async () => {
+    const f = await timerFixture();
+    const wake = TestBed.inject(WakeLockService);
+    const acquire = vi.spyOn(wake, 'acquire').mockResolvedValue(true);
+    const release = vi.spyOn(wake, 'release').mockResolvedValue();
+    const dialog = await openFocus(f);
+    expect(acquire).toHaveBeenCalledWith('focus');
+    expect(release).not.toHaveBeenCalled();
+    (dialog.querySelector('[aria-label="Exit focus mode"]') as HTMLButtonElement).click();
+    f.host.detectChanges();
+    await f.host.whenStable();
+    expect(release).toHaveBeenCalledWith('focus');
   });
 
   it('preserves servings, checkmarks, running clocks and the selected tab on focus exit', async () => {

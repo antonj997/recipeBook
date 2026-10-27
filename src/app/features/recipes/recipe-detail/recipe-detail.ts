@@ -2,6 +2,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { RecipeFocusComponent } from './recipe-focus';
 import { RecipeShoppingPickerComponent } from '../../../shared/components/recipe-shopping-picker';
 import { StepTimerService } from '../../../core/services/step-timer.service';
+import { WakeLockService } from '../../../core/services/wake-lock.service';
 import { StepTimerComponent } from '../../../shared/components/step-timer';
 import {
   maxClockSeconds,
@@ -226,6 +227,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   };
   private cookingSessions = inject(CookingSessionService);
   private readonly timers = inject(StepTimerService);
+  private readonly wakeLock = inject(WakeLockService);
   readonly stepTimers = computed(() => {
     const recipe = this.recipe();
     return recipe ? recipeStepTimers(recipe) : [];
@@ -283,6 +285,12 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
         const state = this.timers.state(target);
         if (state.running || state.done) this.timers.pause(target);
       }
+    });
+    // Focus mode is for cooking: keep the screen on while it is open, whatever the toggle says.
+    effect((onCleanup) => {
+      if (!this.focusMode()) return;
+      void this.wakeLock.acquire('focus');
+      onCleanup(() => void this.wakeLock.release('focus'));
     });
     effect((onCleanup) => {
       const recipe = this.recipe();

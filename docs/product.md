@@ -247,6 +247,7 @@ Fokusvyn har följande egenskaper:
 - Samma steg, avbockning och timers som i den vanliga receptvyn.
 - Ingen Add to shopping list-knapp och ingen uppmaning att slå på aviseringar.
 - Timeråterkoppling kan fortfarande visas inne i fokusläget.
+- Skärmen hålls tänd så länge fokusläget är öppet, även om Keep screen on är avslaget. Den delar skärmlåset med reglaget och tar det igen när appen kommer tillbaka från bakgrunden.
 
 När fokusläget stängs kommer användaren tillbaka till den vanliga receptsidans scrollposition. Fokusläget återanvänder receptets läsinnehåll, så att det inte finns två parallella uppsättningar steg och timerkomponenter som kan hamna ur synk.
 
