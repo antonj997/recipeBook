@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setSlowMotion } from '../../core/motion';
-import { animateLayout } from './flip';
+import { animateHeight, animateLayout } from './flip';
 
 describe('animateLayout', () => {
   let container: HTMLElement;
@@ -121,5 +121,20 @@ describe('animateLayout', () => {
     expect(animate).toHaveBeenCalledOnce();
     expect(animate.mock.contexts[0]).toBe(after);
     expect(animate.mock.calls[0]![0][0].transform).toBe('translate(0px, -120px)');
+  });
+
+  it('animates an element from its old height to its new one', async () => {
+    const step = row('step', 0);
+    let height = 120;
+    vi.mocked(Element.prototype.getBoundingClientRect).mockImplementation(
+      () => ({ top: 0, left: 0, width: 300, height, bottom: height, right: 300 }) as DOMRect,
+    );
+    await animateHeight(step, () => (height = 40), { duration: 200 });
+    expect(animate.mock.contexts[0]).toBe(step);
+    expect(animate.mock.calls[0]![0]).toEqual([
+      { height: '120px', overflow: 'hidden' },
+      { height: '40px', overflow: 'hidden' },
+    ]);
+    expect(animate.mock.calls[0]![1]).toMatchObject({ duration: 200 });
   });
 });

@@ -270,6 +270,10 @@ li::marker {
   .instructions .cooking-step.is-next::before {
     animation: none;
   }
+  .step-text,
+  .step-photo {
+    transition: none;
+  }
 }
 .cooking-step label {
   --checkbox-size: 32px;
@@ -290,10 +294,23 @@ li::marker {
   min-width: 0;
   white-space: pre-line;
 }
-.completed .step-copy {
+// The strike draws along the text, line after line, before the step folds to one line;
+// its timer and photo fade meanwhile.
+.step-text {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0 1px;
+  transition: background-size var(--motion-control) var(--motion-ease-out);
+}
+.struck .step-text {
+  background-size: 100% 1px;
+}
+.struck .step-copy {
   color: var(--color-muted);
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
+}
+.step-photo {
+  transition: opacity var(--motion-fast);
+}
+.struck :is(app-step-timer, .step-photo) {
+  opacity: 0;
 }
 .completed .step-copy {
   white-space: nowrap;

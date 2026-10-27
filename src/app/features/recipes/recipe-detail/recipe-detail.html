@@ -243,7 +243,8 @@
                     class="cooking-step"
                     [id]="'recipe-step-' + ($index + 1)"
                     tabindex="-1"
-                    [class.completed]="completedSteps().has($index)"
+                    [class.completed]="isCollapsed($index)"
+                    [class.struck]="isStruck($index)"
                     [class.is-next]="nextStep() === $index"
                     [attr.aria-current]="nextStep() === $index ? 'step' : null"
                   >
@@ -263,9 +264,11 @@
                         [attr.aria-label]="'Step ' + ($index + 1) + ': ' + step"
                       />
                       <app-checkbox-mark [number]="$index + 1" />
-                      <span class="step-copy">{{ step }}</span>
+                      <span class="step-copy"
+                        ><span class="step-text">{{ step }}</span></span
+                      >
                     </label>
-                    @if (!completedSteps().has($index) && !failedStepPhotos().has($index)) {
+                    @if (!isCollapsed($index) && !failedStepPhotos().has($index)) {
                       @if (
                         hasPhoto(selectedRecipe.stepDetails?.[$index]) || loadedStepPhotos()[$index]
                       ) {
@@ -301,7 +304,7 @@
                       <app-step-timer
                         [target]="timer"
                         [rotated]="focusMode() && focusPortrait()"
-                        [completed]="completedSteps().has($index)"
+                        [completed]="isCollapsed($index)"
                         [disabled]="isDraft"
                       />
                     }

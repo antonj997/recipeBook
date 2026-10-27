@@ -4,6 +4,8 @@ import { IngredientCheckComponent } from './ingredient-check';
 import { RecipeShoppingPickerComponent } from '../../../shared/components/recipe-shopping-picker';
 import { StepTimerService } from '../../../core/services/step-timer.service';
 import { WakeLockService } from '../../../core/services/wake-lock.service';
+import { animateHeight } from '../../../shared/motion/flip';
+import { motionMs } from '../../../core/motion';
 import { StepTimerComponent } from '../../../shared/components/step-timer';
 import {
   maxClockSeconds,
@@ -309,6 +311,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
         this.focusMode.set(false);
         this.completedSteps.set(new Set());
         this.checkedIngredients.set(new Set());
+        this.clearStepPhases();
         this.activeSection.set('ingredients');
       }
     });
@@ -329,17 +332,68 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     });
     this.saveCookingSession();
   }
-  /** The first unchecked step once cooking has begun; -1 before the first check or when done. */
+  /**
+   * Where cooking continues: the first unchecked step after the last checked one, or the first
+   * unchecked step when everything after it is done. -1 before the first check or when all are.
+   */
   readonly nextStep = computed(() => {
     const done = this.completedSteps();
     const count = this.recipe()?.instructions.length ?? 0;
     if (!done.size) return -1;
+    const after = Math.max(...done) + 1;
+    for (let index = after; index < count; index++) if (!done.has(index)) return index;
     for (let index = 0; index < count; index++) if (!done.has(index)) return index;
     return -1;
   });
+  /** Checked steps whose strike is still drawing; they collapse when it is done. */
+  readonly striking = signal<ReadonlySet<number>>(new Set());
+  /** Unchecked steps that have opened again while their strike is still erasing. */
+  readonly unstriking = signal<ReadonlySet<number>>(new Set());
+  private readonly stepPhases = new Map<number, ReturnType<typeof setTimeout>>();
+  isStruck(index: number): boolean {
+    return this.completedSteps().has(index) || this.unstriking().has(index);
+  }
+  isCollapsed(index: number): boolean {
+    return this.completedSteps().has(index) && !this.striking().has(index);
+  }
   toggleStep(index: number): void {
     if (this.accountChanged()) return;
     const checking = !this.completedSteps().has(index);
+    const row = document.getElementById('recipe-step-' + (index + 1));
+    const animated = !!row && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    clearTimeout(this.stepPhases.get(index));
+    this.stepPhases.delete(index);
+    const phase = (set: typeof this.striking, on: boolean) =>
+      set.update((current) => {
+        const next = new Set(current);
+        on ? next.add(index) : next.delete(index);
+        return next;
+      });
+    phase(this.unstriking, !checking && animated);
+    phase(this.striking, false);
+    if (checking && animated && row) {
+      // The strike draws first; only then does the step fold to one line.
+      phase(this.striking, true);
+      this.stepPhases.set(
+        index,
+        setTimeout(() => {
+          this.stepPhases.delete(index);
+          void animateHeight(row, () => phase(this.striking, false)).then(() =>
+            this.revealNextStep(),
+          );
+        }, motionMs(220)),
+      );
+    } else if (!checking && animated && row) {
+      // Reverse: the step opens at once, then its strike erases.
+      void animateHeight(row, () => undefined);
+      this.stepPhases.set(
+        index,
+        setTimeout(() => {
+          this.stepPhases.delete(index);
+          phase(this.unstriking, false);
+        }, motionMs(200)),
+      );
+    }
     this.completedSteps.update((current) => {
       const next = new Set(current);
       next.has(index) ? next.delete(index) : next.add(index);
@@ -347,7 +401,14 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     });
     this.saveCookingSession();
     // Measure after the checked step has collapsed.
-    if (checking) afterNextRender(() => this.revealNextStep(), { injector: this.injector });
+    if (checking && !animated)
+      afterNextRender(() => this.revealNextStep(), { injector: this.injector });
+  }
+  private clearStepPhases(): void {
+    for (const timer of this.stepPhases.values()) clearTimeout(timer);
+    this.stepPhases.clear();
+    this.striking.set(new Set());
+    this.unstriking.set(new Set());
   }
   /** Scrolls only when the next step starts above the sticky tabs or near the bottom edge. */
   private revealNextStep(): void {
@@ -386,6 +447,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     }
     this.completedSteps.set(new Set());
     this.checkedIngredients.set(new Set());
+    this.clearStepPhases();
     this.saveCookingSession();
   }
 
@@ -397,6 +459,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.loadRequest++;
+    this.clearStepPhases();
     this.readingMedia?.removeEventListener('change', this.syncReadingLayout);
     this.focusMedia?.removeEventListener('change', this.syncFocusOrientation);
     if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
@@ -549,6 +612,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       this.loading.set(true);
       this.completedSteps.set(new Set());
       this.checkedIngredients.set(new Set());
+      this.clearStepPhases();
       this.activeSection.set('ingredients');
       this.loadedStepPhotos.set({});
       this.loadingStepPhotos.set(new Set());

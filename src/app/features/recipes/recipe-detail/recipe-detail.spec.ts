@@ -224,6 +224,18 @@ describe('recipe detail', () => {
     }
   });
 
+  it('continues after the last checked step when steps are checked out of order', async () => {
+    const f = await timerFixture();
+    const c = f.host.componentInstance;
+    c.switchSection('instructions');
+    c.toggleStep(2);
+    f.host.detectChanges();
+    expect(c.nextStep()).toBe(3);
+    c.toggleStep(3);
+    c.toggleStep(4);
+    expect(c.nextStep()).toBe(0);
+  });
+
   it('marks the next step once cooking starts and scrolls only when it is out of view', async () => {
     const f = await timerFixture();
     const c = f.host.componentInstance;
@@ -243,9 +255,14 @@ describe('recipe detail', () => {
         .spyOn(root.querySelector('#' + id)!, 'getBoundingClientRect')
         .mockReturnValue({ top, bottom: top + 80 } as DOMRect);
     place('recipe-step-2', 5000);
+    // The next step is revealed once the checked step has struck through and folded.
+    const settle = async () => {
+      f.host.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve, 260));
+      await f.host.whenStable();
+    };
     c.toggleStep(0);
-    f.host.detectChanges();
-    await f.host.whenStable();
+    await settle();
     const second = root.querySelector('#recipe-step-2')!;
     expect(second.classList).toContain('is-next');
     expect(second.getAttribute('aria-current')).toBe('step');
@@ -254,13 +271,11 @@ describe('recipe detail', () => {
     scroll.mockClear();
     place('recipe-step-3', 300);
     c.toggleStep(1);
-    f.host.detectChanges();
-    await f.host.whenStable();
+    await settle();
     expect(root.querySelector('#recipe-step-3')!.classList).toContain('is-next');
     expect(scroll).not.toHaveBeenCalled();
     c.toggleStep(1);
-    f.host.detectChanges();
-    await f.host.whenStable();
+    await settle();
     expect(scroll).not.toHaveBeenCalled();
   });
 
@@ -422,6 +437,47 @@ describe('recipe detail', () => {
     f.host.detectChanges();
     expect(f.timers.state(f.targets[1]!).remaining).toBe(180);
     expect(reset.disabled).toBe(true);
+  });
+
+  it('draws the strike first, then collapses the step, and reverses on uncheck', async () => {
+    const f = await timerFixture();
+    vi.useFakeTimers();
+    const component = f.host.componentInstance;
+    component.switchSection('instructions');
+    f.host.detectChanges();
+    const step = f.host.nativeElement.querySelector('#recipe-step-1') as HTMLElement;
+    component.toggleStep(0);
+    f.host.detectChanges();
+    expect(step.classList).toContain('struck');
+    expect(step.classList).not.toContain('completed');
+    expect((step.querySelector('app-step-timer') as HTMLElement).hidden).toBe(false);
+    await vi.advanceTimersByTimeAsync(220);
+    f.host.detectChanges();
+    expect(step.classList).toContain('completed');
+    expect((step.querySelector('app-step-timer') as HTMLElement).hidden).toBe(true);
+    component.toggleStep(0);
+    f.host.detectChanges();
+    expect(step.classList).not.toContain('completed');
+    expect(step.classList).toContain('struck');
+    await vi.advanceTimersByTimeAsync(200);
+    f.host.detectChanges();
+    expect(step.classList).not.toContain('struck');
+  });
+
+  it('checks a step at once under Reduce Motion', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    const f = await timerFixture();
+    const component = f.host.componentInstance;
+    component.switchSection('instructions');
+    component.toggleStep(0);
+    f.host.detectChanges();
+    const step = f.host.nativeElement.querySelector('#recipe-step-1') as HTMLElement;
+    expect(step.classList).toContain('completed');
+    expect(step.classList).toContain('struck');
   });
 
   it('pauses a running clock when its step is checked and keeps the time left', async () => {

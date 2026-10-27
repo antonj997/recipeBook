@@ -197,11 +197,11 @@ Portionskontrollen ligger före Add to shopping list. Inköpsknappen öppnar ett
 
 ### 6.5 Instruktioner och tillagningsprogress
 
-Instruktionerna visas som numrerade steg. Numret ligger i samma rundade kvadratiska kryssruta som används för avbockning. När ett steg markeras får texten en diskret överstrykning och raden kollapsar till en kompakt rad. Detta är alltid beteendet; det finns ingen separat inställning för det.
+Instruktionerna visas som numrerade steg. Numret ligger i samma rundade kvadratiska kryssruta som används för avbockning. När ett steg markeras ritas en diskret överstrykning längs texten, rad för rad, medan stegets timer och bild tonas bort. Därefter fälls raden ihop till en kompakt rad. Avmarkering öppnar raden direkt och suddar sedan ut strecket. Med Reduce Motion sker allt på en gång. Detta är alltid beteendet; det finns ingen separat inställning för det.
 
 Steg kan ligga i namngivna avsnitt och kan ha bilder. Bilder som redan finns sparade visas utan att originalwebbplatsen behöver vara tillgänglig. Vissa kvarvarande bildlänkar kan användaren välja att hämta separat.
 
-När första steget är avbockat får nästa steg en tunn kant i receptets ton. Sidan scrollar dit bara om steget ligger dolt bakom sidhuvud och flikar eller nära nederkanten, direkt utan animation när Reduce Motion är på.
+När första steget är avbockat får nästa steg en tunn kant i receptets ton: det första omarkerade steget efter det senast markerade, eller det första omarkerade om alla efter är klara. Sidan scrollar dit bara om steget ligger dolt bakom sidhuvud och flikar eller nära nederkanten, direkt utan animation när Reduce Motion är på.
 
 Ovanför stegen finns en liten progressangivelse och Reset. Reset återställer receptets avbockade steg och dess timers tillsammans, inklusive larm och schemalagda påminnelser. Portionsantalet och andra recept påverkas inte.
 

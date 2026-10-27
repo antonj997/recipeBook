@@ -25,11 +25,7 @@ export async function animateLayout(
   options: LayoutOptions = {},
 ): Promise<void> {
   // Without Web Animations (or with Reduce Motion) the layout simply changes.
-  if (
-    typeof container.animate !== 'function' ||
-    typeof matchMedia !== 'function' ||
-    matchMedia('(prefers-reduced-motion: reduce)').matches
-  ) {
+  if (!animates(container)) {
     await update();
     return;
   }
@@ -41,10 +37,7 @@ export async function animateLayout(
   );
   await update();
   await new Promise(requestAnimationFrame);
-  const easing =
-    getComputedStyle(document.documentElement)
-      .getPropertyValue(`--motion-spring-${options.easing ?? 'calm'}`)
-      .trim() || fallbackEasing;
+  const curve = easing(options.easing);
   const moves: Promise<unknown>[] = [];
   for (const child of children()) {
     const first = before.get(identity(child));
@@ -56,10 +49,52 @@ export async function animateLayout(
     if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
     const animation = child.animate(
       [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
-      { duration: motionMs(options.duration ?? 280), easing },
+      { duration: motionMs(options.duration ?? 280), easing: curve },
     );
     running.set(child, animation);
     moves.push(animation.finished.catch(() => undefined));
   }
   await Promise.all(moves);
+}
+
+/** Animates `element` from its height before `update` to its height after it. */
+export async function animateHeight(
+  element: HTMLElement,
+  update: () => unknown,
+  options: Pick<LayoutOptions, 'duration' | 'easing'> = {},
+): Promise<void> {
+  if (!animates(element)) {
+    await update();
+    return;
+  }
+  const from = element.getBoundingClientRect().height;
+  running.get(element)?.cancel();
+  await update();
+  await new Promise(requestAnimationFrame);
+  const to = element.getBoundingClientRect().height;
+  if (Math.abs(from - to) < 0.5) return;
+  const animation = element.animate(
+    [
+      { height: from + 'px', overflow: 'hidden' },
+      { height: to + 'px', overflow: 'hidden' },
+    ],
+    { duration: motionMs(options.duration ?? 200), easing: easing(options.easing) },
+  );
+  running.set(element, animation);
+  await animation.finished.catch(() => undefined);
+}
+
+function animates(element: HTMLElement): boolean {
+  return (
+    typeof element.animate === 'function' &&
+    typeof matchMedia === 'function' &&
+    !matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
+function easing(name: LayoutOptions['easing'] = 'calm'): string {
+  return (
+    getComputedStyle(document.documentElement).getPropertyValue(`--motion-spring-${name}`).trim() ||
+    fallbackEasing
+  );
 }
