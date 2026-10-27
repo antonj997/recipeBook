@@ -28,7 +28,7 @@ span {
 .recipe-check {
   stroke-dasharray: 35;
   stroke-dashoffset: 35;
-  transition: stroke-dashoffset 340ms var(--ease-out);
+  transition: stroke-dashoffset calc(340ms * var(--motion-scale)) var(--motion-ease-out);
 }
 .ready .recipe-check {
   stroke-dashoffset: 0;

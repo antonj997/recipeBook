@@ -43,7 +43,6 @@
   --page-gutter-right: max(var(--page-gutter), env(safe-area-inset-right, 0px));
   --app-top-inset: env(safe-area-inset-top, 0px);
   --app-header-height: calc(89px + var(--app-top-inset));
-  --ease-out: var(--motion-ease-out);
 }
 @media (max-width: 600px) {
   :root {
@@ -184,8 +183,8 @@ small {
     background var(--motion-fast),
     color var(--motion-fast),
     border-color var(--motion-fast),
-    opacity 140ms,
-    text-shadow 160ms;
+    opacity var(--motion-press),
+    text-shadow var(--motion-reveal);
 }
 .add-recipe-placeholder {
   align-items: center;
@@ -311,7 +310,7 @@ input::file-selector-button {
   background: var(--color-surface);
 }
 .field {
-  animation: field-enter var(--motion-control) var(--ease-out);
+  animation: field-enter var(--motion-control) var(--motion-ease-out);
 }
 @keyframes field-enter {
   from {
@@ -426,7 +425,7 @@ summary.disclosure::marker {
 }
 summary.disclosure app-icon {
   transform: rotate(-90deg);
-  transition: transform 160ms ease;
+  transition: transform var(--motion-reveal) ease;
 }
 details[open] > summary.disclosure app-icon {
   transform: rotate(90deg);
@@ -476,7 +475,7 @@ app-checkbox-mark svg {
 .checkbox-tick {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  transition: stroke-dashoffset var(--motion-fast) var(--ease-out);
+  transition: stroke-dashoffset var(--motion-fast) var(--motion-ease-out);
 }
 .check-control input:checked + app-checkbox-mark {
   color: var(--color-ink);
@@ -541,13 +540,13 @@ app-root.touch-input .check-control input:focus + app-checkbox-mark {
     Helvetica,
     sans-serif;
   font-variant-numeric: tabular-nums;
-  transition: opacity 100ms;
+  transition: opacity var(--motion-tap);
 }
 .check-control input:checked + app-checkbox-mark .checkbox-number {
   opacity: 0;
 }
 .check-control input:checked + app-checkbox-mark:has(.checkbox-number) .checkbox-tick {
-  transition-delay: 70ms;
+  transition-delay: calc(70ms * var(--motion-scale));
 }
 
 .search-field {
@@ -647,7 +646,7 @@ body {
   }
 }
 .glass-menu:popover-open {
-  animation: glass-menu-in 160ms var(--ease-out);
+  animation: glass-menu-in var(--motion-reveal) var(--motion-ease-out);
 }
 @keyframes glass-menu-in {
   from {

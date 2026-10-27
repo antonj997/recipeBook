@@ -541,6 +541,7 @@ Importerad backup valideras före lagring. Säkerhetskopiering ska inte råka ex
 App-delen innehåller:
 
 - På- och avslag för bakgrundsaviseringar samt status och felåterkoppling.
+- Slow motion (test), som spelar all rörelse fem gånger långsammare på den här enheten för att animationer ska kunna bedömas på en telefon.
 - Tillgänglig appuppdatering och omladdning.
 - Installation eller information om Lägg till på hemskärmen.
 - Status för offlineanvändning när den finns tillgänglig.

@@ -155,16 +155,16 @@ import { Component, input } from '@angular/core';
         opacity: 0;
       }
       :host(.discard.play-discard) .food {
-        animation: toss 2200ms linear both;
+        animation: toss calc(2200ms * var(--motion-scale)) linear both;
       }
       :host(.discard.play-discard) .toss-trail {
-        animation: trail 2200ms ease-out both;
+        animation: trail calc(2200ms * var(--motion-scale)) ease-out both;
       }
       :host(.discard) .bin {
         transform-origin: 89px 125px;
       }
       :host(.discard.play-discard) .bin {
-        animation: bin-hop 2200ms linear both;
+        animation: bin-hop calc(2200ms * var(--motion-scale)) linear both;
       }
       :host(.discard) .bin-lid {
         /* Keep the back-right attachment fixed throughout the swing. */
@@ -172,7 +172,7 @@ import { Component, input } from '@angular/core';
         transform-origin: 122px 68px;
       }
       :host(.discard.play-discard) .bin-lid {
-        animation: lid-close 2200ms linear both;
+        animation: lid-close calc(2200ms * var(--motion-scale)) linear both;
       }
       @keyframes steam {
         50% {

@@ -45,7 +45,8 @@
   stroke-linejoin: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  transition: stroke-dashoffset var(--motion-control) var(--motion-ease-out) 60ms;
+  transition: stroke-dashoffset var(--motion-control) var(--motion-ease-out)
+    calc(60ms * var(--motion-scale));
 }
 .pinch-mark i {
   position: absolute;
@@ -67,21 +68,21 @@
   stroke-dashoffset: 0;
 }
 :host(.just-gathered) .pinch-mark {
-  animation: pinch-squish 360ms var(--motion-ease-out);
+  animation: pinch-squish calc(360ms * var(--motion-scale)) var(--motion-ease-out);
 }
 :host(.just-gathered) .pinch-mark i {
-  animation: pinch-crumb 520ms var(--motion-ease-out) both;
+  animation: pinch-crumb calc(520ms * var(--motion-scale)) var(--motion-ease-out) both;
 }
 :host(.just-gathered) .pinch-mark i:nth-child(2) {
   --crumb: -13px, -9px;
 }
 :host(.just-gathered) .pinch-mark i:nth-child(3) {
   --crumb: 3px, -15px;
-  animation-delay: 40ms;
+  animation-delay: calc(40ms * var(--motion-scale));
 }
 :host(.just-gathered) .pinch-mark i:nth-child(4) {
   --crumb: 14px, -6px;
-  animation-delay: 80ms;
+  animation-delay: calc(80ms * var(--motion-scale));
 }
 @keyframes pinch-squish {
   40% {

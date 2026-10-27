@@ -6,6 +6,7 @@ import { IconComponent } from '../../../shared/components/icon';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ImportCookingComponent } from '../../../shared/components/import-cooking';
+import { motionMs } from '../../../core/motion';
 
 @Component({
   selector: 'app-recipe-import',
@@ -103,7 +104,7 @@ export class RecipeImportComponent {
       this.ready.set(true);
       if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
         await new Promise<void>((resolve) => {
-          const timer = setTimeout(resolve, 450);
+          const timer = setTimeout(resolve, motionMs(450));
           controller.signal.addEventListener(
             'abort',
             () => {

@@ -69,7 +69,7 @@
   width: 16px;
   height: 16px;
   transform: rotate(-90deg);
-  transition: transform var(--motion-fast) var(--ease-out);
+  transition: transform var(--motion-fast) var(--motion-ease-out);
 }
 .recipe-options app-icon.is-open {
   transform: rotate(90deg);

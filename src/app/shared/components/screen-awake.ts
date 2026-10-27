@@ -55,8 +55,8 @@ import { WakeLockService } from '../../core/services/wake-lock.service';
       border-radius: 8px;
       background: var(--color-surface);
       transition:
-        background var(--motion-control) var(--ease-out),
-        border-color var(--motion-control) var(--ease-out);
+        background var(--motion-control) var(--motion-ease-out),
+        border-color var(--motion-control) var(--motion-ease-out);
     }
     .switch-thumb {
       display: block;
@@ -65,8 +65,8 @@ import { WakeLockService } from '../../core/services/wake-lock.service';
       border-radius: 5px;
       background: var(--color-ink);
       transition:
-        transform var(--motion-control) var(--ease-out),
-        background var(--motion-control) var(--ease-out);
+        transform var(--motion-control) var(--motion-ease-out),
+        background var(--motion-control) var(--motion-ease-out);
     }
     .is-on .switch-track {
       background: var(--color-green);

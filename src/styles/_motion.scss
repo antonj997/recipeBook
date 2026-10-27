@@ -2,20 +2,87 @@
 $travel: 430ms;
 $list-lead: 100ms;
 :root {
-  --motion-press: 140ms;
-  --motion-fast: 180ms;
-  --motion-control: 220ms;
-  --motion-page: 260ms;
-  --motion-surface: 280ms;
-  --motion-tabs: 280ms;
-  --motion-travel: #{$travel};
-  --motion-list-lead: #{$list-lead};
-  --motion-reveal: 160ms;
-  --motion-reading-reveal: 180ms;
-  --motion-photo-land: 80ms;
-  --motion-dismiss: 65ms;
+  // Slow motion (test) sets this to 5 on one device; every duration below scales with it.
+  --motion-scale: 1;
+  --motion-tap: calc(100ms * var(--motion-scale));
+  --motion-press: calc(140ms * var(--motion-scale));
+  --motion-fast: calc(180ms * var(--motion-scale));
+  --motion-control: calc(220ms * var(--motion-scale));
+  --motion-settle: calc(240ms * var(--motion-scale));
+  --motion-page: calc(260ms * var(--motion-scale));
+  --motion-surface: calc(280ms * var(--motion-scale));
+  --motion-tabs: calc(280ms * var(--motion-scale));
+  --motion-toast: calc(300ms * var(--motion-scale));
+  --motion-header: calc(420ms * var(--motion-scale));
+  --motion-travel: calc(#{$travel} * var(--motion-scale));
+  --motion-list-lead: calc(#{$list-lead} * var(--motion-scale));
+  --motion-reveal: calc(160ms * var(--motion-scale));
+  --motion-reading-reveal: calc(180ms * var(--motion-scale));
+  --motion-photo-land: calc(80ms * var(--motion-scale));
+  --motion-dismiss: calc(65ms * var(--motion-scale));
   --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  // Springs: calm settles without overshoot, snappy overshoots about four percent.
+  --motion-spring-calm: var(--motion-ease-out);
+  --motion-spring-snappy: var(--motion-ease-out);
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --motion-spring-calm: linear(
+      0,
+      0.045,
+      0.144,
+      0.264,
+      0.385,
+      0.496,
+      0.594,
+      0.677,
+      0.745,
+      0.801,
+      0.845,
+      0.881,
+      0.908,
+      0.93,
+      0.947,
+      0.96,
+      0.969,
+      0.977,
+      0.983,
+      0.987,
+      0.99,
+      0.993,
+      0.995,
+      0.996,
+      1
+    );
+    --motion-spring-snappy: linear(
+      0,
+      0.098,
+      0.303,
+      0.524,
+      0.715,
+      0.858,
+      0.952,
+      1.006,
+      1.032,
+      1.038,
+      1.035,
+      1.027,
+      1.019,
+      1.011,
+      1.006,
+      1.002,
+      1,
+      0.999,
+      0.999,
+      0.999,
+      0.999,
+      0.999,
+      1,
+      1,
+      1
+    );
+  }
 }
 
 // Secondary content is live DOM. It waits for the shared geometry, then settles

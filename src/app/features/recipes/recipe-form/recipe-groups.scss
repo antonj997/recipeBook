@@ -146,7 +146,7 @@
 }
 .drop-slot {
   height: 0;
-  transition: height 160ms var(--ease-out);
+  transition: height var(--motion-reveal) var(--motion-ease-out);
 }
 .drop-slot.active {
   height: var(--drag-height, 52px);

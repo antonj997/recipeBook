@@ -1,3 +1,5 @@
+import { motionMs } from './motion';
+
 export interface BrandMarkMotion {
   finished: Promise<void>;
   cancel(): void;
@@ -58,10 +60,14 @@ export function tipRecipebookMark(mark: HTMLElement | null): BrandMarkMotion {
     if (settled) return;
     clearTimeout(fallback);
     // Hidden tabs or a failed animation engine must never trap the launch cover.
-    fallback = setTimeout(finish, 620);
+    fallback = setTimeout(finish, motionMs(620));
     mark.style.transform = 'rotate(-90deg)';
     try {
-      animation = mark.animate(tipFrames, { duration: 520, easing: 'linear', fill: 'both' });
+      animation = mark.animate(tipFrames, {
+        duration: motionMs(520),
+        easing: 'linear',
+        fill: 'both',
+      });
       void Promise.resolve(animation.finished).then(finish, finish);
     } catch {
       finish();
@@ -69,7 +75,7 @@ export function tipRecipebookMark(mark: HTMLElement | null): BrandMarkMotion {
   };
   // Decode before animating to avoid an empty SVG/compositor frame. A stalled
   // optional logo falls back to the static book and never blocks the app.
-  fallback = setTimeout(finish, 620);
+  fallback = setTimeout(finish, motionMs(620));
   try {
     if (mark instanceof HTMLImageElement && typeof mark.decode === 'function')
       void mark.decode().then(start, finish);

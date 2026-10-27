@@ -1,4 +1,5 @@
 import { tipRecipebookMark, type BrandMarkMotion } from './brand-mark-motion';
+import { motionMs } from './motion';
 
 /** The first-paint cover lives outside Angular so it also covers bootstrap and lazy routes. */
 export class LaunchScreen {
@@ -43,7 +44,7 @@ export class LaunchScreen {
           if (event.target === this.cover && event.propertyName === 'opacity') finish();
         };
         // transitionend may not fire when a backgrounded app resumes or styles are disabled.
-        const fallback = setTimeout(finish, 220);
+        const fallback = setTimeout(finish, motionMs(220));
         this.cover!.addEventListener('transitionend', onEnd);
         this.cover!.setAttribute('data-ready', '');
       });

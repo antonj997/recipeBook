@@ -17,6 +17,7 @@ import { FeedbackService } from '../../core/services/feedback.service';
 import { CookingSessionService } from '../../core/services/cooking-session.service';
 import { CheckboxMarkComponent } from './checkbox-mark';
 import { FoodDoodleComponent } from './food-doodle';
+import { motionMs } from '../../core/motion';
 
 @Component({
   selector: 'app-recipe-actions',
@@ -471,7 +472,7 @@ export class RecipeActionsOverlayComponent {
       this.sessions.clear(request.recipe.id);
       this.deleteSucceeded.set(true);
       if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
-        await new Promise<void>((resolve) => setTimeout(resolve, 2200));
+        await new Promise<void>((resolve) => setTimeout(resolve, motionMs(2200)));
       if (version !== this.recipes.accountVersion() || this.destroyed) return;
       this.actions.deletion.set(null);
       await request.afterDelete?.();

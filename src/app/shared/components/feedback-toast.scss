@@ -23,7 +23,7 @@
   padding: 8px 8px 8px 16px;
   border-radius: 8px;
   box-shadow: 0 8px 24px #14141320;
-  animation: toast-in 300ms var(--ease-out);
+  animation: toast-in var(--motion-toast) var(--motion-ease-out);
 }
 .has-action .toast {
   grid-template-columns: 20px minmax(0, 1fr) auto 44px;

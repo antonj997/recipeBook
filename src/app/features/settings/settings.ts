@@ -14,10 +14,17 @@ import {
   StorageDurabilityService,
   storageSummary,
 } from '../../core/services/storage-durability.service';
+import { SlowMotionSwitchComponent } from '../../shared/components/slow-motion-switch';
 
 @Component({
   selector: 'app-settings',
-  imports: [IconComponent, RouterLink, AccountAccessComponent, TimerAlertPreferencesComponent],
+  imports: [
+    SlowMotionSwitchComponent,
+    IconComponent,
+    RouterLink,
+    AccountAccessComponent,
+    TimerAlertPreferencesComponent,
+  ],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })

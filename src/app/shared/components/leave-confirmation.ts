@@ -39,7 +39,7 @@ import { LeaveConfirmationService } from '../../core/services/leave-confirmation
       backdrop-filter: blur(4px);
     }
     dialog[open] {
-      animation: confirm-in 180ms var(--ease-out);
+      animation: confirm-in var(--motion-fast) var(--motion-ease-out);
     }
     p {
       color: var(--color-muted);
