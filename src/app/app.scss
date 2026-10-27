@@ -179,3 +179,23 @@ main:focus {
 :host(.focus-surface) .app-header {
   transition: none;
 }
+
+// How much is still to buy; the list itself stays one tap away.
+.basket-count {
+  position: absolute;
+  top: 6px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font:
+    600 0.6875rem/18px Arial,
+    Helvetica,
+    sans-serif;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}

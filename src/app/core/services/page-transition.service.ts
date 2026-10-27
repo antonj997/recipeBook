@@ -313,6 +313,16 @@ export class PageTransitionService {
     root.setAttribute('data-page-transition', 'expand');
     if (this.morphRecipeId) root.setAttribute('data-recipe-morph', '');
     if (next === '/' || previous === '/settings') root.setAttribute('data-expand-back', '');
+    // The shopping list opens out of the header basket that holds it.
+    const basket =
+      next === '/shopping-list'
+        ? this.document.querySelector<HTMLElement>('.shopping-link')?.getBoundingClientRect()
+        : undefined;
+    if (basket?.width) {
+      root.setAttribute('data-expand-basket', '');
+      root.style.setProperty('--book-basket-x', basket.left + basket.width / 2 + 'px');
+      root.style.setProperty('--book-basket-y', basket.top + basket.height / 2 + 'px');
+    }
     this.active = transition;
     const cancel = () => this.cancel();
     const hidden = () => {
@@ -334,6 +344,8 @@ export class PageTransitionService {
       root.style.removeProperty('--book-expand-color');
       root.style.removeProperty('--book-expand-inset');
       root.style.removeProperty('--book-list-strip-inset');
+      root.style.removeProperty('--book-basket-x');
+      root.style.removeProperty('--book-basket-y');
       for (const element of this.parts.keys()) this.namePart(element);
       for (const part of ['surface', 'image'])
         for (const end of ['from', 'to'])
@@ -351,6 +363,7 @@ export class PageTransitionService {
         'data-page-transition',
         'data-recipe-morph',
         'data-expand-back',
+        'data-expand-basket',
         'data-expand-list',
         'data-book-photo-source',
         'data-book-photo-ready',

@@ -18,14 +18,20 @@
   @if (!hideSettings()) {
     <nav class="header-actions" aria-label="App">
       <a
+        #basketLink
         class="settings-link shopping-link"
         routerLink="/shopping-list"
         routerLinkActive="active"
         ariaCurrentWhenActive="page"
-        aria-label="Shopping list"
-        title="Shopping list"
-        ><app-icon name="basket"
-      /></a>
+        [attr.aria-label]="basket.label()"
+        [title]="basket.label()"
+        ><app-icon name="basket" />
+        @if (basket.count()) {
+          <span class="basket-count" aria-hidden="true">{{
+            basket.count() > 99 ? '99+' : basket.count()
+          }}</span>
+        }
+      </a>
       <a
         class="settings-link"
         [routerLink]="settingsTarget()"

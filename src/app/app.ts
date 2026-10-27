@@ -21,6 +21,8 @@ import { GuestRecipesDialogComponent } from './shared/components/guest-recipes-d
 import { GuestRecipesService } from './core/services/guest-recipes.service';
 import { RecipeImagesService } from './core/services/recipe-images.service';
 import { ImageMigrationService } from './core/services/image-migration.service';
+import { BasketService } from './core/services/basket.service';
+import { motionMs } from './core/motion';
 import {
   afterNextRender,
   Component,
@@ -89,6 +91,8 @@ export class App {
   private confirmation = inject(LeaveConfirmationService);
   private guestRecipes = inject(GuestRecipesService);
   private images = inject(RecipeImagesService);
+  protected readonly basket = inject(BasketService);
+  private readonly basketLink = viewChild<ElementRef<HTMLElement>>('basketLink');
   readonly accountChanging = signal(false);
 
   private syncThemeColor = (): void => {};
@@ -100,6 +104,23 @@ export class App {
     });
     inject(StepTimerService); // Restore countdowns even when the app opens on the library.
     inject(ImageMigrationService).start();
+    // The basket gives a small hop each time added ingredients land in it.
+    let landed = this.basket.arrivals();
+    effect(() => {
+      const arrivals = this.basket.arrivals();
+      if (arrivals === landed) return;
+      landed = arrivals;
+      const icon = this.basketLink()?.nativeElement.querySelector('app-icon');
+      if (!icon?.animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      icon.animate(
+        [
+          { transform: 'scale(1)' },
+          { transform: 'scale(1.22) rotate(-6deg)' },
+          { transform: 'scale(1)' },
+        ],
+        { duration: motionMs(360), easing: 'ease-out' },
+      );
+    });
     this.destroyRef.onDestroy(() => {
       this.stopSnapshotGesture?.();
       cancelAnimationFrame(this.snapshotFocusFrame);

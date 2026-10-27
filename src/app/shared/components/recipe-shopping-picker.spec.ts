@@ -7,6 +7,9 @@ import { RecipeService } from '../../core/services/recipe.service';
 import { ShoppingListService } from '../../core/services/shopping-list.service';
 import { FeedbackService } from '../../core/services/feedback.service';
 import { RecipeShoppingPickerComponent } from './recipe-shopping-picker';
+import { BasketService } from '../../core/services/basket.service';
+
+const flyFrom = vi.fn(async () => undefined);
 
 describe('recipe shopping picker', () => {
   const originalShowModal = Object.getOwnPropertyDescriptor(
@@ -49,10 +52,12 @@ describe('recipe shopping picker', () => {
         },
       },
     });
+    flyFrom.mockClear();
     TestBed.configureTestingModule({
       imports: [RecipeShoppingPickerComponent],
       providers: [
         provideRouter([]),
+        { provide: BasketService, useValue: { flyFrom } },
         {
           provide: RecipeService,
           useValue: { getRecipes: async () => [recipe], accountVersion, revision: signal(0) },
@@ -119,6 +124,27 @@ describe('recipe shopping picker', () => {
     host.detectChanges();
     await host.componentInstance.submit();
     expect(saved).toEqual([{ servings: direct ? 8 : 4, indices: [1], again: false }]);
+  });
+
+  it('sends what was added flying into the basket from the add button', async () => {
+    const host = await fixture();
+    const inputs = host.nativeElement.querySelectorAll('input[type="checkbox"]');
+    (inputs[0] as HTMLInputElement).click();
+    (inputs[2] as HTMLInputElement).click();
+    host.detectChanges();
+    const button = host.nativeElement.querySelector('.add-selected') as HTMLButtonElement;
+    vi.spyOn(button, 'getBoundingClientRect').mockReturnValue({
+      left: 10,
+      top: 700,
+      width: 200,
+      height: 44,
+    } as DOMRect);
+    await host.componentInstance.submit();
+    expect(flyFrom).toHaveBeenCalledOnce();
+    const [from, count, color] = flyFrom.mock.calls[0] as unknown as [DOMRect, number, string];
+    expect(from).toMatchObject({ left: 10, top: 700 });
+    expect(count).toBe(2);
+    expect(color).toContain('color-mix');
   });
 
   it('clears selections when choosing another recipe but preserves them when changing servings', async () => {

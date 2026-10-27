@@ -424,7 +424,7 @@ Kategorihantering ligger utanför inställningarna. Det är arbete med innehåll
 
 ### 12.1 En sammanhängande privat lista
 
-Inköpslistan nås via korgen i headern eller från ett recept. Den tillhör det aktiva kontot eller den utloggade enhetens data. Den är en vanlig privat arbetslista, inte en delad inköpslista för flera vänner samtidigt.
+Inköpslistan nås via korgen i headern eller från ett recept. Korgen visar ett litet märke med antalet omarkerade varor. När ingredienser läggs till från ett recept flyger några små prickar i receptets ton från knappen in i korgen, som gör ett litet skutt, och listan öppnas som en cirkel som växer ut ur korgen. Med Reduce Motion visas bara märket. Den tillhör det aktiva kontot eller den utloggade enhetens data. Den är en vanlig privat arbetslista, inte en delad inköpslista för flera vänner samtidigt.
 
 Toppen är kompakt: en tillbakalänk, sidrubrik och From recipe får plats i en gemensam verktygsrad. Under finns ett fält för egna produkter och en plusknapp. Flera radbrutna produkter kan klistras in. Enter lägger till och gör det lätt att fortsätta skriva nästa produkt.
 

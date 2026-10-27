@@ -242,4 +242,35 @@ describe('shared photo snapshot ownership', () => {
     expect(service.phase()).toBe('idle');
     target.unregister();
   });
+
+  it('grows the shopping list from the header basket', async () => {
+    const service = TestBed.inject(PageTransitionService);
+    const basket = document.createElement('a');
+    basket.className = 'shopping-link';
+    document.body.append(basket);
+    vi.spyOn(basket, 'getBoundingClientRect').mockReturnValue({
+      left: 300,
+      top: 10,
+      width: 44,
+      height: 44,
+    } as DOMRect);
+    const ready = deferred(),
+      finished = deferred();
+    const transition = {
+      ready: ready.promise,
+      finished: finished.promise,
+      skipTransition() {},
+    } as ViewTransition;
+    service.start({ transition, from: route('/'), to: route('/shopping-list') });
+    const root = document.documentElement;
+    expect(root.hasAttribute('data-expand-basket')).toBe(true);
+    expect(root.style.getPropertyValue('--book-basket-x')).toBe('322px');
+    expect(root.style.getPropertyValue('--book-basket-y')).toBe('32px');
+    finished.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(root.hasAttribute('data-expand-basket')).toBe(false);
+    expect(root.style.getPropertyValue('--book-basket-x')).toBe('');
+    basket.remove();
+  });
 });
+

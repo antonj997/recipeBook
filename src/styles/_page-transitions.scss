@@ -411,6 +411,18 @@ html[data-page-transition='expand']::view-transition-old(book-recipe-card-descri
     transform: translateY(-4px) scale(0.99);
   }
 }
+/* The shopping list grows as a circle out of the header basket. */
+html[data-page-transition='expand'][data-expand-basket]::view-transition-new(root) {
+  animation: book-basket-grow var(--motion-surface) var(--motion-spring-calm) both;
+}
+@keyframes book-basket-grow {
+  from {
+    clip-path: circle(0 at var(--book-basket-x) var(--book-basket-y));
+  }
+  to {
+    clip-path: circle(150vmax at var(--book-basket-x) var(--book-basket-y));
+  }
+}
 @keyframes book-expand-in {
   from {
     opacity: 0;

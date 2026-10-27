@@ -20,6 +20,8 @@ import { RecipeImagesService } from '../../core/services/recipe-images.service';
 import { hasPhoto } from '../../core/models/recipe-image';
 import { ShoppingListService } from '../../core/services/shopping-list.service';
 import { FeedbackService } from '../../core/services/feedback.service';
+import { BasketService } from '../../core/services/basket.service';
+import { recipeBackground } from '../../core/models/recipe-color';
 import { CheckboxMarkComponent } from './checkbox-mark';
 import { FoodPlaceholderComponent } from './food-placeholder';
 import { IconComponent } from './icon';
@@ -40,6 +42,7 @@ export class RecipeShoppingPickerComponent {
   private readonly feedback = inject(FeedbackService);
   private readonly router = inject(Router);
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly basket = inject(BasketService);
   private readonly pickerBody = viewChild<ElementRef<HTMLDivElement>>('pickerBody');
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
   private readonly ingredientHeading =
@@ -226,8 +229,16 @@ export class RecipeShoppingPickerComponent {
     this.busy.set(true);
     this.error.set('');
     try {
+      // Measure before closing: the items fly from the button that added them.
+      const button = this.dialog()?.nativeElement.querySelector<HTMLElement>('.add-selected');
       const count = await this.shopping.addRecipe(recipe, servings, indices, allowDuplicate);
       if (!this.current()) return;
+      if (button?.isConnected)
+        void this.basket.flyFrom(
+          button.getBoundingClientRect(),
+          count,
+          `color-mix(in srgb, ${recipeBackground(recipe)} 52%, var(--color-ink))`,
+        );
       const account = this.account;
       this.feedback.show(count + (count === 1 ? ' item added' : ' items added'), {
         label: 'View list',
