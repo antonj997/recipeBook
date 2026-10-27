@@ -20,6 +20,7 @@ import { LeaveConfirmationComponent } from './shared/components/leave-confirmati
 import { GuestRecipesDialogComponent } from './shared/components/guest-recipes-dialog';
 import { GuestRecipesService } from './core/services/guest-recipes.service';
 import { RecipeImagesService } from './core/services/recipe-images.service';
+import { ImageMigrationService } from './core/services/image-migration.service';
 import {
   afterNextRender,
   Component,
@@ -98,6 +99,7 @@ export class App {
       this.syncThemeColor();
     });
     inject(StepTimerService); // Restore countdowns even when the app opens on the library.
+    inject(ImageMigrationService).start();
     this.destroyRef.onDestroy(() => {
       this.stopSnapshotGesture?.();
       cancelAnimationFrame(this.snapshotFocusFrame);
