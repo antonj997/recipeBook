@@ -4,6 +4,7 @@ import { FormArray, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark';
 import { AutoGrowTextareaDirective } from '../../../shared/directives/auto-grow-textarea';
 import { IconComponent } from '../../../shared/components/icon';
+import { animateLayout } from '../../../shared/motion/flip';
 
 interface Group {
   id: number;
@@ -239,7 +240,8 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
   handleKey(event: KeyboardEvent, control: FormControl<string>): void {
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     event.preventDefault();
-    this.shift(control, event.key === 'ArrowUp' ? -1 : 1);
+    const direction = event.key === 'ArrowUp' ? -1 : 1;
+    this.moveRows(() => this.shift(control, direction));
     requestAnimationFrame(() =>
       document
         .getElementById(this.rowId(control))
@@ -355,6 +357,15 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     this.items().markAsDirty();
     this.sync();
     this.message.set(this.kind() + ' moved to position ' + this.number(control) + '.');
+  }
+  /** Rows moved between groups are re-created; they travel instead of fading out and in. */
+  readonly moving = signal(false);
+  private moveRows(update: () => void): void {
+    this.moving.set(true);
+    void animateLayout(this.host, update, {
+      selector: '.editor-row[data-flip]',
+      key: (row) => row.dataset['flip'],
+    }).finally(() => this.moving.set(false));
   }
   shift(control: FormControl<string>, direction: number) {
     const rows = this.items().controls,
@@ -484,7 +495,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     event.preventDefault();
     const control = this.dragging(),
       to = this.destination();
-    if (control && to) this.move(control, to.groupId, to.before);
+    if (control && to) this.moveRows(() => this.move(control, to.groupId, to.before));
     this.endDrag();
   }
   touchCancel(): void {
@@ -515,7 +526,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     if (!to) return;
     event.preventDefault();
     event.stopPropagation();
-    this.move(control, to.groupId, to.before);
+    this.moveRows(() => this.move(control, to.groupId, to.before));
     this.endDrag();
   }
   isSlot(group: Group, before: FormControl<string> | null) {

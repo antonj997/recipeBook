@@ -318,3 +318,29 @@
   font-size: 0.8125rem;
   margin: 6px 0;
 }
+
+// Added and removed rows; rows that only move travel with animateLayout instead.
+.editor-row-enter {
+  animation: editor-row-in var(--motion-surface) var(--motion-spring-calm) both;
+}
+.editor-row-leave {
+  animation: editor-row-out var(--motion-fast) var(--motion-ease-out) both;
+}
+@keyframes editor-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes editor-row-out {
+  to {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .editor-row-enter,
+  .editor-row-leave {
+    animation: none;
+  }
+}

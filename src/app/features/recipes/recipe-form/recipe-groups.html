@@ -48,6 +48,9 @@
           class="editor-row"
           [class.dragging]="dragging() === control"
           [class.step-row]="kind() === 'step'"
+          [attr.data-flip]="rowId(control)"
+          [animate.enter]="moving() ? '' : 'editor-row-enter'"
+          [animate.leave]="moving() ? '' : 'editor-row-leave'"
         >
           <button
             type="button"
