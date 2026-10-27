@@ -278,10 +278,12 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     });
     effect(() => {
       if (this.accountChanged() || this.isDraft) return;
+      // A checked step stops counting but keeps its time; unchecking shows the clock paused.
       for (const index of this.completedSteps()) {
         const target = this.stepTimers()[index];
         if (!target) continue;
-        if (this.timerNeedsReset(target)) this.timers.reset(target);
+        const state = this.timers.state(target);
+        if (state.running || state.done) this.timers.pause(target);
       }
     });
     effect((onCleanup) => {

@@ -303,10 +303,7 @@ Om appen är synlig kan ett kort ljud upprepas i högst 30 sekunder från den ur
 
 En tunn toast berättar vilket steg som är klart och vilken timerlängd som har förflutit. View step öppnar receptet och rätt instruktion när användaren själv väljer det. Appen byter inte sida automatiskt.
 
-Om ett steg bockas av döljs dess timer och larmet avbryts. Vid kontroll av dagens
-kod återställs också timerns lokala progress. Det avviker från det tidigare
-önskemålet att avbockning bara ska stoppa klockan och behålla värdet; se avsnitt
-17.6. Stop-knappen i själva timerkontrollen pausar däremot utan återställning.
+Om ett steg bockas av döljs dess timer, klockan pausas med den tid som är kvar och larmet och schemalagda påminnelser avbryts. Tas bocken bort syns timern pausad där den stannade. Reset återställer fortfarande allt.
 
 Om en aktiv övertidstimer lämnas utan tillsyn återställs den efter en timme räknat från sluttiden. En uttryckligen pausad timer ligger däremot kvar pausad.
 
@@ -810,11 +807,9 @@ Automatiska tester används för bland annat datamodeller, import, kontogränser
 
 Förändringar ska vara små nog att förstå, återanvända befintliga komponenter och inte lägga till stora beroenden för problem som webbläsaren redan löser. Prestanda är en del av designkvaliteten: en snygg första bildruta räcker inte om interaktionen hackar, tappar tillstånd eller känns osäker.
 
-### 17.6 Noterad skillnad mellan tidigare beslut och dagens kod
+### 17.6 Avbockning och timer
 
-Vi hade beslutat att avbockning av ett steg skulle dölja och stoppa timern utan att återställa dess värde. Den aktuella receptsidan använder i stället Reset för en avbockad timers ändrade lokala tillstånd. Därför beskriver denna fil inte bevarad timerprogress efter avbockning som en befintlig funktion.
-
-Stop-knappen fungerar fortfarande som paus. Skillnaden gäller just avbockningen och bör stämmas av vid fortsatt funktionsarbete. Ingen appkod har ändrats som del av denna dokumentation.
+Vi hade beslutat att avbockning av ett steg skulle dölja och stoppa timern utan att återställa dess värde, men en tidigare version återställde timern. Efter granskningen i oktober 2026 pausar avbockningen klockan och behåller tiden som är kvar, som beslutat. Stop-knappen i timerkontrollen pausar på samma sätt.
 
 ## 18. Kärnan att bevara vid framtida designarbete
 

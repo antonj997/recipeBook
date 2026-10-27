@@ -366,6 +366,33 @@ describe('recipe detail', () => {
     expect(reset.disabled).toBe(true);
   });
 
+  it('pauses a running clock when its step is checked and keeps the time left', async () => {
+    const f = await timerFixture();
+    vi.useFakeTimers();
+    const component = f.host.componentInstance;
+    component.switchSection('instructions');
+    f.timers.start(f.targets[0]!);
+    await vi.advanceTimersByTimeAsync(30_000);
+    component.toggleStep(0);
+    f.host.detectChanges();
+    expect(f.timers.state(f.targets[0]!)).toMatchObject({
+      running: false,
+      paused: true,
+      started: true,
+      remaining: 90,
+    });
+    // Background alerts are scheduled only for timers with a deadline.
+    expect(
+      f.push.replaceTimers.mock.lastCall![0].some(
+        (timer: { deadline?: number }) => timer.deadline !== undefined,
+      ),
+    ).toBe(false);
+    await vi.advanceTimersByTimeAsync(60_000);
+    component.toggleStep(0);
+    f.host.detectChanges();
+    expect(f.timers.state(f.targets[0]!)).toMatchObject({ paused: true, remaining: 90 });
+  });
+
   it('resets checked steps and all recipe clocks together without clearing another recipe', async () => {
     const f = await timerFixture();
     vi.useFakeTimers();
