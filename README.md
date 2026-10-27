@@ -25,7 +25,7 @@ A personal recipe app for collecting recipes and cooking from them on your phone
 
 ## Getting started
 
-Use Node.js 24 or newer and npm.
+Use Node.js 24.15 or newer (see `.nvmrc`) and npm. Run `npx ng test --watch=false` for the unit tests.
 
 ```sh
 npm ci
