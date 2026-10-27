@@ -1,5 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { RecipeFocusComponent } from './recipe-focus';
+import { IngredientCheckComponent } from './ingredient-check';
 import { RecipeShoppingPickerComponent } from '../../../shared/components/recipe-shopping-picker';
 import { StepTimerService } from '../../../core/services/step-timer.service';
 import { WakeLockService } from '../../../core/services/wake-lock.service';
@@ -32,6 +33,7 @@ import { instructionText } from '../../../core/models/recipe-metadata';
 import {
   CookingSessionService,
   stepFingerprint,
+  ingredientFingerprint,
   type CookingSection,
 } from '../../../core/services/cooking-session.service';
 import { RecipeSummaryDetailsComponent, RecipeExtraDetailsComponent } from './recipe-metadata-view';
@@ -70,6 +72,7 @@ import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
     '(window:beforeunload)': 'onBeforeUnload($event)',
   },
   imports: [
+    IngredientCheckComponent,
     NgTemplateOutlet,
     RecipeFocusComponent,
     StepTimerComponent,
@@ -241,6 +244,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     () =>
       !this.accountChanged() &&
       (this.completedSteps().size > 0 ||
+        this.checkedIngredients().size > 0 ||
         (!this.isDraft &&
           this.stepTimers().some((target) => !!target && this.timerNeedsReset(target)))),
   );
@@ -304,12 +308,27 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       if (this.accountChanged()) {
         this.focusMode.set(false);
         this.completedSteps.set(new Set());
+        this.checkedIngredients.set(new Set());
         this.activeSection.set('ingredients');
       }
     });
   }
   // Progress is local to this account and never changes the saved recipe.
   completedSteps = signal<Set<number>>(new Set());
+  /** Ingredients set out while cooking; separate from the shopping list. */
+  checkedIngredients = signal<Set<number>>(new Set());
+  /** Only a mark checked just now scatters its crumbs; restored marks stay still. */
+  readonly justGathered = signal<number | null>(null);
+  toggleIngredient(index: number): void {
+    if (this.accountChanged() || this.isDraft) return;
+    this.justGathered.set(this.checkedIngredients().has(index) ? null : index);
+    this.checkedIngredients.update((current) => {
+      const next = new Set(current);
+      next.has(index) ? next.delete(index) : next.add(index);
+      return next;
+    });
+    this.saveCookingSession();
+  }
   /** The first unchecked step once cooking has begun; -1 before the first check or when done. */
   readonly nextStep = computed(() => {
     const done = this.completedSteps();
@@ -366,6 +385,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       this.timers.removeRecipe(recipe.id);
     }
     this.completedSteps.set(new Set());
+    this.checkedIngredients.set(new Set());
     this.saveCookingSession();
   }
 
@@ -392,6 +412,10 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
         index,
         fingerprint: stepFingerprint(recipe, index),
       })),
+      ingredients: [...this.checkedIngredients()].map((index) => ({
+        index,
+        fingerprint: ingredientFingerprint(recipe, index),
+      })),
     });
   }
 
@@ -410,6 +434,17 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
               step.fingerprint === stepFingerprint(recipe, step.index),
           )
           .map((step) => step.index),
+      ),
+    );
+    this.checkedIngredients.set(
+      new Set(
+        (saved.ingredients ?? [])
+          .filter(
+            (item) =>
+              item.index < recipe.ingredients.length &&
+              item.fingerprint === ingredientFingerprint(recipe, item.index),
+          )
+          .map((item) => item.index),
       ),
     );
   }
@@ -480,13 +515,13 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   }
   ingredientGroups = computed(() => {
     const recipe = this.recipe();
-    const groups: { section: string; ingredients: string[] }[] = [];
+    const groups: { section: string; ingredients: { text: string; index: number }[] }[] = [];
     recipe?.ingredients.forEach((ingredient, index) => {
-      ingredient = scaleIngredient(ingredient, this.baseServings(), this.selectedServings());
+      const text = scaleIngredient(ingredient, this.baseServings(), this.selectedServings());
       const section = recipe.ingredientSections?.[index] ?? '';
       const previous = groups.at(-1);
-      if (previous?.section === section) previous.ingredients.push(ingredient);
-      else groups.push({ section, ingredients: [ingredient] });
+      if (previous?.section === section) previous.ingredients.push({ text, index });
+      else groups.push({ section, ingredients: [{ text, index }] });
     });
     return groups;
   });
@@ -513,6 +548,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       this.recipe.set(undefined);
       this.loading.set(true);
       this.completedSteps.set(new Set());
+      this.checkedIngredients.set(new Set());
       this.activeSection.set('ingredients');
       this.loadedStepPhotos.set({});
       this.loadingStepPhotos.set(new Set());

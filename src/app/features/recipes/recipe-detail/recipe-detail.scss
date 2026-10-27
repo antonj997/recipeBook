@@ -164,6 +164,12 @@ li::marker {
 
 .ingredients,
 .instructions {
+  // The recipe colour deepened for small marks on the white reading surface.
+  --recipe-tone: color-mix(
+    in srgb,
+    var(--page-background, var(--color-canvas)) 52%,
+    var(--color-ink)
+  );
   grid-area: 1 / 1;
   width: 100%;
   max-width: 75ch;
@@ -251,7 +257,7 @@ li::marker {
   inset-inline-start: -10px;
   width: 3px;
   border-radius: 2px;
-  background: var(--recipe-outline);
+  background: var(--recipe-tone);
   animation: next-step-edge var(--motion-control) var(--motion-ease-out) both;
 }
 @keyframes next-step-edge {
@@ -436,4 +442,13 @@ li::marker {
     width: 18px;
     height: 18px;
   }
+}
+
+.ingredient-checklist {
+  padding-left: 0;
+  list-style: none;
+}
+.ingredient-checklist li {
+  padding-left: 0;
+  margin-bottom: 0;
 }

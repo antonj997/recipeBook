@@ -191,6 +191,8 @@ Beräkningen utgår alltid från receptets sparade originalmängder och standard
 
 Portionsmenyn stöder vanligt tryck, tangentbord och att hålla inne och dra genom alternativen. Förhandsvisningen följer det markerade värdet. Släpp utanför menyn avbryter valet.
 
+Under matlagning kan ingredienserna bockas av när de är framtagna. De stryks inte över och texten behåller sin färg, så att mängden fortfarande går att läsa. I stället har varje rad en rund markering som fylls med receptets ton och får en bock, medan en liten nypa smulor stänks ut från den. Markeringarna sparas lokalt med receptets steg, följer med till fokusläget och nollställs av Reset. Portionsbyte behåller dem, men en ändrad ingrediensrad släpper sin markering. De påverkar inte inköpslistan och visas inte i utkastgranskningen.
+
 Portionskontrollen ligger före Add to shopping list. Inköpsknappen öppnar ett urval av receptets ingredienser med det valda portionsantalet.
 
 ### 6.5 Instruktioner och tillagningsprogress

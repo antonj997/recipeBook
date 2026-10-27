@@ -13,7 +13,10 @@ import { RecipeService } from '../../../core/services/recipe.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
 import { StepTimerService } from '../../../core/services/step-timer.service';
 import { FeedbackService } from '../../../core/services/feedback.service';
-import { CookingSessionService } from '../../../core/services/cooking-session.service';
+import {
+  CookingSessionService,
+  ingredientFingerprint,
+} from '../../../core/services/cooking-session.service';
 import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
 import { StorageDurabilityService } from '../../../core/services/storage-durability.service';
 import { WakeLockService } from '../../../core/services/wake-lock.service';
@@ -794,5 +797,94 @@ describe('recipe detail', () => {
     );
     expect(feedback.action()?.label).toBe('Show how');
     expect(durability.markNudged).toHaveBeenCalledTimes(1);
+  });
+
+  it('checks off ingredients without striking them through and remembers them', async () => {
+    const f = await fixture();
+    const box = f.ingredients.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    expect(box.closest('label')?.textContent).toContain('Salt');
+    box.click();
+    f.host.detectChanges();
+    const item = f.ingredients.querySelector('li')!;
+    expect(item.classList).toContain('gathered');
+    expect(item.querySelector('.ingredient-text')?.textContent?.trim()).toBe('Salt');
+    expect(TestBed.inject(CookingSessionService).read('tab-test')).toMatchObject({
+      ingredients: [{ index: 0, fingerprint: JSON.stringify(['Salt', '']) }],
+    });
+  });
+
+  it('restores checked ingredients only while their text is unchanged', async () => {
+    const sessions = TestBed.inject(CookingSessionService);
+    sessions.save('tab-test', {
+      section: 'ingredients',
+      completed: [],
+      ingredients: [{ index: 0, fingerprint: JSON.stringify(['Pepper', '']) }],
+    });
+    const stale = await fixture();
+    expect(stale.ingredients.querySelector('li.gathered')).toBeNull();
+    stale.host.destroy();
+    sessions.save('tab-test', {
+      section: 'ingredients',
+      completed: [],
+      ingredients: [{ index: 0, fingerprint: JSON.stringify(['Salt', '']) }],
+    });
+    const fresh = await fixture();
+    expect(fresh.ingredients.querySelector('li.gathered')).not.toBeNull();
+  });
+
+  it('clears checked ingredients with Reset, together with the steps', async () => {
+    const f = await timerFixture();
+    const reset = f.host.nativeElement.querySelector('.reset-instructions') as HTMLButtonElement;
+    expect(reset.disabled).toBe(true);
+    const ingredients = f.host.nativeElement.querySelector('#ingredients-panel') as HTMLElement;
+    ingredients.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    f.host.detectChanges();
+    expect(reset.disabled).toBe(false);
+    reset.click();
+    f.host.detectChanges();
+    expect(ingredients.querySelector('li.gathered')).toBeNull();
+    expect(TestBed.inject(CookingSessionService).read('tab-test')?.ingredients).toEqual([]);
+  });
+
+  it('keeps draft ingredients as a plain list', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        data: routeData,
+        snapshot: { paramMap: convertToParamMap({}), data: { draft: true } },
+      },
+    });
+    TestBed.overrideProvider(RecipeDraftService, {
+      useValue: {
+        getOrCreate: () => ({
+          id: 'draft',
+          title: 'Draft soup',
+          servings: 4,
+          ingredients: ['Water'],
+          instructions: ['Boil.'],
+        }),
+        clear: vi.fn(),
+        photoNotice: signal(''),
+      },
+    });
+    TestBed.overrideProvider(RecipeService, {
+      useValue: { accountVersion: signal(0), revision: signal(0), getCollections: async () => [] },
+    });
+    const { host } = await fixture();
+    await host.whenStable();
+    host.detectChanges();
+    const panel = host.nativeElement.querySelector('#ingredients-panel') as HTMLElement;
+    expect(panel.textContent).toContain('Water');
+    expect(panel.querySelector('input[type="checkbox"]')).toBeNull();
+  });
+
+  it('fingerprints an ingredient by its saved text and group, not the scaled amount', () => {
+    const recipe = {
+      id: 'r',
+      title: 'R',
+      ingredients: ['2 onions'],
+      ingredientSections: ['Base'],
+      instructions: [],
+    };
+    expect(ingredientFingerprint(recipe, 0)).toBe(JSON.stringify(['2 onions', 'Base']));
   });
 });

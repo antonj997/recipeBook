@@ -3,15 +3,40 @@ import type { Recipe } from '../models/recipe.model';
 import { SupabaseService } from './supabase.service';
 
 export type CookingSection = 'ingredients' | 'instructions';
+type Checked = { index: number; fingerprint: string };
 export interface CookingSession {
   section: CookingSection;
   servings?: number;
-  completed: { index: number; fingerprint: string }[];
+  completed: Checked[];
+  /** Ingredients set out while cooking; absent in sessions saved by earlier versions. */
+  ingredients?: Checked[];
 }
 
 export function stepFingerprint(recipe: Recipe, index: number): string {
   // Keep the text itself so even small edits invalidate an old completion.
   return JSON.stringify([recipe.instructions[index], recipe.stepDetails?.[index]?.section ?? '']);
+}
+
+/** The saved, unscaled text: changing servings keeps the mark, editing the line drops it. */
+export function ingredientFingerprint(
+  recipe: Pick<Recipe, 'ingredients' | 'ingredientSections'>,
+  index: number,
+): string {
+  return JSON.stringify([recipe.ingredients[index], recipe.ingredientSections?.[index] ?? '']);
+}
+
+function readChecked(value: unknown): Checked[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item: unknown): item is Checked => {
+    if (!item || typeof item !== 'object') return false;
+    const entry = item as Record<string, unknown>;
+    return (
+      typeof entry['index'] === 'number' &&
+      Number.isSafeInteger(entry['index']) &&
+      entry['index'] >= 0 &&
+      typeof entry['fingerprint'] === 'string'
+    );
+  });
 }
 
 @Service()
@@ -45,18 +70,8 @@ export class CookingSessionService {
             ? state['servings']
             : undefined,
         section: state['section'] as CookingSection,
-        completed: state['completed'].filter(
-          (item: unknown): item is CookingSession['completed'][number] => {
-            if (!item || typeof item !== 'object') return false;
-            const step = item as Record<string, unknown>;
-            return (
-              typeof step['index'] === 'number' &&
-              Number.isSafeInteger(step['index']) &&
-              step['index'] >= 0 &&
-              typeof step['fingerprint'] === 'string'
-            );
-          },
-        ),
+        completed: readChecked(state['completed']),
+        ingredients: readChecked(state['ingredients']),
       };
     } catch {
       return this.memory.get(key) ?? null;

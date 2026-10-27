@@ -182,9 +182,20 @@
                 @if (group.section) {
                   <h3 class="group-heading">{{ group.section }}</h3>
                 }
-                <ul>
-                  @for (ingredient of group.ingredients; track $index) {
-                    <li>{{ ingredient }}</li>
+                <ul [class.ingredient-checklist]="!isDraft">
+                  @for (ingredient of group.ingredients; track ingredient.index) {
+                    @if (isDraft) {
+                      <li>{{ ingredient.text }}</li>
+                    } @else {
+                      <li [class.gathered]="checkedIngredients().has(ingredient.index)">
+                        <app-ingredient-check
+                          [text]="ingredient.text"
+                          [checked]="checkedIngredients().has(ingredient.index)"
+                          [justChecked]="justGathered() === ingredient.index"
+                          (toggled)="toggleIngredient(ingredient.index)"
+                        />
+                      </li>
+                    }
                   }
                 </ul>
               }
