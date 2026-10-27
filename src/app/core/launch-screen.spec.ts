@@ -52,6 +52,29 @@ describe('launch screen', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('finishes the logo tipping into its book orientation before revealing a ready page', async () => {
+    const flight = deferred();
+    const image = document.createElement('img');
+    image.className = 'app-launch__logo';
+    image.decode = () => Promise.resolve();
+    image.animate = vi.fn(
+      () => ({ finished: flight.promise, cancel: vi.fn() }) as unknown as Animation,
+    );
+    document.getElementById('app-launch')!.prepend(image);
+    const launch = new LaunchScreen(document);
+    const done = launch.revealWhen(Promise.resolve());
+    await vi.advanceTimersByTimeAsync(40);
+    expect(document.getElementById('app-launch')?.hasAttribute('data-ready')).toBe(false);
+    expect(image.animate).toHaveBeenCalledOnce();
+    flight.resolve();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(document.getElementById('app-launch')?.hasAttribute('data-ready')).toBe(true);
+    await vi.advanceTimersByTimeAsync(250);
+    await done;
+    expect(document.getElementById('app-launch')).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('waits for visible photos to decode before revealing the page', async () => {
     const decoded = deferred();
     const image = document.createElement('img');

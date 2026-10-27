@@ -1,11 +1,15 @@
+import { tipRecipebookMark, type BrandMarkMotion } from './brand-mark-motion';
+
 /** The first-paint cover lives outside Angular so it also covers bootstrap and lazy routes. */
 export class LaunchScreen {
   private readonly cover: HTMLElement | null;
   private readonly app: HTMLElement | null;
+  private readonly logoMotion: BrandMarkMotion;
 
   constructor(private readonly document: Document) {
     this.cover = document.getElementById('app-launch');
     this.app = document.querySelector('app-root');
+    this.logoMotion = tipRecipebookMark(this.cover?.querySelector('.app-launch__logo') ?? null);
   }
 
   async revealWhen(startup: Promise<unknown>): Promise<void> {
@@ -26,6 +30,8 @@ export class LaunchScreen {
         this.dismiss();
         return;
       }
+      // The tip runs during bootstrap; only a fast load waits for its remaining frames.
+      await this.logoMotion.finished;
       await new Promise<void>((resolve) => {
         const finish = () => {
           clearTimeout(fallback);
@@ -42,6 +48,7 @@ export class LaunchScreen {
         this.cover!.setAttribute('data-ready', '');
       });
     } catch {
+      this.logoMotion.cancel();
       this.cover?.setAttribute('data-failed', '');
       const message = this.cover?.querySelector('[data-launch-message]');
       if (message) message.textContent = 'Recipebook could not start.';
@@ -50,6 +57,7 @@ export class LaunchScreen {
   }
 
   dismiss(): void {
+    this.logoMotion.cancel();
     this.cover?.remove();
     this.document.documentElement.removeAttribute('data-app-loading');
     this.app?.removeAttribute('inert');

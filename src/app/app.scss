@@ -69,6 +69,7 @@
 .brand-mark {
   flex: 0 0 24px;
   object-fit: contain;
+  transform: rotate(-90deg);
 }
 .brand-word {
   display: inline-block;
