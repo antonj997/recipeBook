@@ -23,40 +23,25 @@
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: 32px minmax(0, 1fr);
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
 }
 header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-width: 0;
-  padding: 4px 20px;
-  border-bottom: 1px solid color-mix(in srgb, var(--page-background) 65%, var(--color-ink));
-  background: var(--page-background, var(--color-canvas));
-}
-h2 {
-  min-width: 0;
-  margin: 0;
-  font:
-    400 1.25rem/1.25 Georgia,
-    'Times New Roman',
-    serif;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  position: relative;
+  background: var(--color-surface);
 }
 button {
-  flex-shrink: 0;
+  position: absolute;
+  inset: 0 8px auto auto;
+  width: 44px;
   min-height: 44px;
-  padding: 8px 4px;
-  gap: 6px;
+  padding: 0;
   border: 0;
   background: transparent;
-  font-size: 0.875rem;
 }
+/* The close target extends into the panels' empty top padding, preserving a
+   44px touch target while the toolbar itself only takes 32px of reading space. */
 @media (orientation: portrait) {
   .focus-landscape {
     position: absolute;

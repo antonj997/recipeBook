@@ -20,15 +20,14 @@ import { IconComponent } from '../../../shared/components/icon';
     <dialog
       #dialog
       class="recipe-focus"
-      aria-labelledby="focus-recipe-title"
+      [attr.aria-label]="title()"
       (cancel)="$event.preventDefault(); close()"
       (close)="close()"
     >
       <div class="focus-landscape">
         <header>
-          <h2 id="focus-recipe-title">{{ title() }}</h2>
           <button type="button" aria-label="Exit focus mode" (click)="close()" autofocus>
-            <app-icon name="close" /><span>Exit focus</span>
+            <app-icon name="close" />
           </button>
         </header>
         <ng-content />

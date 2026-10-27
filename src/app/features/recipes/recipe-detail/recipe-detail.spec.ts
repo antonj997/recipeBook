@@ -200,6 +200,9 @@ describe('recipe detail', () => {
     const f = await fixture();
     const dialog = await openFocus(f);
     expect(dialog.open).toBe(true);
+    expect(dialog.getAttribute('aria-label')).toBe('Recipe section test');
+    expect(dialog.querySelector('header h2')).toBeNull();
+    expect(dialog.querySelector('header')?.textContent?.trim()).toBe('');
     expect(document.documentElement.style.overflow).toBe('hidden');
     expect(f.host.nativeElement.querySelectorAll('#ingredients-panel')).toHaveLength(1);
     expect(f.host.nativeElement.querySelectorAll('#instructions-panel')).toHaveLength(1);
