@@ -190,7 +190,7 @@ export class StepTimerComponent {
 
   protected beginEdit(event: Event): void {
     if (this.locked()) return;
-    this.ruler()?.stopMotion(true);
+    this.ruler()?.stopMotion();
     if (!this.editing()) {
       this.nativeEdit = undefined;
       this.editTarget = this.target().key;
@@ -346,7 +346,7 @@ export class StepTimerComponent {
 
   // Recipe-wide reset also clears a pending text edit or an ongoing ruler fling.
   resetInteraction(): void {
-    this.ruler()?.stopMotion(true);
+    this.ruler()?.stopMotion();
     this.cancelEdit();
   }
 
@@ -357,7 +357,7 @@ export class StepTimerComponent {
   }
 
   protected adjust(minutes: -1 | 1): void {
-    this.ruler()?.stopMotion(true);
+    this.ruler()?.stopMotion();
     if (this.minuteLocked() || !this.commitEdit()) return;
     this.timers.adjust(this.target(), minutes);
   }

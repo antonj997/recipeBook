@@ -1,10 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MinuteRulerComponent } from './minute-ruler';
-import {
-  TimerRulerPreferencesService,
-  type TimerRulerMode,
-} from '../../core/services/timer-ruler-preferences.service';
 
 describe('minute ruler gestures', () => {
   beforeEach(() => {
@@ -23,8 +19,7 @@ describe('minute ruler gestures', () => {
     vi.unstubAllGlobals();
     localStorage.removeItem('recipebook:timer-ruler-mode:v1');
   });
-  function setup(seconds = 1800, mode: TimerRulerMode = 'swipe') {
-    TestBed.inject(TimerRulerPreferencesService).setMode(mode);
+  function setup(seconds = 1800) {
     const view = TestBed.createComponent(MinuteRulerComponent);
     view.componentRef.setInput('seconds', seconds);
     view.detectChanges();
@@ -77,26 +72,23 @@ describe('minute ruler gestures', () => {
     await vi.advanceTimersByTimeAsync(milliseconds);
     return trackOffset(f) - before;
   }
-  it.each(['swipe', 'edge'] as const)(
-    'uses the landscape axis for %s gestures on a rotated phone',
-    async (mode) => {
-      const f = setup(1800, mode);
-      f.view.componentRef.setInput('rotated', true);
-      f.view.detectChanges();
-      vi.mocked(f.slider.getBoundingClientRect).mockReturnValue({
-        left: 10,
-        top: 40,
-        width: 30,
-        height: 360,
-      } as DOMRect);
-      pointer(f.slider, 'pointerdown', 20, 220);
-      await vi.advanceTimersByTimeAsync(400);
-      pointer(document, 'pointermove', 20, 274);
-      f.view.detectChanges();
-      expect(f.changes.at(-1)).toBe((mode === 'swipe' ? 27 : 33) * 60);
-      pointer(document, 'pointerup', 20, 274);
-    },
-  );
+  it('uses the landscape axis for swipe gestures on a rotated phone', async () => {
+    const f = setup(1800);
+    f.view.componentRef.setInput('rotated', true);
+    f.view.detectChanges();
+    vi.mocked(f.slider.getBoundingClientRect).mockReturnValue({
+      left: 10,
+      top: 40,
+      width: 30,
+      height: 360,
+    } as DOMRect);
+    pointer(f.slider, 'pointerdown', 20, 220);
+    await vi.advanceTimersByTimeAsync(400);
+    pointer(document, 'pointermove', 20, 274);
+    f.view.detectChanges();
+    expect(f.changes.at(-1)).toBe(27 * 60);
+    pointer(document, 'pointerup', 20, 274);
+  });
 
   it.each([0, 60, 1800, 3600])('keeps swipe selection centered at %i seconds', (seconds) => {
     const f = setup(seconds);
@@ -250,6 +242,22 @@ describe('minute ruler gestures', () => {
     await vi.advanceTimersByTimeAsync(1000);
     expect(f.changes).toHaveLength(count);
   });
+  it('ignores an Edge hold choice saved by the removed test setting', async () => {
+    localStorage.setItem('recipebook:timer-ruler-mode:v1', 'edge');
+    const view = TestBed.createComponent(MinuteRulerComponent);
+    view.componentRef.setInput('seconds', 1800);
+    view.detectChanges();
+    const slider = (view.nativeElement as HTMLElement).querySelector<HTMLElement>('[role=slider]')!;
+    vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 360 } as DOMRect);
+    const changes: number[] = [];
+    view.componentInstance.durationChange.subscribe((value) => changes.push(value));
+    pointer(slider, 'pointerdown', 350);
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(changes).toEqual([]);
+    pointer(document, 'pointermove', 332);
+    expect(changes.at(-1)).toBe(31 * 60);
+    pointer(document, 'pointerup', 332);
+  });
   it('never starts edge scrolling in swipe mode, even when held at the edge', async () => {
     const f = setup();
     pointer(f.slider, 'pointerdown', 180);
@@ -258,35 +266,6 @@ describe('minute ruler gestures', () => {
       count = f.changes.length;
     await vi.advanceTimersByTimeAsync(1500);
     expect(trackOffset(f)).toBe(offset);
-    expect(f.changes).toHaveLength(count);
-    pointer(document, 'pointerup', 350);
-  });
-  it('stops immediately on release in edge mode without adding swipe momentum', async () => {
-    const f = setup(1800, 'edge');
-    await fling(f);
-    const offset = trackOffset(f),
-      count = f.changes.length;
-    await vi.advanceTimersByTimeAsync(1500);
-    expect(trackOffset(f)).toBe(offset);
-    expect(f.changes).toHaveLength(count);
-  });
-  it('cancels both kinds of motion immediately when the test mode changes', async () => {
-    const f = setup(),
-      preferences = TestBed.inject(TimerRulerPreferencesService);
-    await fling(f);
-    await vi.advanceTimersByTimeAsync(100);
-    preferences.setMode('edge');
-    f.view.detectChanges();
-    let count = f.changes.length;
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(f.changes).toHaveLength(count);
-    pointer(f.slider, 'pointerdown', 180);
-    pointer(document, 'pointermove', 350);
-    await vi.advanceTimersByTimeAsync(400);
-    preferences.setMode('swipe');
-    f.view.detectChanges();
-    count = f.changes.length;
-    await vi.advanceTimersByTimeAsync(1000);
     expect(f.changes).toHaveLength(count);
     pointer(document, 'pointerup', 350);
   });
@@ -352,18 +331,6 @@ describe('minute ruler gestures', () => {
       }
     },
   );
-  it('keeps the one-minute marker near the left in edge mode', () => {
-    const f = setup(60, 'edge');
-    const marker = (f.view.nativeElement as HTMLElement).querySelector<HTMLElement>(
-      '.ruler-marker',
-    )!;
-    const x = Number(marker.style.transform.match(/translateX\(([\d.-]+)px\)/)?.[1]);
-    expect(x).toBeGreaterThan(10);
-    expect(x).toBeLessThan(80);
-    pointer(f.slider, 'pointerdown', 70);
-    pointer(document, 'pointerup', 70);
-    expect(f.changes.at(-1)).toBe(180);
-  });
   it('lets a mouse slide the scale beneath the fixed marker without needing a hold', () => {
     const f = setup();
     for (const [type, x] of [
@@ -437,7 +404,6 @@ describe('minute ruler gestures', () => {
     ) {
       return { left: 0, width: this.classList.contains('minute-ruler') ? 437.76 : 480 } as DOMRect;
     });
-    TestBed.inject(TimerRulerPreferencesService).setMode('swipe');
     const view = TestBed.createComponent(MinuteRulerComponent);
     view.componentRef.setInput('seconds', 1800);
     view.componentRef.setInput('timeline', true);
@@ -586,115 +552,14 @@ describe('minute ruler gestures', () => {
       root.querySelector<HTMLElement>('.ruler-tick')!.dataset['minute']
     );
   }
-  it('follows the thumb while the scale stays still throughout the middle area', async () => {
-    const f = setup(1800, 'edge');
-    f.view.detectChanges();
-    const initial = rulerWindow(f);
-    pointer(f.slider, 'pointerdown', 126);
-    await vi.advanceTimersByTimeAsync(400);
-    f.view.detectChanges();
-    expect(markerX(f)).toBeCloseTo(126, 1);
-    expect(rulerWindow(f)).toBe(initial);
-    for (const x of [180, 234]) {
-      pointer(document, 'pointermove', x);
-      f.view.detectChanges();
-      expect(markerX(f)).toBeCloseTo(x, 1);
-      expect(rulerWindow(f)).toBe(initial);
-      const count = f.changes.length;
-      await vi.advanceTimersByTimeAsync(1000);
-      f.view.detectChanges();
-      expect(f.changes).toHaveLength(count);
-      expect(rulerWindow(f)).toBe(initial);
-    }
-    expect(f.changes.at(-1)).toBe(33 * 60);
-  });
-  it.each([90, 180, 270])(
-    'starts anywhere and scrolls only in the edge zone (start %i)',
-    async (start) => {
-      const f = setup(1800, 'edge');
-      pointer(f.slider, 'pointerdown', start);
-      pointer(document, 'pointermove', 330);
-      await vi.advanceTimersByTimeAsync(400);
-      f.view.detectChanges();
-      const before = f.changes.at(-1)!;
-      const window = rulerWindow(f);
-      await vi.advanceTimersByTimeAsync(1000);
-      f.view.detectChanges();
-      const delta = (f.changes.at(-1)! - before + 3660) % 3660;
-      expect(delta).toBeGreaterThanOrEqual(7 * 60);
-      expect(delta).toBeLessThanOrEqual(9 * 60);
-      expect(markerX(f)).toBeCloseTo(330, 1);
-      expect(rulerWindow(f)).not.toBe(window);
-      pointer(document, 'pointermove', 180);
-      f.view.detectChanges();
-      const middle = rulerWindow(f),
-        count = f.changes.length;
-      await vi.advanceTimersByTimeAsync(1000);
-      f.view.detectChanges();
-      expect(f.changes).toHaveLength(count);
-      expect(rulerWindow(f)).toBe(middle);
-      expect(markerX(f)).toBeCloseTo(180, 1);
-    },
-  );
-  it('selects the tick under a dragged thumb instead of keeping a fixed center marker', () => {
-    const f = setup(1800, 'edge');
-    pointer(f.slider, 'pointerdown', 90);
-    pointer(document, 'pointermove', 100);
-    f.view.detectChanges();
-    expect(f.changes.at(-1)).toBe(26 * 60);
-    expect(markerX(f)).toBeCloseTo(100, 1);
-    pointer(document, 'pointerup', 100);
-    f.view.detectChanges();
-    expect(markerX(f)).toBeCloseTo(108, 1);
-  });
-  it('accelerates toward the edge and stops drifting when held in the middle', async () => {
-    const f = setup(1800, 'edge');
-    pointer(f.slider, 'pointerdown', 300);
-    await vi.advanceTimersByTimeAsync(400);
-    const first = f.changes.at(-1)!;
-    await vi.advanceTimersByTimeAsync(1000);
-    const slow = (f.changes.at(-1)! - first + 3660) % 3660;
-    pointer(document, 'pointermove', 358);
-    const next = f.changes.at(-1)!;
-    await vi.advanceTimersByTimeAsync(1000);
-    const fast = (f.changes.at(-1)! - next + 3660) % 3660;
-    expect(fast).toBeGreaterThan(slow);
-    pointer(document, 'pointermove', 180);
-    f.view.detectChanges();
-    const count = f.changes.length;
-    await vi.advanceTimersByTimeAsync(1500);
-    expect(f.changes).toHaveLength(count);
-    pointer(document, 'pointerup', 180);
-    await vi.advanceTimersByTimeAsync(1500);
-    expect(f.changes).toHaveLength(count);
-  });
-  it.each(['pointercancel', 'scroll', 'blur'])('cancels a held gesture on %s', async (event) => {
-    const f = setup(1800, 'edge');
-    pointer(f.slider, 'pointerdown', 350);
-    await vi.advanceTimersByTimeAsync(500);
+  it.each(['pointercancel', 'scroll', 'blur'])('cancels a drag on %s', async (event) => {
+    const f = setup(1800);
+    pointer(f.slider, 'pointerdown', 180);
+    pointer(document, 'pointermove', 200);
     (event === 'blur' ? window : document).dispatchEvent(new Event(event));
     const count = f.changes.length;
+    pointer(document, 'pointermove', 300);
     await vi.advanceTimersByTimeAsync(1500);
-    expect(f.changes).toHaveLength(count);
-  });
-  it('stops on an account/step identity change, disabled state and destruction', async () => {
-    const f = setup(1800, 'edge');
-    for (const input of ['identity', 'disabled']) {
-      pointer(f.slider, 'pointerdown', 350);
-      await vi.advanceTimersByTimeAsync(500);
-      f.view.componentRef.setInput(input, input === 'identity' ? 'other-step' : true);
-      f.view.detectChanges();
-      const count = f.changes.length;
-      await vi.advanceTimersByTimeAsync(1000);
-      expect(f.changes).toHaveLength(count);
-    }
-    f.view.componentRef.setInput('disabled', false);
-    f.view.detectChanges();
-    pointer(f.slider, 'pointerdown', 350);
-    await vi.advanceTimersByTimeAsync(500);
-    f.view.destroy();
-    const count = f.changes.length;
-    await vi.advanceTimersByTimeAsync(1000);
     expect(f.changes).toHaveLength(count);
   });
   it('preserves remaining seconds when keyboard or wheel adds a minute', () => {
@@ -716,8 +581,8 @@ describe('minute ruler gestures', () => {
     f.slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     expect(f.changes.at(-1)).toBe(0);
   });
-  it('retains a continuous edge-mode mouse drag after wrapping through zero', () => {
-    const f = setup(3540, 'edge');
+  it('retains a continuous mouse drag after wrapping through zero', () => {
+    const f = setup(3540);
     const mouse = (type: string, x: number) => {
       const event = new MouseEvent(type, {
         bubbles: true,
@@ -733,17 +598,18 @@ describe('minute ruler gestures', () => {
       });
       (type === 'pointerdown' ? f.slider : document).dispatchEvent(event);
     };
+    // The scale moves against the pointer: dragging left by one tick adds a minute.
     mouse('pointerdown', 180);
-    mouse('pointermove', 216);
-    mouse('pointerup', 216);
+    mouse('pointermove', 144);
+    mouse('pointerup', 144);
     expect(f.changes.at(-1)).toBe(0);
-    mouse('pointerdown', 216);
-    mouse('pointermove', 234);
-    mouse('pointerup', 234);
+    mouse('pointerdown', 144);
+    mouse('pointermove', 126);
+    mouse('pointerup', 126);
     expect(f.changes.at(-1)).toBe(60);
-    mouse('pointerdown', 234);
-    mouse('pointermove', 198);
-    mouse('pointerup', 198);
+    mouse('pointerdown', 126);
+    mouse('pointermove', 162);
+    mouse('pointerup', 162);
     expect(f.changes.at(-1)).toBe(3600);
   });
   it('shows a small label every five minutes, including sixty followed by zero', () => {

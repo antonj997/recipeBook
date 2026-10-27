@@ -1,4 +1,3 @@
-import { TimerRulerPreferencesService } from '../../core/services/timer-ruler-preferences.service';
 import { AppUpdateService } from '../../core/services/app-update.service';
 import { IconComponent } from '../../shared/components/icon';
 import { AccountAccessComponent } from './account-access';
@@ -27,7 +26,6 @@ export class SettingsComponent {
   readonly cloud = inject(CloudCookbookService);
   readonly auth = this.cloud.auth;
   readonly app = inject(AppUpdateService);
-  readonly rulerPreferences = inject(TimerRulerPreferencesService);
   private readonly timerAlerts = inject(TimerPushService);
   private readonly confirmation = inject(LeaveConfirmationService);
   readonly returnToImport =

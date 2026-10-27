@@ -283,12 +283,9 @@ Stop betyder paus, inte återställning. Samma knapp ersätter Start när klocka
 
 Före start används en låg, rundad rektangel med tunna streck. Varje streck är en minut. Var femte minut har en liten siffra ovanför strecket. Skalan går från noll till sextio och kan sedan fortsätta runt igen.
 
-Två olika gester finns kvar för jämförelse, men är separerade så att de inte påverkar varandra:
+Linjalen styrs med svep (swipe momentum). Skalan följer svepets riktning under en fast markör i mitten, och markören väljer värdet. Ett snabbt svep fortsätter med avtagande fart. Flera snabba svep åt samma håll kan bygga upp mer fart inom en rimlig maxhastighet. Ett tryck stoppar rörelsen vid det synliga mittvärdet och väljer inte ett annat tick.
 
-- **Swipe momentum, standardläget:** Skalan följer svepets riktning under en fast markör i mitten. Markören väljer värdet. Ett snabbt svep fortsätter med avtagande fart. Flera snabba svep åt samma håll kan bygga upp mer fart inom en rimlig maxhastighet. Ett tryck stoppar rörelsen vid det synliga mittvärdet och väljer inte ett annat tick.
-- **Edge hold, det alternativa testläget:** Markeringen följer fingret. Mittenområdet står stilla, medan närhet till kanterna driver skalan fortare ju längre ut fingret ligger. Släpp stoppar rörelsen direkt. Detta läge har inte svepets efterrullning.
-
-En tillfällig enhetslokal inställning väljer mellan lägena. Sidans scroll blockeras medan man faktiskt drar linjalen, inte efteråt. På dator finns musdragning, fokuserad mushjulsstyrning och tangentbordskontroller.
+Det tidigare testläget Edge hold, där man höll fingret nära en kant för att scrolla, och inställningen som valde mellan lägena togs bort i oktober 2026. Sidans scroll blockeras medan man faktiskt drar linjalen, inte efteråt. På dator finns musdragning, fokuserad mushjulsstyrning och tangentbordskontroller.
 
 ### 8.5 Aktiv och pausad timer
 
@@ -543,7 +540,6 @@ Importerad backup valideras före lagring. Säkerhetskopiering ska inte råka ex
 
 App-delen innehåller:
 
-- Den tillfälliga jämförelsen mellan timerlinjalens två gestlägen.
 - På- och avslag för bakgrundsaviseringar samt status och felåterkoppling.
 - Tillgänglig appuppdatering och omladdning.
 - Installation eller information om Lägg till på hemskärmen.
@@ -745,7 +741,7 @@ Vi provade helt färgade horisontella receptkort med fler rader titel. Den nuvar
 
 Timern började som en enkel ruta med klockikon och minutknappar. Därefter prövades direktinmatning, timfält, hållreglage, en rörlig detaljlinjal och flera placeringar av knapparna.
 
-Dagens beslut är MM:SS och högst 60 minuter, en kompakt knapprad, en redigeringslinjal före start och ett stilla dynamiskt progressfält under gång. Stop pausar. Reset återställer. Plus och minus kan justera en aktiv nedräkning. Svep och kanthåll har separata testlägen eftersom de tidigare konkurrerade.
+Dagens beslut är MM:SS och högst 60 minuter, en kompakt knapprad, en redigeringslinjal före start och ett stilla dynamiskt progressfält under gång. Stop pausar. Reset återställer. Plus och minus kan justera en aktiv nedräkning. Efter en period med svep och kanthåll som separata testlägen behölls bara svepet.
 
 ### 16.14 Inköpslistan blev en del av receptflödet
 
