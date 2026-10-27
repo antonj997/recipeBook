@@ -11,6 +11,7 @@ import {
   type PendingChange,
 } from './account-database';
 import { SupabaseService } from './supabase.service';
+import { StorageDurabilityService } from './storage-durability.service';
 import { downloadPhotos, uploadPhotos, type RecipePhotos } from './cloud-photos';
 import { readRecipeMetadata, isRecipeImage, isHttpsUrl } from '../models/recipe-metadata';
 
@@ -25,6 +26,7 @@ interface CloudRow {
 @Service()
 export class CloudCookbookService {
   readonly auth = inject(SupabaseService);
+  private readonly durability = inject(StorageDurabilityService);
   readonly syncing = signal(false);
   readonly pending = signal(0);
   readonly online = signal(navigator.onLine);
@@ -230,6 +232,8 @@ export class CloudCookbookService {
       },
     );
     if (current()) this.revision.update((value) => value + 1);
+    // The device copy is the only copy until it syncs; ask the browser not to evict it.
+    void this.durability.ensurePersisted();
     if (database instanceof AccountDatabase && current()) {
       const pending = await database.outbox.count();
       if (current()) {

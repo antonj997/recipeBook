@@ -11,6 +11,7 @@ import { StepTimerService } from './step-timer.service';
 import { GuestRecipesService } from './guest-recipes.service';
 import { GuestRecipesDialogComponent } from '../../shared/components/guest-recipes-dialog';
 import { FeedbackService } from './feedback.service';
+import { StorageDurabilityService } from './storage-durability.service';
 import type { ShoppingItem } from '../models/shopping-item';
 
 const time = '2026-10-25T12:00:00.000Z';
@@ -59,6 +60,7 @@ describe('private shopping persistence', () => {
   let remoteRows: Record<string, Record<string, unknown>[]>;
   let onUpload: (() => Promise<void>) | undefined;
   let shoppingMissing = false;
+  const durability = { ensurePersisted: vi.fn(async () => true) };
   function account(id = 'alice') {
     user.set({ id });
     accountVersion.update((version) => version + 1);
@@ -109,6 +111,7 @@ describe('private shopping persistence', () => {
       providers: [
         { provide: SupabaseService, useValue: auth },
         { provide: StepTimerService, useValue: { removeRecipe: vi.fn() } },
+        { provide: StorageDurabilityService, useValue: durability },
       ],
     });
     cloud = TestBed.inject(CloudCookbookService);
@@ -124,6 +127,11 @@ describe('private shopping persistence', () => {
       if (name?.startsWith('RecipebookAccount-')) await Dexie.delete(name);
   });
 
+  it('asks the browser to keep local storage once something is saved', async () => {
+    durability.ensurePersisted.mockClear();
+    await cloud.put('recipes', recipe, db);
+    expect(durability.ensurePersisted).toHaveBeenCalled();
+  });
   it('commits a shopping batch and tombstones in the same account transaction', async () => {
     const cache = account();
     const transaction = vi.spyOn(cache as Dexie, 'transaction');

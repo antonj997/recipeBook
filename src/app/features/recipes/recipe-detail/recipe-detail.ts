@@ -24,6 +24,7 @@ import {
 } from '../../../core/services/recipe-photo';
 import { ScreenAwakeComponent } from '../../../shared/components/screen-awake';
 import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
+import { StorageDurabilityService } from '../../../core/services/storage-durability.service';
 import { LeaveConfirmationService } from '../../../core/services/leave-confirmation.service';
 import { instructionText } from '../../../core/models/recipe-metadata';
 import {
@@ -126,7 +127,25 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       if (this.accountChanged()) return;
       this.leaving = true;
       this.drafts.clear();
-      this.feedback.show('Recipe saved');
+      // Firefox asks the person first; never hold navigation on that prompt.
+      await Promise.race([
+        this.durability.ensurePersisted(),
+        new Promise((resolve) => setTimeout(resolve, 300)),
+      ]);
+      if (this.durability.shouldNudge()) {
+        // A signed-out cookbook in a browser tab can be cleared by the browser; say so once.
+        this.durability.markNudged();
+        this.feedback.show(
+          'Recipe saved on this device. Install Recipebook or sign in so the browser keeps it.',
+          {
+            label: 'Show how',
+            pendingLabel: 'Opening…',
+            run: async () => {
+              await this.router.navigate(['/settings'], { fragment: 'import-cookbook' });
+            },
+          },
+        );
+      } else this.feedback.show('Recipe saved');
       await this.router.navigate(['/recipes', saved.id]);
     } catch {
       this.saveDraftError.set('Could not save your recipe. Please try again.');
@@ -141,6 +160,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   }
   private router = inject(Router);
   private feedback = inject(FeedbackService);
+  private durability = inject(StorageDurabilityService);
   private actions = inject(RecipeActionsService);
   private appearance = inject(PageAppearanceService);
   optionsOpen = computed(

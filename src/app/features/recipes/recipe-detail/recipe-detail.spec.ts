@@ -14,6 +14,8 @@ import { SupabaseService } from '../../../core/services/supabase.service';
 import { StepTimerService } from '../../../core/services/step-timer.service';
 import { FeedbackService } from '../../../core/services/feedback.service';
 import { CookingSessionService } from '../../../core/services/cooking-session.service';
+import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
+import { StorageDurabilityService } from '../../../core/services/storage-durability.service';
 
 describe('recipe detail', () => {
   const stepToReveal = signal<StepTimerTarget | null>(null);
@@ -669,5 +671,46 @@ describe('recipe detail', () => {
 
     expect(heading?.textContent?.trim()).toBeTruthy();
     expect(back?.getAttribute('href')).toBe('/');
+  });
+  it('tells a signed-out browser-tab user once where a saved recipe lives', async () => {
+    const draft = {
+      id: 'draft',
+      title: 'Draft soup',
+      servings: 4,
+      ingredients: ['Water'],
+      instructions: ['Boil.'],
+    };
+    const durability = {
+      ensurePersisted: vi.fn(async () => false),
+      shouldNudge: vi.fn(() => true),
+      markNudged: vi.fn(),
+    };
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        data: routeData,
+        snapshot: { paramMap: convertToParamMap({}), data: { draft: true } },
+      },
+    });
+    TestBed.overrideProvider(RecipeDraftService, {
+      useValue: { getOrCreate: () => draft, clear: vi.fn(), photoNotice: signal('') },
+    });
+    TestBed.overrideProvider(RecipeService, {
+      useValue: {
+        accountVersion: signal(0),
+        revision: signal(0),
+        getCollections: async () => [],
+        addRecipe: async () => ({ ...draft, id: 'saved' }),
+      },
+    });
+    TestBed.overrideProvider(StorageDurabilityService, { useValue: durability });
+    const { host } = await fixture();
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    await host.componentInstance.saveDraft();
+    const feedback = TestBed.inject(FeedbackService);
+    expect(feedback.message()).toBe(
+      'Recipe saved on this device. Install Recipebook or sign in so the browser keeps it.',
+    );
+    expect(feedback.action()?.label).toBe('Show how');
+    expect(durability.markNudged).toHaveBeenCalledTimes(1);
   });
 });

@@ -10,6 +10,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { RecipeService } from '../../core/services/recipe.service';
 import { CloudCookbookService } from '../../core/services/cloud-cookbook.service';
+import {
+  StorageDurabilityService,
+  storageSummary,
+} from '../../core/services/storage-durability.service';
 
 @Component({
   selector: 'app-settings',
@@ -31,6 +35,22 @@ export class SettingsComponent {
     return this.active && version === this.auth.accountVersion();
   }
   readonly feedbackSection = signal<'account' | 'backup'>('account');
+  private readonly durability = inject(StorageDurabilityService);
+  readonly storageStatus = computed(() =>
+    storageSummary(this.durability.status(), !!this.auth.user(), this.durability.browserTab()),
+  );
+  readonly lastBackup = computed(() => {
+    const at = this.durability.lastBackupAt();
+    return at
+      ? 'Last backup from this device: ' +
+          new Date(at).toLocaleDateString(undefined, {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }) +
+          '.'
+      : 'No backup downloaded on this device yet.';
+  });
   readonly syncStatus = computed(() => {
     if (!this.cloud.online()) return 'Offline · changes saved on this device';
     if (this.cloud.syncing()) return 'Syncing your cookbook…';
@@ -162,6 +182,7 @@ export class SettingsComponent {
       setTimeout(() => {
         URL.revokeObjectURL(url);
       }, 60_000);
+      this.durability.markBackup(backup.exportedAt);
 
       this.message.set(
         `Prepared a backup containing ${backup.recipes.length} recipes and ${backup.shoppingItems?.length ?? 0} shopping items.`,
