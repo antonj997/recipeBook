@@ -1,14 +1,30 @@
-import { computed, inject, Service, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injector, Service, signal } from '@angular/core';
 import { motionMs } from '../motion';
-import { ShoppingListService } from './shopping-list.service';
+import type { ShoppingListService } from './shopping-list.service';
 
 const maxDots = 6;
 
 /** The header basket: how much is left to buy, and ingredients flying into it. */
 @Service()
 export class BasketService {
-  private readonly shopping = inject(ShoppingListService);
-  readonly count = computed(() => this.shopping.groups().filter((group) => !group.checked).length);
+  private readonly injector = inject(Injector);
+  // Loaded after startup so the header does not pull the list and its quantity parser into the
+  // first download; the count appears a moment later.
+  private readonly shopping = signal<ShoppingListService | null>(null);
+  readonly count = computed(
+    () =>
+      this.shopping()
+        ?.groups()
+        .filter((group) => !group.checked).length ?? 0,
+  );
+
+  constructor() {
+    let alive = true;
+    inject(DestroyRef).onDestroy(() => (alive = false));
+    void import('./shopping-list.service').then(({ ShoppingListService }) => {
+      if (alive) this.shopping.set(this.injector.get(ShoppingListService));
+    });
+  }
   readonly label = computed(() =>
     this.count() ? `Shopping list, ${this.count()} to buy` : 'Shopping list',
   );

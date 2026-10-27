@@ -46,8 +46,9 @@ describe('BasketService', () => {
     vi.unstubAllGlobals();
   });
 
-  it('counts what is still to buy and says so to screen readers', () => {
+  it('counts what is still to buy and says so to screen readers', async () => {
     const service = TestBed.inject(BasketService);
+    await vi.waitFor(() => expect(service['shopping']()).not.toBeNull());
     expect(service.count()).toBe(0);
     expect(service.label()).toBe('Shopping list');
     groups.set([{ checked: false }, { checked: true }, { checked: false }]);
