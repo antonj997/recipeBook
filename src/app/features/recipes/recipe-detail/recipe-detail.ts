@@ -1,6 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { RecipeFocusComponent } from './recipe-focus';
 import { IngredientCheckComponent } from './ingredient-check';
+import { EdgeSwipeBackDirective } from '../../../shared/directives/edge-swipe-back';
 import { RecipeShoppingPickerComponent } from '../../../shared/components/recipe-shopping-picker';
 import { StepTimerService } from '../../../core/services/step-timer.service';
 import { WakeLockService } from '../../../core/services/wake-lock.service';
@@ -74,6 +75,7 @@ import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
     '(window:beforeunload)': 'onBeforeUnload($event)',
   },
   imports: [
+    EdgeSwipeBackDirective,
     IngredientCheckComponent,
     NgTemplateOutlet,
     RecipeFocusComponent,
@@ -102,6 +104,12 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   readonly drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
   readonly isDraft = !!this.route.snapshot.data['draft'];
+  /** iPhone Home Screen apps have no system back swipe; elsewhere the system owns the edge. */
+  readonly edgeSwipe =
+    !this.isDraft && (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  swipeHome(): void {
+    if (!this.accountChanged()) void this.router.navigateByUrl('/');
+  }
   savingDraft = signal(false);
   saveDraftError = signal('');
   private leaving = false;

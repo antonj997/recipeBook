@@ -1,5 +1,9 @@
 <article
   class="recipe-detail"
+  appEdgeSwipeBack
+  [edgeSwipeEnabled]="edgeSwipe"
+  [style.touch-action]="edgeSwipe ? 'pan-y pinch-zoom' : null"
+  (swipeBack)="swipeHome()"
   [class.draft-preview]="isDraft"
   [class.wide-reading]="wideReading()"
   [class.empty-recipe-page]="!loading() && (!!error() || !recipe())"

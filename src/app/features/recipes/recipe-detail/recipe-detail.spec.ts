@@ -279,6 +279,43 @@ describe('recipe detail', () => {
     expect(scroll).not.toHaveBeenCalled();
   });
 
+  it('goes back with an edge swipe in the iPhone Home Screen app', async () => {
+    Object.defineProperty(navigator, 'standalone', { value: true, configurable: true });
+    try {
+      const { host } = await fixture();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const page = host.nativeElement.querySelector('article.recipe-detail') as HTMLElement;
+      expect(page.style.touchAction).toBe('pan-y pinch-zoom');
+      vi.spyOn(page, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 800,
+      } as DOMRect);
+      const pointer = (type: string, x: number) => {
+        const event = new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: 300,
+        });
+        Object.defineProperties(event, {
+          pointerId: { value: 3 },
+          pointerType: { value: 'touch' },
+          isPrimary: { value: true },
+        });
+        page.dispatchEvent(event);
+      };
+      pointer('pointerdown', 6);
+      pointer('pointermove', 100);
+      pointer('pointermove', 220);
+      pointer('pointerup', 220);
+      expect(navigate).toHaveBeenCalledWith('/');
+    } finally {
+      Reflect.deleteProperty(navigator, 'standalone');
+    }
+  });
+
   it('keeps the screen on while focus mode is open', async () => {
     const f = await timerFixture();
     const wake = TestBed.inject(WakeLockService);
