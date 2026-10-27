@@ -168,7 +168,7 @@ Reduced motion removes transitions, continuous loops and tilt, and makes carouse
 
 ## Recipe review and overlays
 
-Unsaved recipes reuse the saved recipe view. A compact floating action bar provides looks good!, cancel and edit. Approval alone saves to Dexie. Hide settings during review and editing. A shared native dialog protects discard and navigation; native browser warnings protect refresh and tab closing. Only floating controls, menus, dialogs and feedback use restrained shadows.
+Unsaved recipes reuse the saved recipe view. A compact floating action bar provides looks good!, cancel and edit. Approval alone saves to Dexie. Hide settings during review and editing. A shared native dialog protects discard and navigation and also asks the backup-restore and sign-out questions with their own title and button words; native browser warnings protect refresh and tab closing. The installed app offers Shopping list, Import a recipe and Write a recipe as icon shortcuts where the platform supports them. Only floating controls, menus, dialogs and feedback use restrained shadows.
 
 ## Browsing, editing and cooking
 

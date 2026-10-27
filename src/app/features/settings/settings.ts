@@ -9,6 +9,7 @@ import { Component, DestroyRef, computed, effect, inject, signal } from '@angula
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { RecipeService } from '../../core/services/recipe.service';
+import { LeaveConfirmationService } from '../../core/services/leave-confirmation.service';
 import { CloudCookbookService } from '../../core/services/cloud-cookbook.service';
 import {
   StorageDurabilityService,
@@ -28,6 +29,7 @@ export class SettingsComponent {
   readonly app = inject(AppUpdateService);
   readonly rulerPreferences = inject(TimerRulerPreferencesService);
   private readonly timerAlerts = inject(TimerPushService);
+  private readonly confirmation = inject(LeaveConfirmationService);
   readonly returnToImport =
     inject(ActivatedRoute).snapshot.queryParamMap.get('returnTo') === '/recipes/import';
   private active = true;
@@ -111,12 +113,14 @@ export class SettingsComponent {
       if (!this.current(version)) return;
       if (
         pending &&
-        !window.confirm(
+        !(await this.confirmation.confirm(
           pending +
-            ' changes are saved only on this device. They will upload when you sign back into this account. Keep this browser’s site data until then, or download a backup before leaving. Sign out anyway?',
-        )
+            ' changes are saved only on this device. They will upload when you sign back into this account. Keep this browser’s site data until then, or download a backup before leaving.',
+          { title: 'Sign out anyway?', confirm: 'Sign out', cancel: 'Stay signed in' },
+        ))
       )
         return;
+      if (!this.current(version)) return;
       await this.timerAlerts.disableForSignOut().catch(() => undefined);
       if (!this.current(version)) return;
       await this.auth.signOut();
@@ -227,9 +231,10 @@ export class SettingsComponent {
       // Validate before requesting confirmation.
       const backup = this.recipeService.validateBackup(data);
 
-      const confirmed = window.confirm(
-        `Import ${backup.recipes.length} recipes and ${backup.shoppingItems?.length ?? 0} shopping items?\n\n` +
-          'Existing recipes and shopping items will be kept. Items already imported will be skipped.',
+      const confirmed = await this.confirmation.confirm(
+        `Import ${backup.recipes.length} recipes and ${backup.shoppingItems?.length ?? 0} shopping items? ` +
+          'Existing recipes and shopping items are kept. Items already imported are skipped.',
+        { title: 'Restore this backup?', confirm: 'Import', cancel: 'Cancel' },
       );
 
       if (!confirmed || !this.current(version)) {
