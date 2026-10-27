@@ -7,6 +7,7 @@ import { bytesToDataUrl, imageId } from '../models/recipe-image';
 import { testJpeg } from '../models/recipe-image.testing';
 import type { Recipe } from '../models/recipe.model';
 import { AccountDatabase } from './account-database';
+import { fakeSelect } from './cloud-testing';
 import { CloudCookbookService } from './cloud-cookbook.service';
 import { RecipeService } from './recipe.service';
 import { StepTimerService } from './step-timer.service';
@@ -53,13 +54,7 @@ describe('recipe photos in storage, sync and backups', () => {
           upserts.push(row);
           return { error: null };
         },
-        select: () => ({
-          eq: () => ({
-            order: () => ({
-              range: async () => ({ data: table === 'recipes' ? remote : [], error: null }),
-            }),
-          }),
-        }),
+        select: fakeSelect(table, () => ({ rows: table === 'recipes' ? (remote as never) : [] })),
       }),
       storage: {
         from: () => ({

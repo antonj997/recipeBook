@@ -526,7 +526,7 @@ Radering av denna enhetsdata har en extra, uttrycklig bekräftelse eftersom den 
 
 Account visar e-postadress, relevant synkstatus och Sync now. Synkstatus har flyttats bort från hemsidan för att receptbiblioteket ska vara lugnare.
 
-Recept, kategorier, bilder och inköpsposter hör till användarens konto. Lokala ändringar kan köas när man är offline. Utloggning försöker synka först och ska inte kasta väntande ändringar bara för att nätverket är borta.
+Recept, kategorier, bilder och inköpsposter hör till användarens konto. När servern har kolumnen `updated_at` hämtar synken bara rader som ändrats sedan enhetens senaste hämtning, i sidor om 500 med en minuts överlapp, och sparar var den slutade efter varje sida. Saknas kolumnen hämtas allt som tidigare. Lokala ändringar kan köas när man är offline. Utloggning försöker synka först och ska inte kasta väntande ändringar bara för att nätverket är borta.
 
 Utloggning behåller kontots offlinekopia på enheten. Den exponeras inte som utloggat innehåll i det vanliga gränssnittet, men den är inte krypterad mot någon som har tillgång till webbläsarprofilen. På en delad enhet behöver man därför synka eller säkerhetskopiera och sedan rensa webbplatsdata om den lokala kopian ska försvinna helt.
 

@@ -85,7 +85,7 @@ Backup format2 includes shopping items and validates them before any writes. Ver
 
 ## Incremental sync
 
-`20261027193000_cookbook_updated_at.sql` adds a server-assigned `updated_at` to `recipes`, `collections` and `shopping_items`, a trigger that ignores client values, and an `(user_id, updated_at, id)` index per table. Devices then pull only rows changed after their cursor, re-reading a short overlap because `now()` is the transaction start. **It has not been deployed.** Deploy it before a frontend that sends cursor queries; the app falls back to full pulls while the column is missing.
+`20261027193000_cookbook_updated_at.sql` adds a server-assigned `updated_at` to `recipes`, `collections` and `shopping_items`, a trigger that ignores client values, and an `(user_id, updated_at, id)` index per table. Devices then pull only rows changed after their cursor, re-reading a short overlap because `now()` is the transaction start. **It has not been deployed.** The app falls back to the previous full pull while the column is missing (PostgreSQL error 42703), so the frontend can ship first. Once deployed, each account cache keeps a cursor per table (`syncState`) and the server version of every applied row (`remote`); pulls read 500-row keyset pages from a minute before the cursor, skip rows already applied or edited locally, and commit each page with its cursor.
 
 ```sh
 cd supabase/tests && deno test --allow-read --allow-env --allow-net --no-lock cookbook-sync.test.mjs

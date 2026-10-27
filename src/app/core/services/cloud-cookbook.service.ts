@@ -13,16 +13,9 @@ import {
 } from './account-database';
 import { SupabaseService } from './supabase.service';
 import { StorageDurabilityService } from './storage-durability.service';
-import { downloadPhotos, uploadPhotos, type RecipePhotos } from './cloud-photos';
-import { readRecipeMetadata, isRecipeImage, isHttpsUrl } from '../models/recipe-metadata';
+import { uploadPhotos, type RecipePhotos } from './cloud-photos';
+import { pullTable, readCloudRecipe, remoteTable, missingShoppingTable } from './cloud-pull';
 import { extractPhotos, photoRefs, putImages, type PreparedImage } from '../models/recipe-image';
-
-interface CloudRow {
-  id: string;
-  payload: unknown;
-  photos?: RecipePhotos | null;
-  deleted: boolean;
-}
 
 @Service()
 export class CloudCookbookService {
@@ -591,67 +584,11 @@ export class CloudCookbookService {
           if (change.table === 'recipes') await cache.photos.put({ id: change.id, paths: photos });
         });
       }
-      for (const tableName of ['collections', 'recipes', 'shoppingItems'] as const) {
-        if (tableName === 'shoppingItems' && shoppingUnavailable) continue;
-        const rows: CloudRow[] = [];
-        for (let offset = 0; ; offset += 500) {
-          if (!current()) return;
-          const { data, error } = await client
-            .from(remoteTable(tableName))
-            .select(
-              tableName === 'shoppingItems' ? 'id,payload,deleted' : 'id,payload,photos,deleted',
-            )
-            .eq('user_id', userId)
-            .order('id')
-            .range(offset, offset + 499);
-          if (error) {
-            if (tableName === 'shoppingItems' && missingShoppingTable(error)) {
-              shoppingUnavailable = true;
-              break;
-            }
-            throw new Error(error.message);
-          }
-          const page = (data ?? []) as unknown as CloudRow[];
-          rows.push(...page);
-          if (page.length < 500) break;
-        }
-        for (const row of rows) {
-          if (!current()) return;
-          const key = `${tableName}:${row.id}`;
-          if (await cache.outbox.get(key)) continue;
-          let value: CookbookValue | null = null;
-          let images: PreparedImage[] = [];
-          if (!row.deleted) {
-            if (tableName === 'recipes') {
-              ({ recipe: value, images } = await downloadPhotos(
-                client,
-                userId,
-                readCloudRecipe(row.payload),
-                row.photos ?? {},
-                cache,
-                await cache.recipes.get(row.id),
-                (await cache.photos.get(row.id))?.paths,
-              ));
-            } else if (tableName === 'shoppingItems') {
-              value = readShoppingItem(row.payload);
-              if (value.id !== row.id) throw new Error('Invalid cloud shopping item ID.');
-            } else value = readCloudCollection(row.payload);
-          }
-          if (!current()) return;
-          await cache.transaction(
-            'rw',
-            [cache.table(tableName), cache.outbox, cache.photos, cache.images, cache.thumbs],
-            async () => {
-              if (!current() || (await cache.outbox.get(key))) return;
-              await putImages(cache, images);
-              if (value) await cache.table(tableName).put(value);
-              else await cache.table(tableName).delete(row.id);
-              if (tableName === 'recipes')
-                await cache.photos.put({ id: row.id, paths: row.photos ?? {} });
-              if (!current()) throw new Error('Account changed. Try again.');
-            },
-          );
-        }
+      for (const table of ['collections', 'recipes', 'shoppingItems'] as const) {
+        if (table === 'shoppingItems' && shoppingUnavailable) continue;
+        const outcome = await pullTable({ cache, client, userId, current }, table);
+        if (outcome === 'stale') return;
+        if (outcome === 'missing') shoppingUnavailable = true;
       }
       if (current()) {
         this.revision.update((value) => value + 1);
@@ -732,64 +669,9 @@ function deviceContent(value: CookbookValue): string {
   return canonicalRecord(content);
 }
 
-function remoteTable(table: CookbookTable): string {
-  return table === 'shoppingItems' ? 'shopping_items' : table;
-}
-
-function missingShoppingTable(error: { code?: string }): boolean {
-  return error.code === 'PGRST205' || error.code === '42P01';
-}
-
 function canonicalRecord(value: unknown): string {
   return JSON.stringify(value, (_, item: unknown) => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
     return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
   });
-}
-
-function readCloudRecipe(value: unknown): Recipe {
-  if (!value || typeof value !== 'object') throw new Error('Invalid cloud recipe.');
-  const raw = value as Record<string, unknown>;
-  if (
-    typeof raw['id'] !== 'string' ||
-    typeof raw['title'] !== 'string' ||
-    !Array.isArray(raw['ingredients']) ||
-    !raw['ingredients'].every((v) => typeof v === 'string') ||
-    !Array.isArray(raw['instructions']) ||
-    !raw['instructions'].every((v) => typeof v === 'string')
-  )
-    throw new Error('Invalid cloud recipe.');
-  const recipe: Recipe = {
-    ...readRecipeMetadata(value, true),
-    id: raw['id'],
-    title: raw['title'],
-    ingredients: raw['ingredients'],
-    instructions: raw['instructions'],
-  };
-  if (typeof raw['servings'] === 'number') recipe.servings = raw['servings'];
-  if (raw['imageDataUrl'] != null) {
-    if (!isRecipeImage(raw['imageDataUrl'])) throw new Error('Invalid recipe photo.');
-    recipe.imageDataUrl = raw['imageDataUrl'];
-  }
-  if (raw['sourceUrl'] != null) {
-    if (!isHttpsUrl(raw['sourceUrl'])) throw new Error('Invalid recipe link.');
-    recipe.sourceUrl = raw['sourceUrl'];
-  }
-  for (const field of ['notes', 'createdAt', 'updatedAt'] as const)
-    if (typeof raw[field] === 'string') recipe[field] = raw[field];
-  for (const field of ['collectionIds'] as const)
-    if (Array.isArray(raw[field]) && raw[field].every((v) => typeof v === 'string'))
-      recipe[field] = raw[field];
-  return recipe;
-}
-function readCloudCollection(value: unknown): RecipeCollection {
-  if (!value || typeof value !== 'object') throw new Error('Invalid cloud collection.');
-  const raw = value as Record<string, unknown>;
-  if (
-    typeof raw['id'] !== 'string' ||
-    typeof raw['name'] !== 'string' ||
-    typeof raw['sortOrder'] !== 'number'
-  )
-    throw new Error('Invalid cloud collection.');
-  return { id: raw['id'], name: raw['name'], sortOrder: raw['sortOrder'] };
 }

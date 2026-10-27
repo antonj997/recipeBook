@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dexie from 'dexie';
 import { db } from '../database';
 import { AccountDatabase } from './account-database';
+import { fakeSelect } from './cloud-testing';
 import { CloudCookbookService } from './cloud-cookbook.service';
 import { SupabaseService } from './supabase.service';
 import { RecipeService } from './recipe.service';
@@ -81,19 +82,13 @@ describe('private shopping persistence', () => {
         },
         select: (columns: string) => {
           selects.push({ table, columns });
-          return {
-            eq: () => ({
-              order: () => ({
-                range: async () => ({
-                  data: remoteRows[table] ?? [],
-                  error:
-                    table === 'shopping_items' && shoppingMissing
-                      ? { code: 'PGRST205', message: 'Table unavailable' }
-                      : null,
-                }),
-              }),
-            }),
-          };
+          return fakeSelect(table, () => ({
+            rows: (remoteRows[table] ?? []) as never,
+            error:
+              table === 'shopping_items' && shoppingMissing
+                ? { code: 'PGRST205', message: 'Table unavailable' }
+                : null,
+          }))(columns);
         },
       }),
     };
@@ -279,7 +274,10 @@ describe('private shopping persistence', () => {
       table: 'shopping_items',
       row: { user_id: 'alice', id: 'onions', payload: item(), deleted: false },
     });
-    expect(selects).toContainEqual({ table: 'shopping_items', columns: 'id,payload,deleted' });
+    expect(selects).toContainEqual({
+      table: 'shopping_items',
+      columns: 'id,payload,deleted,updated_at',
+    });
     expect(await cache.outbox.count()).toBe(0);
   });
   it('retains a newer shopping edit while an earlier revision uploads', async () => {

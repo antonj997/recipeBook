@@ -16,6 +16,16 @@ export interface PendingChange {
   revision: string;
   value: CookbookValue | null;
 }
+/** Where the last pull of a table stopped: the server's updated_at and id of its last row. */
+export interface SyncState {
+  table: CookbookTable;
+  cursor?: { at: string; id: string };
+}
+/** The server version of a row this device has applied, so overlapping pulls skip it. */
+export interface RemoteVersion {
+  key: string;
+  updatedAt: string;
+}
 
 // Keep the original device cookbook untouched, and isolate every account's offline copy.
 export class AccountDatabase extends Dexie {
@@ -26,6 +36,8 @@ export class AccountDatabase extends Dexie {
   photos!: EntityTable<{ id: string; paths: RecipePhotos }, 'id'>;
   images!: EntityTable<StoredImage, 'id'>;
   thumbs!: EntityTable<StoredThumb, 'id'>;
+  syncState!: EntityTable<SyncState, 'table'>;
+  remote!: EntityTable<RemoteVersion, 'key'>;
 
   constructor(userId: string) {
     super('RecipebookAccount-' + userId);
@@ -41,6 +53,10 @@ export class AccountDatabase extends Dexie {
     this.version(3).stores({
       images: 'id',
       thumbs: 'id',
+    });
+    this.version(4).stores({
+      syncState: 'table',
+      remote: 'key',
     });
   }
 }
