@@ -100,4 +100,26 @@ describe('animateLayout', () => {
     expect(cancel).toHaveBeenCalledOnce();
     expect(animate.mock.calls[1]![0][0].transform).toBe('translate(0px, 50px)');
   });
+
+  it('follows a row that the view re-created elsewhere by its key', async () => {
+    const before = row('milk', 0);
+    before.dataset['flipKey'] = 'milk';
+    const other = document.createElement('ul');
+    container.append(other);
+    let after!: HTMLElement;
+    await animateLayout(
+      container,
+      () => {
+        before.remove();
+        after = document.createElement('li');
+        after.dataset['flipKey'] = 'milk';
+        tops.set(after, 120);
+        other.append(after);
+      },
+      { selector: '[data-flip-key]', key: (element) => element.dataset['flipKey'] },
+    );
+    expect(animate).toHaveBeenCalledOnce();
+    expect(animate.mock.contexts[0]).toBe(after);
+    expect(animate.mock.calls[0]![0][0].transform).toBe('translate(0px, -120px)');
+  });
 });

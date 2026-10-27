@@ -326,3 +326,29 @@
     transition: none;
   }
 }
+
+// Added and removed rows. Rows that only move between lists travel with animateLayout instead.
+.row-enter {
+  animation: shopping-row-in var(--motion-surface) var(--motion-spring-calm) both;
+}
+.row-leave {
+  animation: shopping-row-out var(--motion-fast) var(--motion-ease-out) both;
+}
+@keyframes shopping-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes shopping-row-out {
+  to {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-enter,
+  .row-leave {
+    animation: none;
+  }
+}

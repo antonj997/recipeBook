@@ -3,6 +3,8 @@ import { motionMs } from '../../core/motion';
 export interface LayoutOptions {
   /** The children to follow; the container's direct children by default. */
   selector?: string;
+  /** Matches a child the view re-created elsewhere, such as a row moved to another list. */
+  key?: (child: HTMLElement) => string | undefined;
   /** Milliseconds before Slow motion (test) scaling; the surface token by default. */
   duration?: number;
   easing?: 'calm' | 'snappy';
@@ -22,13 +24,21 @@ export async function animateLayout(
   update: () => unknown,
   options: LayoutOptions = {},
 ): Promise<void> {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  // Without Web Animations (or with Reduce Motion) the layout simply changes.
+  if (
+    typeof container.animate !== 'function' ||
+    typeof matchMedia !== 'function' ||
+    matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
     await update();
     return;
   }
   const children = () =>
     Array.from(container.querySelectorAll<HTMLElement>(options.selector ?? ':scope > *'));
-  const before = new Map(children().map((child) => [child, child.getBoundingClientRect()]));
+  const identity = (child: HTMLElement): unknown => options.key?.(child) ?? child;
+  const before = new Map(
+    children().map((child) => [identity(child), child.getBoundingClientRect()]),
+  );
   await update();
   await new Promise(requestAnimationFrame);
   const easing =
@@ -37,7 +47,7 @@ export async function animateLayout(
       .trim() || fallbackEasing;
   const moves: Promise<unknown>[] = [];
   for (const child of children()) {
-    const first = before.get(child);
+    const first = before.get(identity(child));
     if (!first) continue;
     running.get(child)?.cancel();
     const last = child.getBoundingClientRect();

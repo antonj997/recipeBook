@@ -494,7 +494,7 @@ Produkterna har gemensamma rundade kryssrutor. Ett långt tryck på produkttexte
 
 Minus ersätter radernas Delete-text. Vanliga borttagningar och rensningar kan erbjuda Undo. Att tömma en lista med kvarvarande omarkerade poster kräver en tydlig bekräftelse.
 
-Markerade poster flyttas till slutet av samma lista. Det finns ingen separat Bought-sektion, inget extra kollapsreglage och inga upprepade avdelningsrubriker för dessa poster. Clear checked tar bort markerade poster. Benämningen checked är avsiktlig: att markera något behöver inte betyda att det har köpts.
+Markerade poster flyttas till slutet av samma lista. En nyss markerad post stryks över direkt men ligger kvar på sin plats i knappt en sekund, så att ett felaktigt tryck kan ångras utan att raden har hoppat iväg; markeras nästa post flyttas den förra genast. Flytten animeras från gammal till ny plats, och en avmarkerad post glider tillbaka till sin avdelning med fokus kvar på sig. Nya poster tonas in och borttagna tonas ut. Det finns ingen separat Bought-sektion, inget extra kollapsreglage och inga upprepade avdelningsrubriker för dessa poster. Clear checked tar bort markerade poster. Benämningen checked är avsiktlig: att markera något behöver inte betyda att det har köpts.
 
 Offlineändringar sparas på enheten och kan synkas när anslutningen återkommer.
 

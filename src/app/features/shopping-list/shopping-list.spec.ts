@@ -113,10 +113,15 @@ describe('shopping list', () => {
                 items.update((current) =>
                   current.map((entry) => (ids.includes(entry.id) ? { ...entry, checked } : entry)),
                 );
+                // Like groupShoppingItems, a group's key names its checked state.
                 groups.update((current) =>
                   current.map((group) =>
                     group.items.some((entry) => ids.includes(entry.id))
-                      ? { ...group, checked }
+                      ? {
+                          ...group,
+                          checked,
+                          key: (checked ? 'bought:' : 'needed:') + group.key.replace(/^\w+:/, ''),
+                        }
                       : group,
                   ),
                 );
@@ -456,6 +461,13 @@ describe('shopping list', () => {
       trigger.click();
       await host.whenStable();
       host.detectChanges();
+      if (action === 'complete') {
+        // A checked row stays struck through in place, then moves down and passes focus on.
+        expect(document.activeElement).toBe(trigger);
+        await new Promise((resolve) => setTimeout(resolve, 950));
+        await host.whenStable();
+        host.detectChanges();
+      }
       for (const frame of frames) frame(0);
       expect(document.activeElement).toBe(host.nativeElement.querySelector('#shopping-item-milk'));
       expect(host.nativeElement.querySelector('#shopping-to-buy-produce')).toBeNull();
@@ -644,7 +656,7 @@ describe('shopping list', () => {
     expect(restored).toBe(true);
   });
 
-  it('moves checked items to the bottom and restores unchecked items to their department', async () => {
+  async function twoItems() {
     checkUpdatesList = true;
     items.set([item('milk'), item('apple')]);
     groups.set([
@@ -652,25 +664,59 @@ describe('shopping list', () => {
       { ...groups()[0], key: 'apple', text: '2 äpplen', items: [item('apple')] },
     ]);
     const host = await fixture();
-    const rowOrder = () =>
+    const rows = () =>
       Array.from(
-        host.nativeElement.querySelectorAll(
-          '.shopping-row input[type="checkbox"]',
-        ) as NodeListOf<HTMLInputElement>,
-      ).map((checkbox) => checkbox.id);
-    const toggle = async () => {
-      const checkbox = host.nativeElement.querySelector('#shopping-item-apple') as HTMLInputElement;
-      checkbox.click();
+        host.nativeElement.querySelectorAll('.shopping-row') as NodeListOf<HTMLElement>,
+      ).map(
+        (row) =>
+          (row.closest('[data-department]') as HTMLElement).dataset['department'] +
+          ':' +
+          row.querySelector('input[type="checkbox"]')!.id.replace('shopping-item-', '') +
+          (row.classList.contains('is-checked') ? ' ✓' : ''),
+      );
+    const toggle = async (id: string) => {
+      (host.nativeElement.querySelector('#shopping-item-' + id) as HTMLInputElement).click();
       await host.whenStable();
       host.detectChanges();
     };
-    await toggle();
-    expect(rowOrder()).toEqual(['shopping-item-milk', 'shopping-item-apple']);
-    await toggle();
-    expect(rowOrder()).toEqual(['shopping-item-apple', 'shopping-item-milk']);
-    await host.componentInstance.requestClear();
-    host.detectChanges();
-    expect(host.nativeElement.querySelector('dialog').open).toBe(true);
+    const settle = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 950));
+      await host.whenStable();
+      host.detectChanges();
+    };
+    return { host, rows, toggle, settle };
+  }
+
+  it('keeps a just-checked item struck through in place, then moves it to the bottom', async () => {
+    const f = await twoItems();
+    const before = f.rows();
+    await f.toggle('apple');
+    expect(f.rows()).toEqual(before.map((row) => (row.endsWith(':apple') ? row + ' ✓' : row)));
+    await f.settle();
+    expect(f.rows().at(-1)).toBe('checked:apple ✓');
+    expect(f.rows()[0]).toMatch(/:milk$/);
+  });
+
+  it('moves the previous item at once when the next one is checked', async () => {
+    const f = await twoItems();
+    await f.toggle('apple');
+    await f.toggle('milk');
+    expect(f.rows()).toContain('checked:apple ✓');
+    expect(f.rows().find((row) => row.includes(':milk'))).not.toMatch(/^checked:/);
+    await f.settle();
+    expect(f.rows().every((row) => row.startsWith('checked:'))).toBe(true);
+  });
+
+  it('brings an unchecked item back to its department at once and keeps it focused', async () => {
+    const f = await twoItems();
+    await f.toggle('apple');
+    await f.settle();
+    await f.toggle('apple');
+    expect(f.rows().find((row) => row.includes(':apple'))).not.toMatch(/^checked:|✓/);
+    await vi.waitFor(() => expect(document.activeElement?.id).toBe('shopping-item-apple'));
+    await f.host.componentInstance.requestClear();
+    f.host.detectChanges();
+    expect(f.host.nativeElement.querySelector('dialog').open).toBe(true);
     expect(removed).toEqual([]);
   });
 
