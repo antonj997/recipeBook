@@ -1,4 +1,4 @@
-import { effect, inject, Service, signal } from '@angular/core';
+import { DestroyRef, effect, inject, Service, signal } from '@angular/core';
 import type Dexie from 'dexie';
 import { db } from '../database';
 import type { Recipe } from '../models/recipe.model';
@@ -40,16 +40,27 @@ export class CloudCookbookService {
 
   constructor() {
     effect(() => this.selectAccount(this.auth.user()?.id ?? null));
-    window.addEventListener('online', () => {
-      this.online.set(true);
-      void this.initialize().then(() => this.sync());
-    });
-    window.addEventListener('offline', () => this.online.set(false));
-    document.addEventListener('visibilitychange', () => {
-      // Refresh recipes from other devices, and retry queued changes after returning to the app.
-      if (document.visibilityState === 'visible' && navigator.onLine)
+    const listeners = new AbortController();
+    inject(DestroyRef).onDestroy(() => listeners.abort());
+    const { signal: until } = listeners;
+    window.addEventListener(
+      'online',
+      () => {
+        this.online.set(true);
         void this.initialize().then(() => this.sync());
-    });
+      },
+      { signal: until },
+    );
+    window.addEventListener('offline', () => this.online.set(false), { signal: until });
+    document.addEventListener(
+      'visibilitychange',
+      () => {
+        // Refresh recipes from other devices, and retry queued changes after returning to the app.
+        if (document.visibilityState === 'visible' && navigator.onLine)
+          void this.initialize().then(() => this.sync());
+      },
+      { signal: until },
+    );
   }
 
   async initialize(): Promise<void> {

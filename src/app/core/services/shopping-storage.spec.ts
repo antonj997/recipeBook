@@ -335,11 +335,13 @@ describe('private shopping persistence', () => {
       await cloud.put('recipes', recipe, cache);
     };
     await cloud.sync();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(writes.some((write) => write.table === 'recipes' && write.row['id'] === 'soup')).toBe(
-      true,
-    );
-    expect(await cache.outbox.get('recipes:soup')).toBeUndefined();
+    // The follow-up sync starts after this one settles and needs several IndexedDB round trips.
+    await vi.waitFor(async () => {
+      expect(writes.some((write) => write.table === 'recipes' && write.row['id'] === 'soup')).toBe(
+        true,
+      );
+      expect(await cache.outbox.get('recipes:soup')).toBeUndefined();
+    });
     expect(await cache.outbox.get('shoppingItems:onions')).toMatchObject({ value: item() });
   });
   it('does not hydrate malformed shopping payloads', async () => {
