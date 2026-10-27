@@ -5,7 +5,7 @@ import { TimerAlertPreferencesComponent } from './timer-alert-preferences';
 import { TimerPushService } from '../../core/services/timer-push.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 
-describe('contextual timer alert reminder', () => {
+describe('timer alert settings', () => {
   const user = signal<{ id: string } | null>(null);
   const enabled = signal(false);
   const status = signal('off');
@@ -14,6 +14,8 @@ describe('contextual timer alert reminder', () => {
   const disable = vi.fn();
 
   beforeEach(() => {
+    enable.mockClear();
+    disable.mockClear();
     localStorage.clear();
     user.set(null);
     enabled.set(false);
@@ -49,76 +51,31 @@ describe('contextual timer alert reminder', () => {
     vi.restoreAllMocks();
   });
 
-  function fixture(contextual = true) {
+  function fixture() {
     const view = TestBed.createComponent(TimerAlertPreferencesComponent);
-    if (contextual) view.componentRef.setInput('contextual', true);
     view.detectChanges();
     const root = view.nativeElement as HTMLElement;
     return { view, root };
   }
 
-  function dismiss(root: HTMLElement) {
-    const close = root.querySelector<HTMLButtonElement>('[aria-label="Keep timer alerts off"]');
-    expect(close, 'the recipe reminder can be dismissed without enabling alerts').not.toBeNull();
-    close!.click();
-  }
-
-  it('hides the recipe reminder immediately when alerts become enabled', () => {
+  it('enables alerts from Settings', () => {
     const f = fixture();
-    expect(f.root.hidden).toBe(false);
+    f.root.querySelector<HTMLButtonElement>('button')!.click();
+    expect(enable).toHaveBeenCalledOnce();
+  });
+
+  it('offers to turn alerts off while they are on', () => {
     enabled.set(true);
-    f.view.detectChanges();
-    expect(f.root.hidden).toBe(true);
-  });
-
-  it('remembers a dismissal across component recreation without changing alert permission', () => {
     const f = fixture();
-    dismiss(f.root);
-    f.view.detectChanges();
-    expect(f.root.hidden).toBe(true);
-    expect(enabled()).toBe(false);
-    expect(enable).not.toHaveBeenCalled();
-    expect(disable).not.toHaveBeenCalled();
-    f.view.destroy();
-    expect(fixture().root.hidden).toBe(true);
+    expect(f.root.textContent).toContain('Turn off alerts');
+    f.root.querySelector<HTMLButtonElement>('button')!.click();
+    expect(disable).toHaveBeenCalledOnce();
   });
 
-  it('isolates saved dismissal for the device and each account when switching accounts', () => {
+  it('offers a retry after an error', () => {
+    status.set('error');
     const f = fixture();
-    dismiss(f.root);
-    user.set({ id: 'account-a' });
-    f.view.detectChanges();
-    expect(f.root.hidden).toBe(false);
-    dismiss(f.root);
-    user.set({ id: 'account-b' });
-    f.view.detectChanges();
-    expect(f.root.hidden).toBe(false);
-    user.set({ id: 'account-a' });
-    f.view.detectChanges();
-    expect(f.root.hidden).toBe(true);
-    user.set(null);
-    f.view.detectChanges();
-    expect(f.root.hidden).toBe(true);
-  });
-
-  it('keeps a dismissed reminder hidden if alerts are later enabled and disabled', () => {
-    const f = fixture();
-    dismiss(f.root);
-    enabled.set(true);
-    f.view.detectChanges();
-    enabled.set(false);
-    f.view.detectChanges();
-    expect(f.root.hidden).toBe(true);
-  });
-
-  it('keeps settings available after dismissal and while alerts are enabled', () => {
-    const contextual = fixture();
-    dismiss(contextual.root);
-    contextual.view.destroy();
-    enabled.set(true);
-    const settings = fixture(false);
-    expect(settings.root.hidden).toBe(false);
-    expect(settings.root.querySelector('[aria-label="Keep timer alerts off"]')).toBeNull();
-    expect(settings.root.textContent).toContain('Turn off alerts');
+    f.root.querySelector<HTMLButtonElement>('.retry-alerts')!.click();
+    expect(f.root.querySelector('.alert-error')).not.toBeNull();
   });
 });

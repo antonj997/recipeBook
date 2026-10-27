@@ -1,7 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { RecipeFocusComponent } from './recipe-focus';
 import { RecipeShoppingPickerComponent } from '../../../shared/components/recipe-shopping-picker';
-import { TimerAlertPreferencesComponent } from '../../../shared/components/timer-alert-preferences';
 import { StepTimerService } from '../../../core/services/step-timer.service';
 import { StepTimerComponent } from '../../../shared/components/step-timer';
 import {
@@ -72,7 +71,6 @@ import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
     RecipeFocusComponent,
     StepTimerComponent,
     RecipeShoppingPickerComponent,
-    TimerAlertPreferencesComponent,
     RecipeTitleComponent,
     RecipeTransitionPartDirective,
     SelectMenuComponent,

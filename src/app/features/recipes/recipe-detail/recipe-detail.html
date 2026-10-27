@@ -223,12 +223,8 @@
                   </button>
                 </div>
               }
-              @if (hasTimers()) {
-                @if (isDraft) {
-                  <p class="timer-help">Save the recipe to start timers.</p>
-                } @else if (!focusMode()) {
-                  <app-timer-alert-preferences [contextual]="true" />
-                }
+              @if (hasTimers() && isDraft) {
+                <p class="timer-help">Save the recipe to start timers.</p>
               }
               <ol>
                 @for (step of selectedRecipe.instructions; track $index) {

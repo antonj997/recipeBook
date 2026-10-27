@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { StepTimerService } from '../../core/services/step-timer.service';
+import { TimerAlertOfferService } from '../../core/services/timer-alert-offer.service';
 import {
   formatCountdown,
   maxClockSeconds,
@@ -140,6 +141,7 @@ export class StepTimerComponent {
   readonly disabled = input(false);
   readonly rotated = input(false);
   protected readonly timers = inject(StepTimerService);
+  private readonly alertOffer = inject(TimerAlertOfferService);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
   private readonly ruler = viewChild(MinuteRulerComponent);
@@ -332,6 +334,7 @@ export class StepTimerComponent {
     this.ruler()?.stopMotion();
     if (this.disabled() || this.completed() || !this.commitEdit()) return;
     this.timers.start(this.target());
+    this.alertOffer.offer();
   }
 
   protected stop(): void {

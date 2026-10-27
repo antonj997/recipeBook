@@ -315,7 +315,7 @@ Servern kan skicka en avisering vid sluttiden och högst en extra påminnelse en
 
 Aviseringarna är korta och generiska, med stegnummer utan att lägga ut hela receptinnehållet på låsskärmen. Systemet avgör ljud och eventuell vibration; webbappen kan inte garantera identiskt vibrationsbeteende på alla telefoner.
 
-Uppmaningen inne i receptet försvinner när aviseringar är aktiverade. Användaren kan också stänga uppmaningen om aviseringar ska förbli avstängda. Valet sparas lokalt. Inställningarna finns kvar på inställningssidan.
+Receptsidan har ingen egen panel för aviseringar. Första gången en inloggad användare startar en timer på en enhet som kan ta emot aviseringar visas i stället en kort toast med Enable. Den visas en gång per konto och aldrig för gäster, eftersom aviseringar kräver konto. En påminnelse som stängts i en tidigare version räknas som besvarad. Inställningarna finns kvar på inställningssidan.
 
 Timerförinställningar följer receptet och synkas. Pågående klockor hör till det aktuella kontot på den aktuella enheten; en timer blir inte automatiskt en gemensam klocka på alla inloggade enheter. Absoluta sluttider används så att navigation och tillfällig bakgrundskörning inte ensamma förstör nedräkningen. Operativsystem och nätverk gör ändå push till en påminnelsefunktion, inte ett garanterat exakt systemalarm.
 
