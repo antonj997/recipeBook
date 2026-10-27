@@ -13,14 +13,14 @@ const tipFrames: Keyframe[] = [
   {
     transform: 'translateY(-3px) rotate(6deg)',
     offset: 0.18,
-    easing: 'cubic-bezier(0.55, 0, 0.9, 0.35)',
+    easing: 'cubic-bezier(0.55, 0, 0.85, 0.35)',
   },
   {
-    transform: 'translateY(2px) rotate(-94deg)',
-    offset: 0.76,
-    easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    transform: 'translateY(0) rotate(-90deg)',
+    offset: 0.8,
+    easing: 'linear',
   },
-  { transform: 'translateY(0) rotate(-88deg)', offset: 0.9, easing: 'ease-in-out' },
+  // Contact stops the fall abruptly; hold flat without a rebound or settling.
   { transform: 'rotate(-90deg)', offset: 1 },
 ];
 
