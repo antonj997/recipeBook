@@ -29,11 +29,9 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
     :host {
       display: block;
     }
-    .awake-control {
-      margin-top: 24px;
-    }
     button {
       gap: 12px;
+      font-size: inherit;
       border: 0;
       padding: 4px 0;
       background: transparent;
@@ -85,6 +83,11 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
       color: var(--color-muted);
       font-size: 0.875rem;
       max-width: 50ch;
+    }
+    @media (max-width: 360px) {
+      button {
+        gap: 8px;
+      }
     }
     @media (hover: hover) {
       button:hover .switch-track {

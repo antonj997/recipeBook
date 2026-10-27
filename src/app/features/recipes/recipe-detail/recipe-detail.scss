@@ -31,7 +31,9 @@
 }
 .recipe-detail {
   overflow-anchor: none;
-  background: var(--color-surface);
+  // Match the intro and tabs underneath separate compositing layers. Fractional
+  // text heights must not reveal an off-white hairline at their shared edge.
+  background: var(--page-background, var(--color-canvas));
 }
 .recipe-navigation.page,
 .recipe-intro.page,
@@ -50,7 +52,8 @@
 }
 .recipe-reading {
   display: flow-root;
-  background: var(--color-surface);
+  // The body and footer own their white surface; the backing behind tabs is colored.
+  background: var(--page-background, var(--color-canvas));
 }
 .recipe-navigation .back-link {
   color: var(--color-ink);
@@ -300,6 +303,7 @@ li::marker {
 }
 
 .draft-preview {
+  background: var(--color-surface);
   padding-bottom: 160px;
 }
 .draft-actions {
@@ -374,13 +378,16 @@ li::marker {
 }
 
 .cooking-controls {
+  font-size: 0.9rem;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
+  margin-top: 24px;
   justify-content: space-between;
   gap: 8px 20px;
 }
 .focus-mode-button {
+  font-size: inherit;
   min-height: 44px;
   padding: 8px 0 8px 8px;
   border: 0;
@@ -390,5 +397,20 @@ li::marker {
 @media (min-width: 64rem) and (hover: hover) and (pointer: fine) {
   .focus-mode-button {
     display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .cooking-controls {
+    column-gap: 8px;
+    font-size: 0.875rem;
+  }
+  .focus-mode-button {
+    padding-inline: 0;
+    gap: 6px;
+  }
+  .focus-mode-button app-icon {
+    width: 18px;
+    height: 18px;
   }
 }
