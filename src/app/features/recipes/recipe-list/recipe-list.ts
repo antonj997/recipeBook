@@ -1,4 +1,6 @@
 import { recipeBackground } from '../../../core/models/recipe-color';
+import { hasPhoto } from '../../../core/models/recipe-image';
+import { RecipeImagesService } from '../../../core/services/recipe-images.service';
 import { RecipeContextDirective } from '../../../shared/components/recipe-context';
 import { SelectMenuComponent } from '../../../shared/components/select-menu';
 import { LibraryViewToggleComponent } from '../../../shared/components/library-view-toggle';
@@ -69,6 +71,11 @@ export class RecipeListComponent implements OnDestroy {
       : undefined;
   formatTime = formatRecipeTime;
   recipeBackground = recipeBackground;
+  hasPhoto = hasPhoto;
+  private readonly images = inject(RecipeImagesService);
+  photoUrl(recipe: Recipe): string | undefined {
+    return this.images.peek(recipe, 'thumb');
+  }
   addMenuOwner = signal<AddMenuOwner | null>(null);
   private pendingAddMenuOwner: AddMenuOwner = 'toolbar';
   prepareAddMenu(owner: AddMenuOwner): void {
@@ -184,6 +191,8 @@ export class RecipeListComponent implements OnDestroy {
   });
 
   constructor() {
+    // The resolver prepared the photos near the restored place; the rest follow right away.
+    void this.images.prepare(this.recipes(), 'thumb');
     afterRenderEffect(() => {
       this.listRows();
       this.view();
@@ -275,6 +284,7 @@ export class RecipeListComponent implements OnDestroy {
         this.library.write({ categoryId: '' });
       }
       this.recipes.set(recipes);
+      void this.images.prepare(recipes, 'thumb');
     } catch {
       if (version === this.loadVersion) this.error.set('Could not load your recipes.');
     } finally {

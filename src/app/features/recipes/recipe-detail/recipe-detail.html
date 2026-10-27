@@ -43,16 +43,16 @@
       <div class="recipe-intro page">
         <div
           class="recipe-overview"
-          [class.has-photo]="!!selectedRecipe.imageDataUrl"
+          [class.has-photo]="hasPhoto(selectedRecipe)"
           [appRecipeTransition]="selectedRecipe.id"
           transitionPart="surface"
         >
-          @if (selectedRecipe.imageDataUrl; as photo) {
+          @if (hasPhoto(selectedRecipe)) {
             <img
               class="recipe-hero"
               [appRecipeTransition]="selectedRecipe.id"
               transitionPart="image"
-              [src]="photo"
+              [attr.src]="photoUrl(selectedRecipe) ?? null"
               referrerpolicy="no-referrer"
               [alt]="selectedRecipe.title"
             />
@@ -258,13 +258,15 @@
                     </label>
                     @if (!completedSteps().has($index) && !failedStepPhotos().has($index)) {
                       @if (
-                        selectedRecipe.stepDetails?.[$index]?.imageDataUrl ||
-                          loadedStepPhotos()[$index];
-                        as photo
+                        hasPhoto(selectedRecipe.stepDetails?.[$index]) || loadedStepPhotos()[$index]
                       ) {
                         <img
                           class="step-photo"
-                          [src]="photo"
+                          [attr.src]="
+                            photoUrl(selectedRecipe.stepDetails?.[$index]) ??
+                            loadedStepPhotos()[$index] ??
+                            null
+                          "
                           [alt]="
                             'Step ' +
                             ($index + 1) +

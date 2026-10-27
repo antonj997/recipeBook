@@ -14,6 +14,8 @@ import { RecipeTitleComponent } from '../../../shared/components/recipe-title';
 import { RecipeTransitionPartDirective } from '../../../shared/components/recipe-transition-part';
 import { PageAppearanceService } from '../../../core/services/page-appearance.service';
 import { recipeBackground } from '../../../core/models/recipe-color';
+import { hasPhoto, type PhotoRef } from '../../../core/models/recipe-image';
+import { RecipeImagesService } from '../../../core/services/recipe-images.service';
 import { RecipeActionsService } from '../../../core/services/recipe-actions.service';
 import { SelectMenuComponent } from '../../../shared/components/select-menu';
 import { scaleIngredient } from '../../../core/models/ingredient-quantity';
@@ -161,6 +163,11 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private feedback = inject(FeedbackService);
   private durability = inject(StorageDurabilityService);
+  private images = inject(RecipeImagesService);
+  readonly hasPhoto = hasPhoto;
+  photoUrl(ref: PhotoRef | undefined): string | undefined {
+    return this.images.peek(ref, 'full');
+  }
   private actions = inject(RecipeActionsService);
   private appearance = inject(PageAppearanceService);
   optionsOpen = computed(
@@ -517,6 +524,8 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       }
       if (!current()) return;
       this.recipe.set(result);
+      // Step photos sit below the fold; they need no part in the page capture.
+      if (result) void this.images.prepare([result, ...(result.stepDetails ?? [])], 'full');
       this.error.set(result ? '' : 'This recipe is no longer available.');
       this.selectedServings.set(this.baseServings());
       const collections = ready ? ready.collections : await this.recipeService.getCollections();

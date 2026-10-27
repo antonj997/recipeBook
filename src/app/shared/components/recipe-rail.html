@@ -95,12 +95,12 @@
               transitionPart="surface"
             >
               <div class="recipe-card__media">
-                @if (recipe.imageDataUrl) {
+                @if (hasPhoto(recipe)) {
                   <img
                     class="recipe-image"
                     [appRecipeTransition]="recipe.id"
                     transitionPart="image"
-                    [src]="recipe.imageDataUrl"
+                    [attr.src]="photoUrl(recipe) ?? null"
                     alt=""
                     loading="lazy"
                     decoding="async"

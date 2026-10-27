@@ -774,6 +774,8 @@ Logotypen utvecklades från bok- och bokstavsidéer till användarens egna slutl
 
 Appen är byggd som en Angular-applikation med återanvändbara komponenter och signalbaserat tillstånd. Dexie/IndexedDB lagrar recept, bilder och arbetsdata i webbläsaren. Supabase hanterar konto, privat molndata, bilder, länkimport och schemalagda timeraviseringar.
 
+Bilder lagras i en egen bildtabell, en gång per enhet och namngivna efter SHA-256 av sina JPEG-byte, samma namn som molnlagringen använder. Recept och steg pekar på bilden med ett `photoId`. Kort, listrader och väljare visar en mindre kopia på högst 800 pixlar. Sidan gör bildadresser klara innan navigeringen börjar, så delade övergångar aldrig fångar en tom bild. Äldre recept med inbäddade data-URL:er visas som förut.
+
 GitHub Pages levererar den statiska frontendappen. Det är inte den tjänsten som kör användarens lokala sidanimation eller timerljud. Publicering av frontend och publicering av serverfunktioner är separata steg.
 
 ### 17.2 Privata konton och lokal förstahandsanvändning

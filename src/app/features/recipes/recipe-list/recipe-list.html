@@ -139,9 +139,9 @@
             <span class="index-media">
               <span class="index-color" aria-hidden="true"></span>
               <span class="index-image" [style.background-color]="recipeBackground(recipe)">
-                @if (recipe.imageDataUrl) {
+                @if (hasPhoto(recipe)) {
                   <img
-                    [src]="recipe.imageDataUrl"
+                    [attr.src]="photoUrl(recipe) ?? null"
                     alt=""
                     loading="lazy"
                     decoding="async"

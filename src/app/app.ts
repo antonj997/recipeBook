@@ -19,6 +19,7 @@ import { AppUpdateService } from './core/services/app-update.service';
 import { LeaveConfirmationComponent } from './shared/components/leave-confirmation';
 import { GuestRecipesDialogComponent } from './shared/components/guest-recipes-dialog';
 import { GuestRecipesService } from './core/services/guest-recipes.service';
+import { RecipeImagesService } from './core/services/recipe-images.service';
 import {
   afterNextRender,
   Component,
@@ -86,6 +87,7 @@ export class App {
   private drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
   private guestRecipes = inject(GuestRecipesService);
+  private images = inject(RecipeImagesService);
   readonly accountChanging = signal(false);
 
   private syncThemeColor = (): void => {};
@@ -163,6 +165,8 @@ export class App {
       if (next === version) return;
       version = next;
       this.pageTransition.reset();
+      // Photo URLs belong to the previous cookbook's database.
+      this.images.clear();
       this.accountChanging.set(true);
       this.drafts.clear();
       this.confirmation.answer(true);

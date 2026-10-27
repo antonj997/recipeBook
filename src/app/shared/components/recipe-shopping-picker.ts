@@ -16,6 +16,8 @@ import { Router } from '@angular/router';
 import type { Recipe } from '../../core/models/recipe.model';
 import { scaleIngredient } from '../../core/models/ingredient-quantity';
 import { RecipeService } from '../../core/services/recipe.service';
+import { RecipeImagesService } from '../../core/services/recipe-images.service';
+import { hasPhoto } from '../../core/models/recipe-image';
 import { ShoppingListService } from '../../core/services/shopping-list.service';
 import { FeedbackService } from '../../core/services/feedback.service';
 import { CheckboxMarkComponent } from './checkbox-mark';
@@ -53,6 +55,11 @@ export class RecipeShoppingPickerComponent {
   readonly error = signal('');
   readonly confirming = signal(false);
   readonly failedPhotos = signal<Set<string>>(new Set());
+  readonly hasPhoto = hasPhoto;
+  private readonly images = inject(RecipeImagesService);
+  photoUrl(recipe: Recipe): string | undefined {
+    return this.images.peek(recipe, 'thumb');
+  }
   readonly selectedCount = computed(() => this.selected().size);
   readonly baseServings = computed(() => this.validServings(this.selectedRecipe()?.servings) ?? 4);
   readonly servingOptions = computed(() =>
@@ -147,6 +154,7 @@ export class RecipeShoppingPickerComponent {
       const recipes = await this.recipesService.getRecipes();
       if (!this.current()) return;
       this.recipes.set(recipes);
+      void this.images.prepare(recipes, 'thumb');
       this.loadedRecipes = true;
     } catch {
       if (this.current()) this.error.set('Could not load recipes. Try again.');

@@ -1,6 +1,8 @@
 import { RecipePhotoWarmupService } from '../../core/services/recipe-photo-warmup.service';
 import { RecipeTransitionPartDirective } from './recipe-transition-part';
 import { recipeBackground } from '../../core/models/recipe-color';
+import { hasPhoto } from '../../core/models/recipe-image';
+import { RecipeImagesService } from '../../core/services/recipe-images.service';
 import { RecipeContextDirective } from './recipe-context';
 import {
   recipeCategoryNames,
@@ -55,6 +57,12 @@ export class RecipeRailComponent implements OnDestroy {
     return this.cardMetadata().get(recipe)?.calories;
   }
   recipeBackground = recipeBackground;
+  hasPhoto = hasPhoto;
+  private readonly images = inject(RecipeImagesService);
+  photoUrl(recipe: Recipe): string | undefined {
+    return this.images.peek(recipe, 'thumb');
+  }
+  private warmTimer?: ReturnType<typeof setTimeout>;
   compact = input(false);
   addMenuId = input('');
   addMenuOpen = input(false);
@@ -304,9 +312,14 @@ export class RecipeRailComponent implements OnDestroy {
     if (id && id !== this.currentRecipeId) {
       this.currentRecipeId = id;
       // Wait for fast scrubbing to settle; selected is newest in the bounded cache.
-      this.photos.schedule(
-        [nearest - 1, nearest + 1, nearest].map((index) => this.recipes()[index]?.imageDataUrl),
-      );
+      const nearby = [nearest - 1, nearest + 1, nearest].map((index) => this.recipes()[index]);
+      clearTimeout(this.warmTimer);
+      this.warmTimer = setTimeout(() => {
+        void this.images.prepare(nearby, 'full').then(() => {
+          if (this.currentRecipeId === id)
+            this.photos.schedule(nearby.map((recipe) => this.images.peek(recipe, 'full')));
+        });
+      }, 100);
       this.activeRecipeChange.emit(id);
     }
   }
@@ -562,6 +575,7 @@ export class RecipeRailComponent implements OnDestroy {
     }
   }
   ngOnDestroy(): void {
+    clearTimeout(this.warmTimer);
     this.finishScrub(undefined, false);
     cancelAnimationFrame(this.frame);
     cancelAnimationFrame(this.restoreFrame);

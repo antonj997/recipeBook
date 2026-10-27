@@ -6,6 +6,7 @@ import type { RecipeCollection } from '../models/recipe-collection.model';
 import { readShoppingItem, type ShoppingItem, type ShoppingSource } from '../models/shopping-item';
 import {
   AccountDatabase,
+  type CookbookDatabase,
   type CookbookTable,
   type CookbookValue,
   type PendingChange,
@@ -15,7 +16,6 @@ import { StorageDurabilityService } from './storage-durability.service';
 import { downloadPhotos, uploadPhotos, type RecipePhotos } from './cloud-photos';
 import { readRecipeMetadata, isRecipeImage, isHttpsUrl } from '../models/recipe-metadata';
 
-type CookbookDatabase = typeof db | AccountDatabase;
 interface CloudRow {
   id: string;
   payload: unknown;

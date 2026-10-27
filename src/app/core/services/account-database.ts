@@ -3,8 +3,11 @@ import type { Recipe } from '../models/recipe.model';
 import type { RecipeCollection } from '../models/recipe-collection.model';
 import type { RecipePhotos } from './cloud-photos';
 import type { ShoppingItem } from '../models/shopping-item';
+import type { StoredImage, StoredThumb } from '../models/recipe-image';
+import type { db } from '../database';
 
 export type CookbookTable = 'recipes' | 'collections' | 'shoppingItems';
+export type CookbookDatabase = typeof db | AccountDatabase;
 export type CookbookValue = Recipe | RecipeCollection | ShoppingItem;
 export interface PendingChange {
   key: string;
@@ -21,6 +24,8 @@ export class AccountDatabase extends Dexie {
   shoppingItems!: EntityTable<ShoppingItem, 'id'>;
   outbox!: EntityTable<PendingChange, 'key'>;
   photos!: EntityTable<{ id: string; paths: RecipePhotos }, 'id'>;
+  images!: EntityTable<StoredImage, 'id'>;
+  thumbs!: EntityTable<StoredThumb, 'id'>;
 
   constructor(userId: string) {
     super('RecipebookAccount-' + userId);
@@ -32,6 +37,10 @@ export class AccountDatabase extends Dexie {
     });
     this.version(2).stores({
       shoppingItems: 'id, createdAt',
+    });
+    this.version(3).stores({
+      images: 'id',
+      thumbs: 'id',
     });
   }
 }
