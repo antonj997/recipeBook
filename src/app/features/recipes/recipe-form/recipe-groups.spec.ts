@@ -55,8 +55,9 @@ describe('editor row motion', () => {
     handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     fixture.detectChanges();
     await fixture.whenStable();
-    await new Promise((resolve) => requestAnimationFrame(resolve));
     expect(order()).toEqual(['Pepper', 'Salt', 'Oil']);
-    expect(document.activeElement?.getAttribute('aria-label')).toBe('Move ingredient 2');
+    await vi.waitFor(() =>
+      expect(document.activeElement?.getAttribute('aria-label')).toBe('Move ingredient 2'),
+    );
   });
 });
