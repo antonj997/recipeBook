@@ -108,24 +108,25 @@ export class EdgeSwipeBackDirective {
     style.overflow = 'clip';
   }
 
-  /** Springs the page back into place and forgets the gesture. */
+  /** Forgets the gesture; a page that followed the finger springs back. */
   private settle(): void {
     this.stopListening();
     const active = this.gesture?.active;
     this.gesture = undefined;
-    const style = this.element.style;
-    const clear = () => {
-      for (const property of ['transform', 'transform-origin', 'border-radius', 'overflow'])
-        style.removeProperty(property);
-    };
+    if (active) this.reset();
+    else this.clear();
+  }
+
+  /** Springs the page back into place, also after a swipe that did not lead anywhere. */
+  reset(): void {
+    const from = this.element.style.transform;
+    this.clear();
     if (
-      !active ||
+      !from ||
       typeof this.element.animate !== 'function' ||
       matchMedia('(prefers-reduced-motion: reduce)').matches
     )
-      return clear();
-    const from = style.transform;
-    clear();
+      return;
     const easing =
       getComputedStyle(document.documentElement)
         .getPropertyValue('--motion-spring-snappy')
@@ -134,6 +135,11 @@ export class EdgeSwipeBackDirective {
       duration: motionMs(280),
       easing,
     });
+  }
+
+  private clear(): void {
+    for (const property of ['transform', 'transform-origin', 'border-radius', 'overflow'])
+      this.element.style.removeProperty(property);
   }
 
   private stopListening(): void {

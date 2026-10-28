@@ -107,8 +107,12 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   /** iPhone Home Screen apps have no system back swipe; elsewhere the system owns the edge. */
   readonly edgeSwipe =
     !this.isDraft && (navigator as Navigator & { standalone?: boolean }).standalone === true;
-  swipeHome(): void {
-    if (!this.accountChanged()) void this.router.navigateByUrl('/');
+  private readonly edgeSwipeBack = viewChild(EdgeSwipeBackDirective);
+  async swipeHome(): Promise<void> {
+    const left =
+      !this.accountChanged() && (await this.router.navigateByUrl('/').catch(() => false));
+    // A navigation that was cancelled or failed leaves the page where the finger let go.
+    if (!left) this.edgeSwipeBack()?.reset();
   }
   savingDraft = signal(false);
   saveDraftError = signal('');

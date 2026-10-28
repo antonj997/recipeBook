@@ -371,6 +371,43 @@ describe('recipe detail', () => {
     }
   });
 
+  it('springs the page back when the swipe does not lead home', async () => {
+    Object.defineProperty(navigator, 'standalone', { value: true, configurable: true });
+    try {
+      const { host } = await fixture();
+      vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(false);
+      const page = host.nativeElement.querySelector('article.recipe-detail') as HTMLElement;
+      vi.spyOn(page, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 800,
+      } as DOMRect);
+      for (const [type, x] of [
+        ['pointerdown', 6],
+        ['pointermove', 100],
+        ['pointermove', 220],
+        ['pointerup', 220],
+      ] as const) {
+        const event = new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: 300,
+        });
+        Object.defineProperties(event, {
+          pointerId: { value: 3 },
+          pointerType: { value: 'touch' },
+          isPrimary: { value: true },
+        });
+        page.dispatchEvent(event);
+      }
+      await vi.waitFor(() => expect(page.style.transform).toBe(''));
+    } finally {
+      Reflect.deleteProperty(navigator, 'standalone');
+    }
+  });
+
   it('keeps the screen on while focus mode is open', async () => {
     const f = await timerFixture();
     const wake = TestBed.inject(WakeLockService);

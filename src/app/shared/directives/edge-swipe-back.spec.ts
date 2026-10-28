@@ -1,5 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EdgeSwipeBackDirective } from './edge-swipe-back';
 
@@ -100,5 +101,18 @@ describe('edge swipe back', () => {
     fixture.detectChanges();
     swipe(page, 8, 300, 300);
     expect(host.backs).toBe(0);
+  });
+
+  it('keeps the page where it was let go, and springs it back when asked', () => {
+    const { fixture, page, host } = render();
+    swipe(page, 8, 300, 300);
+    expect(host.backs).toBe(1);
+    expect(page.style.transform).toContain('scale(');
+    fixture.debugElement
+      .query(By.directive(EdgeSwipeBackDirective))
+      .injector.get(EdgeSwipeBackDirective)
+      .reset();
+    expect(page.style.transform).toBe('');
+    expect(page.style.borderRadius).toBe('');
   });
 });
