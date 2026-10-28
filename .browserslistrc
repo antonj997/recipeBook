@@ -1,0 +1,9 @@
+# Current browsers, plus Safari 16.4+ for iPads that cannot update past iPadOS 16 (Safari 16.6).
+# Angular warns that Safari 16 is outside its support; the build lowers syntax and prefixes CSS
+# for it, and src/app/core/compat fills in the APIs it lacks.
+last 2 Chrome versions
+last 2 ChromeAndroid versions
+last 2 Edge versions
+last 2 Firefox versions
+Safari >= 16.4
+iOS >= 16.4

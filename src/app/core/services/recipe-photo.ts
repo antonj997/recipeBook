@@ -1,4 +1,5 @@
 import { assertRecipePhotoDimensions, readRecipePhotoDimensions } from './recipe-photo-header';
+import { anySignal } from '../compat/compat';
 
 const maxBytes = 20 * 1024 * 1024;
 const imageTypes = ['image/jpeg', 'image/png', 'image/webp'];
@@ -38,7 +39,7 @@ export async function downloadRecipePhoto(
   signal?.throwIfAborted();
   if (!isSupportedRecipePhotoUrl(url)) throw new Error('This photo URL is not supported.');
   const downloadSignal = signal
-    ? AbortSignal.any([signal, AbortSignal.timeout(10_000)])
+    ? anySignal([signal, AbortSignal.timeout(10_000)])
     : AbortSignal.timeout(10_000);
   const response = proxy
     ? await proxy(url)

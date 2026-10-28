@@ -628,6 +628,10 @@ Vid laddning kan R-märket tippa över till bokorienteringen. Den aktuella röre
 
 ## 15. Rörelse, responsivitet och kvalitet
 
+### 15.0 Äldre iPads
+
+Appen ska fungera på iPads som inte kan uppdateras förbi iPadOS 16 (Safari 16.6). Bygget riktar sig därför även till Safari 16.4 och senare, så att koden och stilarna anpassas dit. Det som Safari 16 saknar fylls i: menyerna (Popover API) får en polyfill som bara laddas där den behövs, och avbrytbara nätverksanrop klarar sig utan `AbortSignal.any`. På de här enheterna stängs oskärpa bakom glas och den förvrängande kanten på hyllan av och ersätts av täckande ytor, eftersom de gör scrollning och animationer hackiga på äldre grafikchip. Sidövergångarna mellan kort och recept kräver nyare Safari och byts där mot vanliga sidbyten.
+
 ### 15.1 Kortet blir receptsidan
 
 Den huvudsakliga sidövergången expanderar det valda receptet till dess sida. Hemsideinnehållet ligger kvar på sin plats och täcks av den växande receptfärgen; hela startsidan zoomas inte.

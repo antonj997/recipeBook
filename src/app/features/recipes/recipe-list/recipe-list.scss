@@ -89,7 +89,7 @@
     0.2px 0 currentColor,
     -0.2px 0 currentColor;
 }
-#add-recipe-options:popover-open {
+#add-recipe-options:where(:popover-open, .\:popover-open) {
   animation: menu-in var(--motion-fast) var(--motion-ease-out);
 }
 @supports (position-anchor: auto) {

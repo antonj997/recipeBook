@@ -1,5 +1,6 @@
 import { Service, signal } from '@angular/core';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
+import { anySignal } from '../compat/compat';
 
 @Service()
 export class SupabaseService {
@@ -82,7 +83,7 @@ export class SupabaseService {
           fetch(input, {
             ...options,
             signal: options?.signal
-              ? AbortSignal.any([options.signal, AbortSignal.timeout(15_000)])
+              ? anySignal([options.signal, AbortSignal.timeout(15_000)])
               : AbortSignal.timeout(15_000),
           }),
       },
@@ -232,7 +233,7 @@ export class SupabaseService {
       },
       body: JSON.stringify(body),
       signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
+        ? anySignal([signal, AbortSignal.timeout(20_000)])
         : AbortSignal.timeout(20_000),
     });
     if (!response.ok) {

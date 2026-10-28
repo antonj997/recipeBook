@@ -5,9 +5,11 @@ import { App } from './app/app';
 import { applyMotionScale } from './app/core/motion';
 import { runtimeConfig } from './app/core/runtime-config';
 import { sharedStartUrl } from './app/core/share-target';
+import { applyPopoverPolyfill, markLiteEffects } from './app/core/compat/compat';
 
 // Before the launch cover animates, so Slow motion (test) stretches it too.
 applyMotionScale();
+markLiteEffects();
 // A link or text shared to the installed app arrives as query parameters; open the import.
 const shared = sharedStartUrl(new URL(location.href), runtimeConfig.pages);
 if (shared) history.replaceState(null, '', shared);
@@ -16,7 +18,12 @@ const launch = new LaunchScreen(document);
 
 // Pages cannot send a frame-ancestors header. Never initialize account data inside a frame.
 if (window.self === window.top) {
-  void launch.revealWhen(bootstrapApplication(App, appConfig).then((app) => app.whenStable()));
+  void launch.revealWhen(
+    applyPopoverPolyfill()
+      .catch(() => undefined)
+      .then(() => bootstrapApplication(App, appConfig))
+      .then((app) => app.whenStable()),
+  );
 } else {
   const message = document.createElement('p');
   message.textContent = 'Open Recipebook in its own tab.';

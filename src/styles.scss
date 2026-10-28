@@ -648,7 +648,7 @@ body {
     backdrop-filter: blur(18px) saturate(1.15);
   }
 }
-.glass-menu:popover-open {
+.glass-menu:where(:popover-open, .\:popover-open) {
   animation: glass-menu-in var(--motion-reveal) var(--motion-ease-out);
 }
 @keyframes glass-menu-in {
@@ -662,7 +662,7 @@ body {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .glass-menu:popover-open {
+  .glass-menu:where(:popover-open, .\:popover-open) {
     animation: none;
   }
   :where(button, .button):hover:not(:disabled) {
@@ -707,4 +707,24 @@ main .recipe-detail.empty-recipe-page {
 
 .recipe-detail.empty-recipe-page > .recipe-navigation.page {
   background: inherit;
+}
+
+/* Older iPads (engines before Safari 17, see markLiteEffects) stutter under live blur and SVG
+   displacement while scrolling: those surfaces become opaque instead. */
+.lite-effects {
+  .glass-menu,
+  .edge-glass {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .glass-menu {
+    background: var(--color-surface);
+  }
+  .edge-glass {
+    background: linear-gradient(90deg, var(--color-canvas), transparent);
+  }
+  dialog::backdrop {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
 }
