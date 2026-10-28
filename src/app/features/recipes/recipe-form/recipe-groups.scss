@@ -159,6 +159,8 @@
 .step-row .row-remove {
   grid-area: 2 / 1;
   margin-top: -8px;
+  // Above the number, which would otherwise take taps on the button's top edge.
+  position: relative;
 }
 .step-row textarea {
   grid-area: 1 / 2 / 3;
