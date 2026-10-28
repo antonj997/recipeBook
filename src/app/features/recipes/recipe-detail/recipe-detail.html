@@ -1,5 +1,9 @@
 <article
   class="recipe-detail"
+  appEdgeSwipeBack
+  [edgeSwipeEnabled]="edgeSwipe"
+  [style.touch-action]="edgeSwipe ? 'pan-y pinch-zoom' : null"
+  (swipeBack)="swipeHome()"
   [class.draft-preview]="isDraft"
   [class.wide-reading]="wideReading()"
   [class.empty-recipe-page]="!loading() && (!!error() || !recipe())"
@@ -43,22 +47,22 @@
       <div class="recipe-intro page">
         <div
           class="recipe-overview"
-          [class.has-photo]="!!selectedRecipe.imageDataUrl"
+          [class.has-photo]="hasPhoto(selectedRecipe)"
           [appRecipeTransition]="selectedRecipe.id"
           transitionPart="surface"
         >
-          @if (selectedRecipe.imageDataUrl; as photo) {
+          @if (hasPhoto(selectedRecipe)) {
             <img
               class="recipe-hero"
               [appRecipeTransition]="selectedRecipe.id"
               transitionPart="image"
-              [src]="photo"
+              [attr.src]="photoUrl(selectedRecipe) ?? null"
               referrerpolicy="no-referrer"
               [alt]="selectedRecipe.title"
             />
           }
           <header class="recipe-summary">
-            <h1 [appRecipeTransition]="selectedRecipe.id" transitionPart="title">
+            <h1 #titleHeading [appRecipeTransition]="selectedRecipe.id" transitionPart="title">
               <app-recipe-title [title]="selectedRecipe.title || 'New recipe'" />
             </h1>
             <app-recipe-summary-details
@@ -182,9 +186,20 @@
                 @if (group.section) {
                   <h3 class="group-heading">{{ group.section }}</h3>
                 }
-                <ul>
-                  @for (ingredient of group.ingredients; track $index) {
-                    <li>{{ ingredient }}</li>
+                <ul [class.ingredient-checklist]="!isDraft">
+                  @for (ingredient of group.ingredients; track ingredient.index) {
+                    @if (isDraft) {
+                      <li>{{ ingredient.text }}</li>
+                    } @else {
+                      <li [class.gathered]="checkedIngredients().has(ingredient.index)">
+                        <app-ingredient-check
+                          [text]="ingredient.text"
+                          [checked]="checkedIngredients().has(ingredient.index)"
+                          [justChecked]="justGathered() === ingredient.index"
+                          (toggled)="toggleIngredient(ingredient.index)"
+                        />
+                      </li>
+                    }
                   }
                 </ul>
               }
@@ -223,12 +238,8 @@
                   </button>
                 </div>
               }
-              @if (hasTimers()) {
-                @if (isDraft) {
-                  <p class="timer-help">Save the recipe to start timers.</p>
-                } @else if (!focusMode()) {
-                  <app-timer-alert-preferences [contextual]="true" />
-                }
+              @if (hasTimers() && isDraft) {
+                <p class="timer-help">Save the recipe to start timers.</p>
               }
               <ol>
                 @for (step of selectedRecipe.instructions; track $index) {
@@ -236,7 +247,10 @@
                     class="cooking-step"
                     [id]="'recipe-step-' + ($index + 1)"
                     tabindex="-1"
-                    [class.completed]="completedSteps().has($index)"
+                    [class.completed]="isCollapsed($index)"
+                    [class.struck]="isStruck($index)"
+                    [class.is-next]="nextStep() === $index"
+                    [attr.aria-current]="nextStep() === $index ? 'step' : null"
                   >
                     @if (selectedRecipe.stepDetails?.[$index]?.section; as section) {
                       @if (
@@ -254,17 +268,21 @@
                         [attr.aria-label]="'Step ' + ($index + 1) + ': ' + step"
                       />
                       <app-checkbox-mark [number]="$index + 1" />
-                      <span class="step-copy">{{ step }}</span>
+                      <span class="step-copy"
+                        ><span class="step-text">{{ step }}</span></span
+                      >
                     </label>
-                    @if (!completedSteps().has($index) && !failedStepPhotos().has($index)) {
+                    @if (!isCollapsed($index) && !failedStepPhotos().has($index)) {
                       @if (
-                        selectedRecipe.stepDetails?.[$index]?.imageDataUrl ||
-                          loadedStepPhotos()[$index];
-                        as photo
+                        hasPhoto(selectedRecipe.stepDetails?.[$index]) || loadedStepPhotos()[$index]
                       ) {
                         <img
                           class="step-photo"
-                          [src]="photo"
+                          [attr.src]="
+                            photoUrl(selectedRecipe.stepDetails?.[$index]) ??
+                            loadedStepPhotos()[$index] ??
+                            null
+                          "
                           [alt]="
                             'Step ' +
                             ($index + 1) +
@@ -290,7 +308,7 @@
                       <app-step-timer
                         [target]="timer"
                         [rotated]="focusMode() && focusPortrait()"
-                        [completed]="completedSteps().has($index)"
+                        [completed]="isCollapsed($index)"
                         [disabled]="isDraft"
                       />
                     }

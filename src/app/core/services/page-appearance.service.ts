@@ -1,4 +1,9 @@
-import { Service, signal } from '@angular/core';
+import { computed, Service, signal, type Signal } from '@angular/core';
+
+export interface HeaderTitle {
+  text: string;
+  shown: boolean;
+}
 
 // A routed page can tint the shell without changing shared palette tokens.
 @Service()
@@ -19,6 +24,23 @@ export class PageAppearanceService {
       if (this.browserOwner !== owner) return;
       this.browserOwner = undefined;
       this.browserTint.set(null);
+    };
+  }
+
+  // The compact header can carry the page title once the page's own heading has scrolled away.
+  private readonly titleSource = signal<Signal<HeaderTitle | null> | null>(null);
+  readonly headerTitle = computed(() => this.titleSource()?.() ?? null);
+  private readonly headerSize = signal(0);
+  readonly headerHeight = this.headerSize.asReadonly();
+
+  setHeaderHeight(height: number): void {
+    this.headerSize.set(height);
+  }
+
+  useHeaderTitle(title: Signal<HeaderTitle | null>): () => void {
+    this.titleSource.set(title);
+    return () => {
+      if (this.titleSource() === title) this.titleSource.set(null);
     };
   }
 

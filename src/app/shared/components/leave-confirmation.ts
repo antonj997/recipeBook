@@ -9,12 +9,19 @@ import { LeaveConfirmationService } from '../../core/services/leave-confirmation
     aria-describedby="leave-copy"
     (cancel)="cancel($event)"
   >
-    <h2 id="leave-heading">Discard changes?</h2>
+    <h2 id="leave-heading">{{ confirmation.labels().title }}</h2>
     <p id="leave-copy">{{ confirmation.message() }}</p>
     <div class="actions">
-      <button type="button" autofocus (click)="confirmation.answer(false)">Keep</button>
-      <button type="button" class="delete-button" (click)="confirmation.answer(true)">
-        Discard
+      <button type="button" autofocus (click)="confirmation.answer(false)">
+        {{ confirmation.labels().cancel }}
+      </button>
+      <button
+        type="button"
+        [class.delete-button]="confirmation.labels().destructive"
+        [class.primary]="!confirmation.labels().destructive"
+        (click)="confirmation.answer(true)"
+      >
+        {{ confirmation.labels().confirm }}
       </button>
     </div>
   </dialog>`,
@@ -32,10 +39,11 @@ import { LeaveConfirmationService } from '../../core/services/leave-confirmation
       backdrop-filter: blur(4px);
     }
     dialog[open] {
-      animation: confirm-in 180ms var(--ease-out);
+      animation: confirm-in var(--motion-fast) var(--motion-ease-out);
     }
     p {
       color: var(--color-muted);
+      white-space: pre-line;
     }
     .actions {
       display: flex;

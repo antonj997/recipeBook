@@ -7,7 +7,7 @@
   position: relative;
   height: 44px;
   overflow: hidden;
-  transition: height 240ms var(--ease-out);
+  transition: height var(--motion-settle) var(--motion-ease-out);
 }
 .ruler-stage.is-timeline {
   height: 16px;
@@ -35,12 +35,12 @@
   overflow: hidden;
   contain: paint;
   opacity: 1;
-  transition: opacity 120ms var(--ease-out);
+  transition: opacity calc(120ms * var(--motion-scale)) var(--motion-ease-out);
 }
 .ruler-ticks {
   position: absolute;
   inset: 0;
-  transition: transform 240ms var(--ease-out);
+  transition: transform var(--motion-settle) var(--motion-ease-out);
 }
 .ruler-tick {
   position: absolute;
@@ -53,11 +53,11 @@
   background: var(--color-control-border);
   opacity: 0;
   transition:
-    transform 240ms var(--ease-out),
-    height 240ms var(--ease-out),
-    margin-top 240ms var(--ease-out),
-    background-color 200ms var(--ease-out),
-    opacity 200ms var(--ease-out);
+    transform var(--motion-settle) var(--motion-ease-out),
+    height var(--motion-settle) var(--motion-ease-out),
+    margin-top var(--motion-settle) var(--motion-ease-out),
+    background-color calc(200ms * var(--motion-scale)) var(--motion-ease-out),
+    opacity calc(200ms * var(--motion-scale)) var(--motion-ease-out);
 }
 .ruler-tick.is-edit-tick {
   opacity: 1;
@@ -78,8 +78,8 @@
   pointer-events: none;
   opacity: 1;
   transition:
-    transform 240ms var(--ease-out),
-    opacity 120ms var(--ease-out);
+    transform var(--motion-settle) var(--motion-ease-out),
+    opacity calc(120ms * var(--motion-scale)) var(--motion-ease-out);
 }
 .is-dragging .ruler-ticks,
 .is-dragging .ruler-marker,

@@ -11,7 +11,7 @@
   border: 1px solid var(--color-control-border);
   font: inherit;
   cursor: pointer;
-  transition: border-color var(--motion-fast) var(--ease-out);
+  transition: border-color var(--motion-fast) var(--motion-ease-out);
 }
 .menu-trigger.drag-enabled,
 .menu-panel.drag-enabled {
@@ -33,7 +33,7 @@
   width: 16px;
   height: 16px;
   transform: rotate(-90deg);
-  transition: transform var(--motion-fast) var(--ease-out);
+  transition: transform var(--motion-fast) var(--motion-ease-out);
 }
 .menu-trigger app-icon.is-open {
   transform: rotate(90deg);
@@ -84,7 +84,7 @@
 .menu-option > span {
   min-width: 0;
   overflow-wrap: anywhere;
-  transition: text-shadow 150ms var(--ease-out);
+  transition: text-shadow calc(150ms * var(--motion-scale)) var(--motion-ease-out);
 }
 .menu-option app-icon {
   width: 18px;

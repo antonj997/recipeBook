@@ -16,8 +16,12 @@ import { Router } from '@angular/router';
 import type { Recipe } from '../../core/models/recipe.model';
 import { scaleIngredient } from '../../core/models/ingredient-quantity';
 import { RecipeService } from '../../core/services/recipe.service';
+import { RecipeImagesService } from '../../core/services/recipe-images.service';
+import { hasPhoto } from '../../core/models/recipe-image';
 import { ShoppingListService } from '../../core/services/shopping-list.service';
 import { FeedbackService } from '../../core/services/feedback.service';
+import { BasketService } from '../../core/services/basket.service';
+import { recipeBackground } from '../../core/models/recipe-color';
 import { CheckboxMarkComponent } from './checkbox-mark';
 import { FoodPlaceholderComponent } from './food-placeholder';
 import { IconComponent } from './icon';
@@ -38,6 +42,7 @@ export class RecipeShoppingPickerComponent {
   private readonly feedback = inject(FeedbackService);
   private readonly router = inject(Router);
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly basket = inject(BasketService);
   private readonly pickerBody = viewChild<ElementRef<HTMLDivElement>>('pickerBody');
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
   private readonly ingredientHeading =
@@ -53,6 +58,11 @@ export class RecipeShoppingPickerComponent {
   readonly error = signal('');
   readonly confirming = signal(false);
   readonly failedPhotos = signal<Set<string>>(new Set());
+  readonly hasPhoto = hasPhoto;
+  private readonly images = inject(RecipeImagesService);
+  photoUrl(recipe: Recipe): string | undefined {
+    return this.images.peek(recipe, 'thumb');
+  }
   readonly selectedCount = computed(() => this.selected().size);
   readonly baseServings = computed(() => this.validServings(this.selectedRecipe()?.servings) ?? 4);
   readonly servingOptions = computed(() =>
@@ -147,6 +157,7 @@ export class RecipeShoppingPickerComponent {
       const recipes = await this.recipesService.getRecipes();
       if (!this.current()) return;
       this.recipes.set(recipes);
+      void this.images.prepare(recipes, 'thumb');
       this.loadedRecipes = true;
     } catch {
       if (this.current()) this.error.set('Could not load recipes. Try again.');
@@ -218,8 +229,16 @@ export class RecipeShoppingPickerComponent {
     this.busy.set(true);
     this.error.set('');
     try {
+      // Measure before closing: the items fly from the button that added them.
+      const button = this.dialog()?.nativeElement.querySelector<HTMLElement>('.add-selected');
       const count = await this.shopping.addRecipe(recipe, servings, indices, allowDuplicate);
       if (!this.current()) return;
+      if (button?.isConnected)
+        void this.basket.flyFrom(
+          button.getBoundingClientRect(),
+          count,
+          `color-mix(in srgb, ${recipeBackground(recipe)} 52%, var(--color-ink))`,
+        );
       const account = this.account;
       this.feedback.show(count + (count === 1 ? ' item added' : ' items added'), {
         label: 'View list',

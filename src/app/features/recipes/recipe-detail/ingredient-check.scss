@@ -1,0 +1,120 @@
+// The text stays as readable as before; only the round mark changes, filling with the recipe
+// tone while a pinch of crumbs scatters from it.
+:host {
+  display: block;
+}
+.ingredient-check {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding-block: 8px;
+  cursor: pointer;
+  font-weight: inherit;
+}
+.ingredient-check input {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  opacity: 0;
+}
+.pinch-mark {
+  position: relative;
+  flex: 0 0 22px;
+  height: 22px;
+  margin-top: 3px;
+  border: 1.5px solid color-mix(in srgb, var(--recipe-tone) 70%, var(--color-surface));
+  border-radius: 50%;
+  transition:
+    background var(--motion-fast) var(--motion-ease-out),
+    border-color var(--motion-fast) var(--motion-ease-out);
+}
+.pinch-mark svg {
+  position: absolute;
+  inset: -1.5px;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--color-surface);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset var(--motion-control) var(--motion-ease-out)
+    calc(60ms * var(--motion-scale));
+}
+.pinch-mark i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px;
+  border-radius: 50%;
+  background: var(--recipe-tone);
+  opacity: 0;
+  pointer-events: none;
+}
+:host(.gathered) .pinch-mark {
+  border-color: var(--recipe-tone);
+  background: var(--recipe-tone);
+}
+:host(.gathered) .pinch-mark svg {
+  stroke-dashoffset: 0;
+}
+:host(.just-gathered) .pinch-mark {
+  animation: pinch-squish calc(360ms * var(--motion-scale)) var(--motion-ease-out);
+}
+:host(.just-gathered) .pinch-mark i {
+  animation: pinch-crumb calc(520ms * var(--motion-scale)) var(--motion-ease-out) both;
+}
+:host(.just-gathered) .pinch-mark i:nth-child(2) {
+  --crumb: -13px, -9px;
+}
+:host(.just-gathered) .pinch-mark i:nth-child(3) {
+  --crumb: 3px, -15px;
+  animation-delay: calc(40ms * var(--motion-scale));
+}
+:host(.just-gathered) .pinch-mark i:nth-child(4) {
+  --crumb: 14px, -6px;
+  animation-delay: calc(80ms * var(--motion-scale));
+}
+@keyframes pinch-squish {
+  40% {
+    transform: scale(0.82);
+  }
+}
+@keyframes pinch-crumb {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--crumb, 0, -12px)) scale(0.4);
+  }
+}
+@media (hover: hover) {
+  .ingredient-check:hover .pinch-mark {
+    border-color: var(--recipe-tone);
+  }
+}
+.ingredient-check input:focus-visible + .pinch-mark {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pinch-mark,
+  .pinch-mark svg {
+    transition: none;
+  }
+  :host(.just-gathered) .pinch-mark,
+  :host(.just-gathered) .pinch-mark i {
+    animation: none;
+  }
+}

@@ -48,6 +48,9 @@
           class="editor-row"
           [class.dragging]="dragging() === control"
           [class.step-row]="kind() === 'step'"
+          [attr.data-flip]="rowId(control)"
+          [animate.enter]="moving() ? '' : 'editor-row-enter'"
+          [animate.leave]="moving() ? '' : 'editor-row-leave'"
         >
           <button
             type="button"
@@ -59,7 +62,9 @@
           </button>
           <div class="row-content">
             @if (kind() === 'step') {
-              <label [for]="rowId(control)">Step {{ number(control) }}</label>
+              <label [for]="rowId(control)"
+                ><span class="sr-only">Step </span>{{ number(control) }}</label
+              >
               <textarea
                 [id]="rowId(control)"
                 appAutoGrow
@@ -109,9 +114,10 @@
                   class="timer-add"
                   [id]="rowId(control) + '-timer-add'"
                   [attr.aria-label]="'Add timer to step ' + number(control)"
+                  title="Add timer"
                   (click)="addTimer(control)"
                 >
-                  <app-icon name="clock" />Add timer
+                  <app-icon name="clock" />
                 </button>
               }
               @if (photo(control); as photo) {
@@ -154,6 +160,7 @@
             (pointercancel)="touchCancel()"
             (keydown)="handleKey($event, control)"
             [attr.aria-label]="'Move ' + kind() + ' ' + number(control)"
+            [attr.aria-describedby]="kind() + '-move-hint'"
           >
             <svg viewBox="0 0 20 24" fill="currentColor">
               <circle cx="7" cy="6" r="1" />
@@ -167,10 +174,8 @@
         </div>
       }
       <div class="drop-slot" [class.active]="isSlot(group, null)" aria-hidden="true"></div>
-      @if (!group.rows.length && !isSlot(group, null)) {
-        <p class="empty-group">
-          {{ group.ungrouped ? 'Use Add to add an item.' : 'Use Add / move to fill this group.' }}
-        </p>
+      @if (!group.ungrouped && !group.rows.length && !isSlot(group, null)) {
+        <p class="empty-group">Use Add / move to fill this group.</p>
       }
       <div class="group-footer">
         <button
@@ -225,7 +230,7 @@
       }
     </section>
   }
-  <p class="move-hint">
+  <p class="move-hint" [id]="kind() + '-move-hint'">
     Drag the handle to reorder or move between groups. With a keyboard, focus the handle and use the
     arrow keys.
   </p>

@@ -69,7 +69,7 @@
   width: 16px;
   height: 16px;
   transform: rotate(-90deg);
-  transition: transform var(--motion-fast) var(--ease-out);
+  transition: transform var(--motion-fast) var(--motion-ease-out);
 }
 .recipe-options app-icon.is-open {
   transform: rotate(90deg);
@@ -164,6 +164,12 @@ li::marker {
 
 .ingredients,
 .instructions {
+  // The recipe colour deepened for small marks on the white reading surface.
+  --recipe-tone: color-mix(
+    in srgb,
+    var(--page-background, var(--color-canvas)) 52%,
+    var(--color-ink)
+  );
   grid-area: 1 / 1;
   width: 100%;
   max-width: 75ch;
@@ -238,9 +244,36 @@ li::marker {
   padding: 0;
 }
 .instructions .cooking-step {
+  position: relative;
   padding: 0;
   margin: 0;
   border-bottom: 1px solid var(--color-border);
+}
+// Once cooking has begun, a quiet edge in the recipe tone marks where to continue.
+.instructions .cooking-step.is-next::before {
+  content: '';
+  position: absolute;
+  inset-block: 12px;
+  inset-inline-start: -10px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--recipe-tone);
+  animation: next-step-edge var(--motion-control) var(--motion-ease-out) both;
+}
+@keyframes next-step-edge {
+  from {
+    opacity: 0;
+    transform: scaleY(0.4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .instructions .cooking-step.is-next::before {
+    animation: none;
+  }
+  .step-text,
+  .step-photo {
+    transition: none;
+  }
 }
 .cooking-step label {
   --checkbox-size: 32px;
@@ -261,10 +294,23 @@ li::marker {
   min-width: 0;
   white-space: pre-line;
 }
-.completed .step-copy {
+// The strike draws along the text, line after line, before the step folds to one line;
+// its timer and photo fade meanwhile.
+.step-text {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0 1px;
+  transition: background-size var(--motion-control) var(--motion-ease-out);
+}
+.struck .step-text {
+  background-size: 100% 1px;
+}
+.struck .step-copy {
   color: var(--color-muted);
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
+}
+.step-photo {
+  transition: opacity var(--motion-fast);
+}
+.struck :is(app-step-timer, .step-photo) {
+  opacity: 0;
 }
 .completed .step-copy {
   white-space: nowrap;
@@ -413,4 +459,13 @@ li::marker {
     width: 18px;
     height: 18px;
   }
+}
+
+.ingredient-checklist {
+  padding-left: 0;
+  list-style: none;
+}
+.ingredient-checklist li {
+  padding-left: 0;
+  margin-bottom: 0;
 }

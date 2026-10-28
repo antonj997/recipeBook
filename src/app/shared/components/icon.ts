@@ -99,7 +99,7 @@ import { Component, input } from '@angular/core';
         width: 100%;
         height: 100%;
         stroke-width: var(--icon-stroke-width, 1.65);
-        transition: stroke-width 160ms var(--ease-out);
+        transition: stroke-width var(--motion-reveal) var(--motion-ease-out);
       }
       @media (prefers-reduced-motion: reduce) {
         svg {

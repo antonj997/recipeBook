@@ -17,6 +17,9 @@
     "catalog:benchmark": "node scripts/shopping-catalog/benchmark.mjs"
   },
   "private": true,
+  "engines": {
+    "node": ">=24.15.0"
+  },
   "packageManager": "npm@12.0.2",
   "dependencies": {
     "@angular/common": "^22.1.0",
@@ -41,6 +44,7 @@
     "@angular/cli": "^22.1.8",
     "@angular/compiler-cli": "^22.1.0",
     "concurrently": "^9.2.1",
+    "fake-indexeddb": "^6.2.6",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",

@@ -2,6 +2,7 @@ import { RecipePhotoWarmupService } from '../../core/services/recipe-photo-warmu
 import { DestroyRef, Directive, ElementRef, effect, inject, input, signal } from '@angular/core';
 import type { Recipe } from '../../core/models/recipe.model';
 import { RecipeActionsService } from '../../core/services/recipe-actions.service';
+import { RecipeImagesService } from '../../core/services/recipe-images.service';
 
 @Directive({
   selector: '[appRecipeContext]',
@@ -24,8 +25,12 @@ export class RecipeContextDirective {
   recipe = input.required<Recipe>({ alias: 'appRecipeContext' });
   private actions = inject(RecipeActionsService);
   private readonly photos = inject(RecipePhotoWarmupService);
+  private readonly images = inject(RecipeImagesService);
   warmPhoto(): void {
-    this.photos.warm(this.recipe().imageDataUrl);
+    const recipe = this.recipe();
+    void this.images.url(recipe, 'full').then((url) => {
+      if (this.recipe() === recipe) this.photos.warm(url);
+    });
   }
   private element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   protected readonly pressed = signal(false);

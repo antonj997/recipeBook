@@ -40,11 +40,11 @@ For local development, set the same environment variables before `npm.cmd run de
 
 ## Importer
 
-The Edge Function verifies the user, enforces 30 recipe imports and 150 photo requests per account per hour, and only fetches approved HTTPS hosts. Requests, downloads, and execution have bounds; redirects are rejected. Browser origins are limited to the published app and local development. A photo fallback handles approved image CDNs when browser CORS prevents direct downloads.
+The Edge Function verifies the user, enforces 30 recipe imports and 150 photo requests per account per hour, and fetches public HTTPS pages without a site whitelist. Each connection is pinned to a validated public IP and every one of at most three redirects is checked again; requests, downloads and execution have bounds (see IMPORTING.md). Browser origins are limited to the published app and local development. Photos always pass through this authenticated importer.
 
 The hosted function and Express server share the same parser and metadata extraction. Author, ratings, difficulty, separate prep/cook times, and cooking tips remain excluded. Recipes still open in the unsaved review flow before **looks good!** writes them.
 
-Private files use content hashes to avoid duplicate uploads. Unreferenced photos are retained, rather than deleting files that another offline device may still need; a future cleanup process can reclaim them. Account caches are stored on the device, so use a trusted browser profile.
+Private files use content hashes to avoid duplicate uploads. The device image store uses the same SHA-256 names, so sync uploads only photos whose path the recipe has not synced before and never downloads a photo the device already stores; a title-only edit sends no photo. Unreferenced photos are retained, rather than deleting files that another offline device may still need; a future cleanup process can reclaim them. Account caches are stored on the device, so use a trusted browser profile.
 
 ## Verification
 
@@ -82,3 +82,13 @@ Deploy `20261024230433_shopping_items.sql` before publishing a frontend that syn
 Device schema3 and account schema2 add a `shoppingItems` store without altering existing tables. Each entry and its outbox change commit together. Overlapping recipe additions and missing-only Undo restores are checked in the same local write transaction. Individual contribution IDs preserve unrelated additions across devices; edits to the same entry follow the existing last-successful-upload conflict rule. If the new table is temporarily absent, shopping stays queued while recipe/category sync continues.
 
 Backup format2 includes shopping items and validates them before any writes. Version1 remains importable and leaves the current list intact. Sign-out retains shopping outbox records inside the account's private device cache. Verify two-account isolation, guest-only shopping migration, offline reconnect, source snapshots after recipe deletion, conditional Undo, and repeated backup imports after deployment.
+
+## Incremental sync
+
+`20261028080815_cookbook_updated_at.sql` adds a server-assigned `updated_at` to `recipes`, `collections` and `shopping_items`, a trigger that ignores client values, and an `(user_id, updated_at, id)` index per table. Devices then pull only rows changed after their cursor, re-reading a short overlap because `now()` is the transaction start. It was applied to the production project on 2026-10-28 (remote version `20261028080815`). The app still falls back to the previous full pull where the column is missing (PostgreSQL error 42703), as on a project that has not run it. Each account cache keeps a cursor per table (`syncState`) and the server version of every applied row (`remote`); pulls read 500-row keyset pages from a minute before the cursor, skip rows already applied or edited locally, and commit each page with its cursor. Uploads send at most 100 queued rows per table in one upsert. A local edit waits 1.5 seconds before syncing, so a burst of edits travels together; returning to the app syncs only when the last successful sync is more than 30 seconds old, while coming online, signing in and Sync now run at once. Views reload their records only when a pull changed this device's copy; a row it already holds, such as its own upload read back, is not written again. A return to the app checks the signed-in account first, so a switch that has not settled yet never borrows the previous account's last sync time.
+
+```sh
+cd supabase/tests && deno test --allow-read --allow-env --allow-net --no-lock cookbook-sync.test.mjs
+```
+
+The remote migration history lacks `20261024230433_shopping_items`: the table exists, but it was created outside the CLI. Mark it applied with `supabase migration repair --status applied 20261024230433` before the next `supabase db push`, or the push tries to create the table again.

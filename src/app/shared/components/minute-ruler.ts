@@ -13,10 +13,6 @@ import {
   untracked,
 } from '@angular/core';
 import { formatCountdown, maxClockSeconds } from '../../core/models/step-timer';
-import {
-  TimerRulerPreferencesService,
-  type TimerRulerMode,
-} from '../../core/services/timer-ruler-preferences.service';
 
 const pitch = 18;
 const maximum = maxClockSeconds / 60;
@@ -108,13 +104,11 @@ export class MinuteRulerComponent {
   protected readonly maximum = maximum;
   protected readonly pitch = pitch;
   private readonly document = inject(DOCUMENT);
-  private readonly preferences = inject(TimerRulerPreferencesService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly width = signal(360);
   private readonly progressWidth = signal(360);
   private readonly position = signal<number | undefined>(undefined);
   private readonly cycle = signal(0);
-  private readonly anchor = signal<number | undefined>(undefined);
   protected readonly locked = computed(() => this.disabled() || this.timeline());
   // Geometry depends only on width; each tick covers an equal share of the full duration.
   protected readonly progressTicks = computed(() =>
@@ -141,13 +135,10 @@ export class MinuteRulerComponent {
   );
   protected readonly valueText = computed(() => formatCountdown(this.minute() * 60));
   private readonly visiblePosition = computed(() => this.position() ?? this.idlePosition());
-  private readonly windowStart = computed(() => {
-    const visible = this.visiblePosition();
-    const anchor = this.preferences.mode() === 'swipe' ? this.width() / 2 : this.anchor();
-    return anchor === undefined
-      ? this.defaultWindowStart(visible)
-      : visible - (anchor - inset) / pitch;
-  });
+  // The scale slides beneath a fixed center marker.
+  private readonly windowStart = computed(
+    () => this.visiblePosition() - (this.width() / 2 - inset) / pitch,
+  );
   protected readonly ticks = computed(() =>
     Array.from(
       { length: Math.ceil(this.width() / pitch) + 2 },
@@ -192,7 +183,6 @@ export class MinuteRulerComponent {
     left: number;
     width: number;
     active: boolean;
-    mode: TimerRulerMode;
     mouse: boolean;
     sampleX: number;
     sampleAt: number;
@@ -200,12 +190,9 @@ export class MinuteRulerComponent {
     carry: number;
     carryAt: number;
   };
-  private hold?: ReturnType<typeof setTimeout>;
   private frame?: number;
-  private lastFrame = 0;
   private lastIdentity?: string;
   private lastTimeline?: boolean;
-  private lastMode?: TimerRulerMode;
   private coasting = false;
   private coastSpeed = 0;
   private coastAt = 0;
@@ -239,7 +226,6 @@ export class MinuteRulerComponent {
       const identity = this.identity();
       const unavailable = this.disabled();
       const timeline = this.timeline();
-      const mode = this.preferences.mode();
       this.rotated();
       untracked(() => {
         const changed = this.lastIdentity !== identity;
@@ -247,18 +233,13 @@ export class MinuteRulerComponent {
           changed ||
           unavailable ||
           timeline !== this.lastTimeline ||
-          mode !== this.lastMode ||
           this.gesture ||
           this.coasting
         )
           this.cancel();
-        if (changed) {
-          this.cycle.set(0);
-          this.anchor.set(undefined);
-        }
+        if (changed) this.cycle.set(0);
         this.lastIdentity = identity;
         this.lastTimeline = timeline;
-        this.lastMode = mode;
       });
     });
     const destroy = inject(DestroyRef);
@@ -272,7 +253,6 @@ export class MinuteRulerComponent {
         this.progressWidth.set(fullWidth);
         if (pickerWidth !== this.width()) {
           this.cancel();
-          this.anchor.set(undefined);
           this.width.set(pickerWidth);
         }
       };
@@ -293,18 +273,16 @@ export class MinuteRulerComponent {
   }
 
   /** Stop an in-flight gesture before an external timer control changes its value. */
-  stopMotion(resetView = false): void {
+  stopMotion(): void {
     this.cancel();
-    if (resetView) this.anchor.set(undefined);
   }
 
   protected begin(event: PointerEvent): void {
     if (this.locked() || event.button !== 0 || event.isPrimary === false) return;
     const now = performance.now();
-    const mode = this.preferences.mode();
     const from = this.position() ?? this.idlePosition();
     const carry =
-      mode === 'swipe' && event.pointerType === 'touch'
+      event.pointerType === 'touch'
         ? this.coastSpeed * Math.exp(-(now - this.coastAt) / coastFriction)
         : 0;
     this.cancel();
@@ -328,7 +306,6 @@ export class MinuteRulerComponent {
       left: rotated ? bounds.top : bounds.left,
       width,
       active: false,
-      mode,
       mouse: event.pointerType === 'mouse',
       sampleX: x,
       sampleAt: now,
@@ -336,8 +313,7 @@ export class MinuteRulerComponent {
       carry,
       carryAt: now,
     };
-    if (mode === 'swipe') this.position.set(from);
-    else this.pointAt(x, false);
+    this.position.set(from);
     // Capture from the first contact so a drag can begin anywhere, including the center.
     try {
       element.setPointerCapture(event.pointerId);
@@ -350,7 +326,6 @@ export class MinuteRulerComponent {
     this.document.addEventListener('pointerup', this.upListener);
     this.document.addEventListener('pointercancel', this.cancelListener);
     this.watchInterruption();
-    if (mode === 'edge' && !this.gesture.mouse) this.hold = setTimeout(() => this.activate(), 350);
   }
 
   private activate(): void {
@@ -359,7 +334,6 @@ export class MinuteRulerComponent {
     gesture.active = true;
     this.dragging.set(true);
     this.setPosition(this.position() ?? this.idlePosition());
-    this.driveEdge();
   }
 
   private move(event: PointerEvent): void {
@@ -369,84 +343,33 @@ export class MinuteRulerComponent {
     const now = performance.now();
     const x = gesture.rotated ? event.clientY : event.clientX;
     const elapsed = now - gesture.sampleAt;
-    if (elapsed > 0)
-      gesture.velocity = ((x - gesture.sampleX) / elapsed) * (gesture.mode === 'swipe' ? -1 : 1);
+    // The scale moves against the finger, so its velocity has the opposite sign.
+    if (elapsed > 0) gesture.velocity = -(x - gesture.sampleX) / elapsed;
     if (gesture.velocity && Math.sign(gesture.velocity) !== Math.sign(gesture.carry))
       gesture.carry = 0;
     gesture.sampleX = x;
     gesture.sampleAt = now;
     gesture.clientX = x;
-    // Swipe moves the scale beneath the center; Edge hold moves the selection with contact.
     this.pointAt(x, gesture.active);
     if (
       !gesture.active &&
       Math.hypot(x - gesture.x, (gesture.rotated ? event.clientX : event.clientY) - gesture.y) > 6
-    ) {
-      clearTimeout(this.hold);
+    )
       this.activate();
-    }
-    if (gesture.active) this.driveEdge();
   }
 
   private pointAt(clientX: number, commit: boolean): void {
     const gesture = this.gesture;
     if (!gesture) return;
-    if (gesture.mode === 'swipe') {
-      const position = gesture.position - (clientX - gesture.x) / pitch;
-      if (commit) this.setPosition(position);
-      else this.position.set(position);
-      return;
-    }
-    const window = this.windowStart();
-    const anchor = Math.max(inset, Math.min(gesture.width - inset, clientX - gesture.left));
-    this.anchor.set(anchor);
-    const position = window + (anchor - inset) / pitch;
+    const position = gesture.position - (clientX - gesture.x) / pitch;
     if (commit) this.setPosition(position);
     else this.position.set(position);
-  }
-
-  private edgeSpeed(): number {
-    const gesture = this.gesture;
-    if (!gesture || gesture.mouse || gesture.mode !== 'edge') return 0;
-    const x = gesture.clientX - gesture.left;
-    const edge = gesture.width * 0.2;
-    const amount =
-      x < edge
-        ? (x - edge) / edge
-        : x > gesture.width - edge
-          ? (x - gesture.width + edge) / edge
-          : 0;
-    const penetration = Math.max(-1, Math.min(1, amount));
-    return Math.sign(penetration) * 24 * penetration ** 2;
-  }
-
-  private driveEdge(): void {
-    if (!this.edgeSpeed()) {
-      if (this.frame !== undefined) cancelAnimationFrame(this.frame);
-      this.frame = undefined;
-      this.lastFrame = 0;
-    } else if (this.frame === undefined) {
-      this.lastFrame = 0;
-      this.frame = requestAnimationFrame((time) => this.advance(time));
-    }
-  }
-
-  private advance(time: number): void {
-    this.frame = undefined;
-    const gesture = this.gesture;
-    if (!gesture?.active) return;
-    const speed = this.edgeSpeed();
-    if (!speed) return;
-    const dt = this.lastFrame ? Math.min(50, time - this.lastFrame) / 1000 : 0;
-    this.lastFrame = time;
-    this.setPosition((this.position() ?? this.idlePosition()) + speed * dt);
-    if (this.gesture === gesture) this.frame = requestAnimationFrame((next) => this.advance(next));
   }
 
   private end(event: PointerEvent): void {
     const gesture = this.gesture;
     if (!gesture || event.pointerId !== gesture.id) return;
-    if (gesture.mode === 'swipe' && !gesture.active) {
+    if (!gesture.active) {
       // Taps only arrest motion. Keep even a typed partial minute exactly unchanged.
       this.cancel();
       return;
@@ -460,8 +383,7 @@ export class MinuteRulerComponent {
     const reducedMotion = this.document.defaultView?.matchMedia?.(
       '(prefers-reduced-motion: reduce)',
     ).matches;
-    const coast = gesture.mode === 'swipe' && Math.abs(velocity) >= 0.35 && !reducedMotion;
-    if (gesture.mode === 'edge') this.anchor.set(this.x(Math.round(from)));
+    const coast = Math.abs(velocity) >= 0.35 && !reducedMotion;
     const now = performance.now();
     const carry =
       now - gesture.carryAt <= flywheelWindow && Math.sign(velocity) === Math.sign(gesture.carry)
@@ -518,7 +440,6 @@ export class MinuteRulerComponent {
   }
 
   protected cancel(): void {
-    clearTimeout(this.hold);
     if (this.frame !== undefined) cancelAnimationFrame(this.frame);
     const gesture = this.gesture;
     this.gesture = undefined;
@@ -567,7 +488,6 @@ export class MinuteRulerComponent {
     if (next === undefined) return;
     event.preventDefault();
     this.cancel();
-    this.anchor.set(undefined);
     this.selectRelative(next);
   }
 
@@ -582,7 +502,6 @@ export class MinuteRulerComponent {
       return;
     event.preventDefault();
     if (this.coasting) this.cancel();
-    this.anchor.set(undefined);
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? this.width() : 1;
     const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
     this.wheelRemainder += Math.max(-400, Math.min(400, -delta * unit));
@@ -607,10 +526,6 @@ export class MinuteRulerComponent {
     const remainder = ((seconds % 60) + 60) % 60;
     this.cycle.update((cycle) => cycle + Math.floor(minute / cycleLength));
     this.durationChange.emit(Math.min(maxClockSeconds, this.tickMinute(minute) * 60 + remainder));
-  }
-  private defaultWindowStart(position: number): number {
-    const capacity = Math.max(1, (this.width() - inset * 2) / pitch);
-    return position < 0 ? position : Math.max(0, position - capacity / 2);
   }
   private idlePosition(): number {
     return this.currentMinute() + this.cycle() * cycleLength;

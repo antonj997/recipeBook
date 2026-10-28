@@ -1,3 +1,4 @@
+import { hasPhoto, type PhotoRef } from './recipe-image';
 export const recipeColors = [
   { id: 'beige', label: 'Oat' },
   { id: 'butter', label: 'Butter' },
@@ -26,14 +27,8 @@ function hash(seed: string): number {
 export function defaultRecipeColor(seed: string, photo = false): RecipeColor {
   return recipeColors[hash((photo ? 'card:' : 'color:') + seed) % recipeColors.length].id;
 }
-export function recipeBackground(recipe: {
-  id: string;
-  color?: RecipeColor;
-  imageDataUrl?: string;
-}): string {
+export function recipeBackground(recipe: { id: string; color?: RecipeColor } & PhotoRef): string {
   return recipeColorBackground(
-    isRecipeColor(recipe.color)
-      ? recipe.color
-      : defaultRecipeColor(recipe.id, !!recipe.imageDataUrl),
+    isRecipeColor(recipe.color) ? recipe.color : defaultRecipeColor(recipe.id, hasPhoto(recipe)),
   );
 }

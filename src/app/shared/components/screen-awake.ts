@@ -1,6 +1,7 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { WakeLockService } from '../../core/services/wake-lock.service';
 
-// Scoped to a recipe view: the browser releases the lock when hidden or closed.
+// Scoped to a recipe view; the shared lock also serves focus mode and returns after hiding.
 @Component({
   selector: 'app-screen-awake',
   template: `
@@ -54,8 +55,8 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
       border-radius: 8px;
       background: var(--color-surface);
       transition:
-        background var(--motion-control) var(--ease-out),
-        border-color var(--motion-control) var(--ease-out);
+        background var(--motion-control) var(--motion-ease-out),
+        border-color var(--motion-control) var(--motion-ease-out);
     }
     .switch-thumb {
       display: block;
@@ -64,8 +65,8 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
       border-radius: 5px;
       background: var(--color-ink);
       transition:
-        transform var(--motion-control) var(--ease-out),
-        background var(--motion-control) var(--ease-out);
+        transform var(--motion-control) var(--motion-ease-out),
+        background var(--motion-control) var(--motion-ease-out);
     }
     .is-on .switch-track {
       background: var(--color-green);
@@ -103,73 +104,34 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
   `,
 })
 export class ScreenAwakeComponent {
-  readonly supported = window.isSecureContext && 'wakeLock' in navigator;
-  readonly requested = signal(false);
-  readonly active = signal(false);
-  readonly enabled = computed(() => this.requested() && this.active());
+  private readonly wake = inject(WakeLockService);
+  readonly supported = this.wake.supported;
+  readonly requested = computed(() => this.wake.wants('toggle'));
+  readonly enabled = computed(() => this.requested() && this.wake.held());
   readonly busy = signal(false);
-  readonly notice = signal('');
-  private lock?: WakeLockSentinel;
-  private generation = 0;
-  private destroyed = false;
+  private readonly refused = signal(false);
+  readonly notice = computed(() =>
+    this.refused()
+      ? 'Could not keep the screen on. Check your device’s battery-saving settings.'
+      : this.requested() && this.wake.lostWhileVisible()
+        ? 'Screen lock was released. Switch off and on to try again.'
+        : '',
+  );
 
   constructor() {
-    const visibility = () => {
-      if (document.visibilityState === 'visible' && this.requested()) void this.acquire();
-    };
-    document.addEventListener('visibilitychange', visibility);
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-      this.requested.set(false);
-      this.generation++;
-      document.removeEventListener('visibilitychange', visibility);
-      void this.lock?.release().catch(() => undefined);
-    });
+    inject(DestroyRef).onDestroy(() => void this.wake.release('toggle'));
   }
 
   async toggle(): Promise<void> {
     if (this.busy()) return;
+    this.refused.set(false);
     if (this.requested()) {
-      this.requested.set(false);
-      this.generation++;
-      this.notice.set('');
-      this.active.set(false);
-      await this.lock?.release().catch(() => undefined);
-      this.lock = undefined;
-    } else {
-      this.requested.set(true);
-      await this.acquire();
+      await this.wake.release('toggle');
+      return;
     }
-  }
-
-  private async acquire(): Promise<void> {
-    if (this.destroyed || this.busy() || (this.lock && !this.lock.released)) return;
-    const generation = ++this.generation;
     this.busy.set(true);
-    this.notice.set('');
     try {
-      const lock = await navigator.wakeLock.request('screen');
-      if (this.destroyed || !this.requested() || generation !== this.generation) {
-        await lock.release();
-        return;
-      }
-      this.lock = lock;
-      this.active.set(true);
-      lock.addEventListener('release', () => {
-        if (this.lock !== lock) return;
-        this.active.set(false);
-        this.lock = undefined;
-        if (document.visibilityState === 'visible' && this.requested() && !this.destroyed)
-          this.notice.set('Screen lock was released. Switch off and on to try again.');
-      });
-    } catch {
-      if (!this.destroyed && generation === this.generation) {
-        this.requested.set(false);
-        this.active.set(false);
-        this.notice.set(
-          'Could not keep the screen on. Check your device’s battery-saving settings.',
-        );
-      }
+      this.refused.set(!(await this.wake.acquire('toggle')));
     } finally {
       this.busy.set(false);
     }

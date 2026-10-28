@@ -6,6 +6,7 @@ import { StepTimerComponent } from './step-timer';
 import { StepTimerService } from '../../core/services/step-timer.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { CloudCookbookService } from '../../core/services/cloud-cookbook.service';
+import { TimerAlertOfferService } from '../../core/services/timer-alert-offer.service';
 import { recipeStepTimers } from '../../core/models/step-timer';
 import type { Recipe } from '../../core/models/recipe.model';
 
@@ -17,6 +18,7 @@ describe('editable step timer controls', () => {
     instructions: ['Cook for 2 minutes.'],
   };
   const target = recipeStepTimers(recipe)[0]!;
+  const offer = vi.fn();
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -26,6 +28,7 @@ describe('editable step timer controls', () => {
       imports: [StepTimerComponent],
       providers: [
         provideRouter([]),
+        { provide: TimerAlertOfferService, useValue: { offer } },
         {
           provide: SupabaseService,
           useValue: {
@@ -188,6 +191,14 @@ describe('editable step timer controls', () => {
     f.view.detectChanges();
     expect(input.value).toBe('01:24');
   });
+  it('offers background alerts when a timer starts, not before', () => {
+    offer.mockClear();
+    const f = fixture();
+    expect(offer).not.toHaveBeenCalled();
+    f.root.querySelector<HTMLButtonElement>('[aria-label="Start timer for step 1"]')!.click();
+    expect(offer).toHaveBeenCalledOnce();
+  });
+
   it('allows zero on the loop without starting an empty timer', () => {
     const f = fixture(),
       input = field(f.root);

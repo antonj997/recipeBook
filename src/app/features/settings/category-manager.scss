@@ -60,7 +60,7 @@
 }
 .category-row app-icon {
   transform: rotate(-90deg);
-  transition: transform 180ms var(--ease-out);
+  transition: transform var(--motion-fast) var(--motion-ease-out);
 }
 .category-row app-icon.open {
   transform: rotate(90deg);

@@ -3,7 +3,9 @@
   width: min(100%, 30rem);
   margin: -4px 0 20px;
   font-family: Arial, Helvetica, sans-serif;
-  transition: margin-top 240ms var(--ease-out);
+  transition:
+    margin-top var(--motion-settle) var(--motion-ease-out),
+    opacity var(--motion-fast) var(--motion-ease-out);
 }
 :host([hidden]) {
   display: none;
@@ -31,7 +33,7 @@
   border-radius: inherit;
   pointer-events: none;
   opacity: 1;
-  transition: opacity 200ms var(--ease-out);
+  transition: opacity calc(200ms * var(--motion-scale)) var(--motion-ease-out);
 }
 .step-timer.is-timeline::before {
   opacity: 0;

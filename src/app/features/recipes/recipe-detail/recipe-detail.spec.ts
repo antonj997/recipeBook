@@ -13,7 +13,13 @@ import { RecipeService } from '../../../core/services/recipe.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
 import { StepTimerService } from '../../../core/services/step-timer.service';
 import { FeedbackService } from '../../../core/services/feedback.service';
-import { CookingSessionService } from '../../../core/services/cooking-session.service';
+import {
+  CookingSessionService,
+  ingredientFingerprint,
+} from '../../../core/services/cooking-session.service';
+import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
+import { StorageDurabilityService } from '../../../core/services/storage-durability.service';
+import { WakeLockService } from '../../../core/services/wake-lock.service';
 
 describe('recipe detail', () => {
   const stepToReveal = signal<StepTimerTarget | null>(null);
@@ -164,6 +170,61 @@ describe('recipe detail', () => {
     expect(tools.lastElementChild?.textContent).toContain('Add to shopping list');
   });
 
+  it('hands its title to the header once the heading scrolls under it', async () => {
+    const observers: {
+      callback: IntersectionObserverCallback;
+      options?: IntersectionObserverInit;
+      targets: Element[];
+      disconnected: boolean;
+    }[] = [];
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        private record;
+        constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+          this.record = { callback, options, targets: [] as Element[], disconnected: false };
+          observers.push(this.record);
+        }
+        observe(target: Element) {
+          this.record.targets.push(target);
+        }
+        disconnect() {
+          this.record.disconnected = true;
+        }
+      },
+    );
+    const appearance = TestBed.inject(PageAppearanceService);
+    appearance.setHeaderHeight(57.4);
+    const f = await fixture();
+    const live = () => observers.filter((observer) => !observer.disconnected);
+    expect(live()).toHaveLength(1);
+    const [observer] = live();
+    expect(observer!.targets[0]?.tagName).toBe('H1');
+    expect(observer!.options?.rootMargin).toBe('-57px 0px 0px 0px');
+    expect(appearance.headerTitle()).toEqual({ text: 'Recipe section test', shown: false });
+    const report = (isIntersecting: boolean, top: number) =>
+      observer!.callback(
+        [
+          {
+            isIntersecting,
+            boundingClientRect: { top } as DOMRectReadOnly,
+            rootBounds: { top: 57, bottom: 800 } as DOMRectReadOnly,
+          } as IntersectionObserverEntry,
+        ],
+        observer as never,
+      );
+    report(false, -20);
+    expect(appearance.headerTitle()?.shown).toBe(true);
+    report(true, 40);
+    expect(appearance.headerTitle()?.shown).toBe(false);
+    // Below the screen, as after a jump to a far step, the heading has not been passed yet.
+    report(false, 900);
+    expect(appearance.headerTitle()?.shown).toBe(false);
+    f.host.destroy();
+    expect(appearance.headerTitle()).toBeNull();
+    expect(observer!.disconnected).toBe(true);
+  });
+
   async function openFocus(f: Awaited<ReturnType<typeof fixture>>, beforeRender?: () => void) {
     if (!HTMLDialogElement.prototype.showModal)
       Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
@@ -216,6 +277,149 @@ describe('recipe detail', () => {
       expect(panel.getAttribute('tabindex')).toBe('0');
       expect(panel.hasAttribute('inert')).toBe(false);
     }
+  });
+
+  it('continues after the last checked step when steps are checked out of order', async () => {
+    const f = await timerFixture();
+    const c = f.host.componentInstance;
+    c.switchSection('instructions');
+    c.toggleStep(2);
+    f.host.detectChanges();
+    expect(c.nextStep()).toBe(3);
+    c.toggleStep(3);
+    c.toggleStep(4);
+    expect(c.nextStep()).toBe(0);
+  });
+
+  it('marks the next step once cooking starts and scrolls only when it is out of view', async () => {
+    const f = await timerFixture();
+    const c = f.host.componentInstance;
+    c.switchSection('instructions');
+    f.host.detectChanges();
+    const root = f.host.nativeElement as HTMLElement;
+    expect(root.querySelector('.cooking-step.is-next')).toBeNull();
+    if (!HTMLElement.prototype.scrollIntoView)
+      Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+        configurable: true,
+        writable: true,
+        value() {},
+      });
+    const scroll = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
+    const place = (id: string, top: number) =>
+      vi
+        .spyOn(root.querySelector('#' + id)!, 'getBoundingClientRect')
+        .mockReturnValue({ top, bottom: top + 80 } as DOMRect);
+    place('recipe-step-2', 5000);
+    // The next step is revealed once the checked step has struck through and folded.
+    const settle = async () => {
+      f.host.detectChanges();
+      await new Promise((resolve) => setTimeout(resolve, 260));
+      await f.host.whenStable();
+    };
+    c.toggleStep(0);
+    await settle();
+    const second = root.querySelector('#recipe-step-2')!;
+    expect(second.classList).toContain('is-next');
+    expect(second.getAttribute('aria-current')).toBe('step');
+    expect(scroll).toHaveBeenCalledOnce();
+    expect(scroll.mock.contexts[0]).toBe(second);
+    scroll.mockClear();
+    place('recipe-step-3', 300);
+    c.toggleStep(1);
+    await settle();
+    expect(root.querySelector('#recipe-step-3')!.classList).toContain('is-next');
+    expect(scroll).not.toHaveBeenCalled();
+    c.toggleStep(1);
+    await settle();
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
+  it('goes back with an edge swipe in the iPhone Home Screen app', async () => {
+    Object.defineProperty(navigator, 'standalone', { value: true, configurable: true });
+    try {
+      const { host } = await fixture();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+      const page = host.nativeElement.querySelector('article.recipe-detail') as HTMLElement;
+      expect(page.style.touchAction).toBe('pan-y pinch-zoom');
+      vi.spyOn(page, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 800,
+      } as DOMRect);
+      const pointer = (type: string, x: number) => {
+        const event = new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: 300,
+        });
+        Object.defineProperties(event, {
+          pointerId: { value: 3 },
+          pointerType: { value: 'touch' },
+          isPrimary: { value: true },
+        });
+        page.dispatchEvent(event);
+      };
+      pointer('pointerdown', 6);
+      pointer('pointermove', 100);
+      pointer('pointermove', 220);
+      pointer('pointerup', 220);
+      expect(navigate).toHaveBeenCalledWith('/');
+    } finally {
+      Reflect.deleteProperty(navigator, 'standalone');
+    }
+  });
+
+  it('springs the page back when the swipe does not lead home', async () => {
+    Object.defineProperty(navigator, 'standalone', { value: true, configurable: true });
+    try {
+      const { host } = await fixture();
+      vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(false);
+      const page = host.nativeElement.querySelector('article.recipe-detail') as HTMLElement;
+      vi.spyOn(page, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        width: 400,
+        height: 800,
+      } as DOMRect);
+      for (const [type, x] of [
+        ['pointerdown', 6],
+        ['pointermove', 100],
+        ['pointermove', 220],
+        ['pointerup', 220],
+      ] as const) {
+        const event = new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: 300,
+        });
+        Object.defineProperties(event, {
+          pointerId: { value: 3 },
+          pointerType: { value: 'touch' },
+          isPrimary: { value: true },
+        });
+        page.dispatchEvent(event);
+      }
+      await vi.waitFor(() => expect(page.style.transform).toBe(''));
+    } finally {
+      Reflect.deleteProperty(navigator, 'standalone');
+    }
+  });
+
+  it('keeps the screen on while focus mode is open', async () => {
+    const f = await timerFixture();
+    const wake = TestBed.inject(WakeLockService);
+    const acquire = vi.spyOn(wake, 'acquire').mockResolvedValue(true);
+    const release = vi.spyOn(wake, 'release').mockResolvedValue();
+    const dialog = await openFocus(f);
+    expect(acquire).toHaveBeenCalledWith('focus');
+    expect(release).not.toHaveBeenCalled();
+    (dialog.querySelector('[aria-label="Exit focus mode"]') as HTMLButtonElement).click();
+    f.host.detectChanges();
+    await f.host.whenStable();
+    expect(release).toHaveBeenCalledWith('focus');
   });
 
   it('preserves servings, checkmarks, running clocks and the selected tab on focus exit', async () => {
@@ -362,6 +566,74 @@ describe('recipe detail', () => {
     f.host.detectChanges();
     expect(f.timers.state(f.targets[1]!).remaining).toBe(180);
     expect(reset.disabled).toBe(true);
+  });
+
+  it('draws the strike first, then collapses the step, and reverses on uncheck', async () => {
+    const f = await timerFixture();
+    vi.useFakeTimers();
+    const component = f.host.componentInstance;
+    component.switchSection('instructions');
+    f.host.detectChanges();
+    const step = f.host.nativeElement.querySelector('#recipe-step-1') as HTMLElement;
+    component.toggleStep(0);
+    f.host.detectChanges();
+    expect(step.classList).toContain('struck');
+    expect(step.classList).not.toContain('completed');
+    expect((step.querySelector('app-step-timer') as HTMLElement).hidden).toBe(false);
+    await vi.advanceTimersByTimeAsync(220);
+    f.host.detectChanges();
+    expect(step.classList).toContain('completed');
+    expect((step.querySelector('app-step-timer') as HTMLElement).hidden).toBe(true);
+    component.toggleStep(0);
+    f.host.detectChanges();
+    expect(step.classList).not.toContain('completed');
+    expect(step.classList).toContain('struck');
+    await vi.advanceTimersByTimeAsync(200);
+    f.host.detectChanges();
+    expect(step.classList).not.toContain('struck');
+  });
+
+  it('checks a step at once under Reduce Motion', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('reduce'),
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    const f = await timerFixture();
+    const component = f.host.componentInstance;
+    component.switchSection('instructions');
+    component.toggleStep(0);
+    f.host.detectChanges();
+    const step = f.host.nativeElement.querySelector('#recipe-step-1') as HTMLElement;
+    expect(step.classList).toContain('completed');
+    expect(step.classList).toContain('struck');
+  });
+
+  it('pauses a running clock when its step is checked and keeps the time left', async () => {
+    const f = await timerFixture();
+    vi.useFakeTimers();
+    const component = f.host.componentInstance;
+    component.switchSection('instructions');
+    f.timers.start(f.targets[0]!);
+    await vi.advanceTimersByTimeAsync(30_000);
+    component.toggleStep(0);
+    f.host.detectChanges();
+    expect(f.timers.state(f.targets[0]!)).toMatchObject({
+      running: false,
+      paused: true,
+      started: true,
+      remaining: 90,
+    });
+    // Background alerts are scheduled only for timers with a deadline.
+    expect(
+      f.push.replaceTimers.mock.lastCall![0].some(
+        (timer: { deadline?: number }) => timer.deadline !== undefined,
+      ),
+    ).toBe(false);
+    await vi.advanceTimersByTimeAsync(60_000);
+    component.toggleStep(0);
+    f.host.detectChanges();
+    expect(f.timers.state(f.targets[0]!)).toMatchObject({ paused: true, remaining: 90 });
   });
 
   it('resets checked steps and all recipe clocks together without clearing another recipe', async () => {
@@ -669,5 +941,135 @@ describe('recipe detail', () => {
 
     expect(heading?.textContent?.trim()).toBeTruthy();
     expect(back?.getAttribute('href')).toBe('/');
+  });
+  it('tells a signed-out browser-tab user once where a saved recipe lives', async () => {
+    const draft = {
+      id: 'draft',
+      title: 'Draft soup',
+      servings: 4,
+      ingredients: ['Water'],
+      instructions: ['Boil.'],
+    };
+    const durability = {
+      ensurePersisted: vi.fn(async () => false),
+      shouldNudge: vi.fn(() => true),
+      markNudged: vi.fn(),
+    };
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        data: routeData,
+        snapshot: { paramMap: convertToParamMap({}), data: { draft: true } },
+      },
+    });
+    TestBed.overrideProvider(RecipeDraftService, {
+      useValue: { getOrCreate: () => draft, clear: vi.fn(), photoNotice: signal('') },
+    });
+    TestBed.overrideProvider(RecipeService, {
+      useValue: {
+        accountVersion: signal(0),
+        revision: signal(0),
+        getCollections: async () => [],
+        addRecipe: async () => ({ ...draft, id: 'saved' }),
+      },
+    });
+    TestBed.overrideProvider(StorageDurabilityService, { useValue: durability });
+    const { host } = await fixture();
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    await host.componentInstance.saveDraft();
+    const feedback = TestBed.inject(FeedbackService);
+    expect(feedback.message()).toBe(
+      'Recipe saved on this device. Install Recipebook or sign in so the browser keeps it.',
+    );
+    expect(feedback.action()?.label).toBe('Show how');
+    expect(durability.markNudged).toHaveBeenCalledTimes(1);
+  });
+
+  it('checks off ingredients without striking them through and remembers them', async () => {
+    const f = await fixture();
+    const box = f.ingredients.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    expect(box.closest('label')?.textContent).toContain('Salt');
+    box.click();
+    f.host.detectChanges();
+    const item = f.ingredients.querySelector('li')!;
+    expect(item.classList).toContain('gathered');
+    expect(item.querySelector('.ingredient-text')?.textContent?.trim()).toBe('Salt');
+    expect(TestBed.inject(CookingSessionService).read('tab-test')).toMatchObject({
+      ingredients: [{ index: 0, fingerprint: JSON.stringify(['Salt', '']) }],
+    });
+  });
+
+  it('restores checked ingredients only while their text is unchanged', async () => {
+    const sessions = TestBed.inject(CookingSessionService);
+    sessions.save('tab-test', {
+      section: 'ingredients',
+      completed: [],
+      ingredients: [{ index: 0, fingerprint: JSON.stringify(['Pepper', '']) }],
+    });
+    const stale = await fixture();
+    expect(stale.ingredients.querySelector('li.gathered')).toBeNull();
+    stale.host.destroy();
+    sessions.save('tab-test', {
+      section: 'ingredients',
+      completed: [],
+      ingredients: [{ index: 0, fingerprint: JSON.stringify(['Salt', '']) }],
+    });
+    const fresh = await fixture();
+    expect(fresh.ingredients.querySelector('li.gathered')).not.toBeNull();
+  });
+
+  it('clears checked ingredients with Reset, together with the steps', async () => {
+    const f = await timerFixture();
+    const reset = f.host.nativeElement.querySelector('.reset-instructions') as HTMLButtonElement;
+    expect(reset.disabled).toBe(true);
+    const ingredients = f.host.nativeElement.querySelector('#ingredients-panel') as HTMLElement;
+    ingredients.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    f.host.detectChanges();
+    expect(reset.disabled).toBe(false);
+    reset.click();
+    f.host.detectChanges();
+    expect(ingredients.querySelector('li.gathered')).toBeNull();
+    expect(TestBed.inject(CookingSessionService).read('tab-test')?.ingredients).toEqual([]);
+  });
+
+  it('keeps draft ingredients as a plain list', async () => {
+    TestBed.overrideProvider(ActivatedRoute, {
+      useValue: {
+        data: routeData,
+        snapshot: { paramMap: convertToParamMap({}), data: { draft: true } },
+      },
+    });
+    TestBed.overrideProvider(RecipeDraftService, {
+      useValue: {
+        getOrCreate: () => ({
+          id: 'draft',
+          title: 'Draft soup',
+          servings: 4,
+          ingredients: ['Water'],
+          instructions: ['Boil.'],
+        }),
+        clear: vi.fn(),
+        photoNotice: signal(''),
+      },
+    });
+    TestBed.overrideProvider(RecipeService, {
+      useValue: { accountVersion: signal(0), revision: signal(0), getCollections: async () => [] },
+    });
+    const { host } = await fixture();
+    await host.whenStable();
+    host.detectChanges();
+    const panel = host.nativeElement.querySelector('#ingredients-panel') as HTMLElement;
+    expect(panel.textContent).toContain('Water');
+    expect(panel.querySelector('input[type="checkbox"]')).toBeNull();
+  });
+
+  it('fingerprints an ingredient by its saved text and group, not the scaled amount', () => {
+    const recipe = {
+      id: 'r',
+      title: 'R',
+      ingredients: ['2 onions'],
+      ingredientSections: ['Base'],
+      instructions: [],
+    };
+    expect(ingredientFingerprint(recipe, 0)).toBe(JSON.stringify(['2 onions', 'Base']));
   });
 });

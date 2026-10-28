@@ -1,8 +1,12 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { RecipeFocusComponent } from './recipe-focus';
+import { IngredientCheckComponent } from './ingredient-check';
+import { EdgeSwipeBackDirective } from '../../../shared/directives/edge-swipe-back';
 import { RecipeShoppingPickerComponent } from '../../../shared/components/recipe-shopping-picker';
-import { TimerAlertPreferencesComponent } from '../../../shared/components/timer-alert-preferences';
 import { StepTimerService } from '../../../core/services/step-timer.service';
+import { WakeLockService } from '../../../core/services/wake-lock.service';
+import { animateHeight } from '../../../shared/motion/flip';
+import { motionMs } from '../../../core/motion';
 import { StepTimerComponent } from '../../../shared/components/step-timer';
 import {
   maxClockSeconds,
@@ -14,6 +18,8 @@ import { RecipeTitleComponent } from '../../../shared/components/recipe-title';
 import { RecipeTransitionPartDirective } from '../../../shared/components/recipe-transition-part';
 import { PageAppearanceService } from '../../../core/services/page-appearance.service';
 import { recipeBackground } from '../../../core/models/recipe-color';
+import { hasPhoto, type PhotoRef } from '../../../core/models/recipe-image';
+import { RecipeImagesService } from '../../../core/services/recipe-images.service';
 import { RecipeActionsService } from '../../../core/services/recipe-actions.service';
 import { SelectMenuComponent } from '../../../shared/components/select-menu';
 import { scaleIngredient } from '../../../core/models/ingredient-quantity';
@@ -24,11 +30,13 @@ import {
 } from '../../../core/services/recipe-photo';
 import { ScreenAwakeComponent } from '../../../shared/components/screen-awake';
 import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
+import { StorageDurabilityService } from '../../../core/services/storage-durability.service';
 import { LeaveConfirmationService } from '../../../core/services/leave-confirmation.service';
 import { instructionText } from '../../../core/models/recipe-metadata';
 import {
   CookingSessionService,
   stepFingerprint,
+  ingredientFingerprint,
   type CookingSection,
 } from '../../../core/services/cooking-session.service';
 import { RecipeSummaryDetailsComponent, RecipeExtraDetailsComponent } from './recipe-metadata-view';
@@ -36,12 +44,14 @@ import { IconComponent } from '../../../shared/components/icon';
 import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark';
 import {
   afterRenderEffect,
+  afterNextRender,
   Component,
   computed,
   DestroyRef,
   ElementRef,
   effect,
   inject,
+  Injector,
   OnInit,
   OnDestroy,
   signal,
@@ -65,11 +75,12 @@ import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
     '(window:beforeunload)': 'onBeforeUnload($event)',
   },
   imports: [
+    EdgeSwipeBackDirective,
+    IngredientCheckComponent,
     NgTemplateOutlet,
     RecipeFocusComponent,
     StepTimerComponent,
     RecipeShoppingPickerComponent,
-    TimerAlertPreferencesComponent,
     RecipeTitleComponent,
     RecipeTransitionPartDirective,
     SelectMenuComponent,
@@ -93,6 +104,16 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   readonly drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
   readonly isDraft = !!this.route.snapshot.data['draft'];
+  /** iPhone Home Screen apps have no system back swipe; elsewhere the system owns the edge. */
+  readonly edgeSwipe =
+    !this.isDraft && (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  private readonly edgeSwipeBack = viewChild(EdgeSwipeBackDirective);
+  async swipeHome(): Promise<void> {
+    const left =
+      !this.accountChanged() && (await this.router.navigateByUrl('/').catch(() => false));
+    // A navigation that was cancelled or failed leaves the page where the finger let go.
+    if (!left) this.edgeSwipeBack()?.reset();
+  }
   savingDraft = signal(false);
   saveDraftError = signal('');
   private leaving = false;
@@ -126,7 +147,25 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       if (this.accountChanged()) return;
       this.leaving = true;
       this.drafts.clear();
-      this.feedback.show('Recipe saved');
+      // Firefox asks the person first; never hold navigation on that prompt.
+      await Promise.race([
+        this.durability.ensurePersisted(),
+        new Promise((resolve) => setTimeout(resolve, 300)),
+      ]);
+      if (this.durability.shouldNudge()) {
+        // A signed-out cookbook in a browser tab can be cleared by the browser; say so once.
+        this.durability.markNudged();
+        this.feedback.show(
+          'Recipe saved on this device. Install Recipebook or sign in so the browser keeps it.',
+          {
+            label: 'Show how',
+            pendingLabel: 'Opening…',
+            run: async () => {
+              await this.router.navigate(['/settings'], { fragment: 'import-cookbook' });
+            },
+          },
+        );
+      } else this.feedback.show('Recipe saved');
       await this.router.navigate(['/recipes', saved.id]);
     } catch {
       this.saveDraftError.set('Could not save your recipe. Please try again.');
@@ -141,6 +180,12 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   }
   private router = inject(Router);
   private feedback = inject(FeedbackService);
+  private durability = inject(StorageDurabilityService);
+  private images = inject(RecipeImagesService);
+  readonly hasPhoto = hasPhoto;
+  photoUrl(ref: PhotoRef | undefined): string | undefined {
+    return this.images.peek(ref, 'full');
+  }
   private actions = inject(RecipeActionsService);
   private appearance = inject(PageAppearanceService);
   optionsOpen = computed(
@@ -157,6 +202,13 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   wideReading = signal(false);
   readonly focusMode = signal(false);
   private readonly readingSurface = viewChild<ElementRef<HTMLElement>>('readingSurface');
+  private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
+  private readonly headingPassed = signal(false);
+  private readonly headerTitle = computed(() => {
+    const recipe = this.recipe();
+    if (!recipe || this.accountChanged()) return null;
+    return { text: recipe.title || 'New recipe', shown: this.headingPassed() };
+  });
   focusReadingHeight = 0;
   focusScroll = { left: 0, top: 0 };
   openFocus(): void {
@@ -201,6 +253,8 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   };
   private cookingSessions = inject(CookingSessionService);
   private readonly timers = inject(StepTimerService);
+  private readonly wakeLock = inject(WakeLockService);
+  private readonly injector = inject(Injector);
   readonly stepTimers = computed(() => {
     const recipe = this.recipe();
     return recipe ? recipeStepTimers(recipe) : [];
@@ -211,6 +265,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     () =>
       !this.accountChanged() &&
       (this.completedSteps().size > 0 ||
+        this.checkedIngredients().size > 0 ||
         (!this.isDraft &&
           this.stepTimers().some((target) => !!target && this.timerNeedsReset(target)))),
   );
@@ -251,35 +306,159 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     });
     effect(() => {
       if (this.accountChanged() || this.isDraft) return;
+      // A checked step stops counting but keeps its time; unchecking shows the clock paused.
       for (const index of this.completedSteps()) {
         const target = this.stepTimers()[index];
         if (!target) continue;
-        if (this.timerNeedsReset(target)) this.timers.reset(target);
+        const state = this.timers.state(target);
+        if (state.running || state.done) this.timers.pause(target);
       }
+    });
+    // Focus mode is for cooking: keep the screen on while it is open, whatever the toggle says.
+    effect((onCleanup) => {
+      if (!this.focusMode()) return;
+      void this.wakeLock.acquire('focus');
+      onCleanup(() => void this.wakeLock.release('focus'));
     });
     effect((onCleanup) => {
       const recipe = this.recipe();
       if (recipe && !this.accountChanged())
         onCleanup(this.appearance.useBackground(recipeBackground(recipe)));
     });
+    // The compact header takes over the title once the heading has scrolled under it.
+    this.destroyRef.onDestroy(this.appearance.useHeaderTitle(this.headerTitle));
+    effect((onCleanup) => {
+      const heading = this.titleHeading()?.nativeElement;
+      const top = Math.round(this.appearance.headerHeight());
+      if (!heading || typeof IntersectionObserver === 'undefined') return;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry)
+            this.headingPassed.set(
+              !entry.isIntersecting && entry.boundingClientRect.top < (entry.rootBounds?.top ?? 0),
+            );
+        },
+        { rootMargin: `-${top}px 0px 0px 0px` },
+      );
+      observer.observe(heading);
+      onCleanup(() => observer.disconnect());
+    });
     effect(() => {
       if (this.accountChanged()) {
         this.focusMode.set(false);
         this.completedSteps.set(new Set());
+        this.checkedIngredients.set(new Set());
+        this.clearStepPhases();
         this.activeSection.set('ingredients');
       }
     });
   }
   // Progress is local to this account and never changes the saved recipe.
   completedSteps = signal<Set<number>>(new Set());
+  /** Ingredients set out while cooking; separate from the shopping list. */
+  checkedIngredients = signal<Set<number>>(new Set());
+  /** Only a mark checked just now scatters its crumbs; restored marks stay still. */
+  readonly justGathered = signal<number | null>(null);
+  toggleIngredient(index: number): void {
+    if (this.accountChanged() || this.isDraft) return;
+    this.justGathered.set(this.checkedIngredients().has(index) ? null : index);
+    this.checkedIngredients.update((current) => {
+      const next = new Set(current);
+      next.has(index) ? next.delete(index) : next.add(index);
+      return next;
+    });
+    this.saveCookingSession();
+  }
+  /**
+   * Where cooking continues: the first unchecked step after the last checked one, or the first
+   * unchecked step when everything after it is done. -1 before the first check or when all are.
+   */
+  readonly nextStep = computed(() => {
+    const done = this.completedSteps();
+    const count = this.recipe()?.instructions.length ?? 0;
+    if (!done.size) return -1;
+    const after = Math.max(...done) + 1;
+    for (let index = after; index < count; index++) if (!done.has(index)) return index;
+    for (let index = 0; index < count; index++) if (!done.has(index)) return index;
+    return -1;
+  });
+  /** Checked steps whose strike is still drawing; they collapse when it is done. */
+  readonly striking = signal<ReadonlySet<number>>(new Set());
+  /** Unchecked steps that have opened again while their strike is still erasing. */
+  readonly unstriking = signal<ReadonlySet<number>>(new Set());
+  private readonly stepPhases = new Map<number, ReturnType<typeof setTimeout>>();
+  isStruck(index: number): boolean {
+    return this.completedSteps().has(index) || this.unstriking().has(index);
+  }
+  isCollapsed(index: number): boolean {
+    return this.completedSteps().has(index) && !this.striking().has(index);
+  }
   toggleStep(index: number): void {
     if (this.accountChanged()) return;
+    const checking = !this.completedSteps().has(index);
+    const row = document.getElementById('recipe-step-' + (index + 1));
+    const animated = !!row && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    clearTimeout(this.stepPhases.get(index));
+    this.stepPhases.delete(index);
+    const phase = (set: typeof this.striking, on: boolean) =>
+      set.update((current) => {
+        const next = new Set(current);
+        on ? next.add(index) : next.delete(index);
+        return next;
+      });
+    phase(this.unstriking, !checking && animated);
+    phase(this.striking, false);
+    if (checking && animated && row) {
+      // The strike draws first; only then does the step fold to one line.
+      phase(this.striking, true);
+      this.stepPhases.set(
+        index,
+        setTimeout(() => {
+          this.stepPhases.delete(index);
+          void animateHeight(row, () => phase(this.striking, false)).then(() =>
+            this.revealNextStep(),
+          );
+        }, motionMs(220)),
+      );
+    } else if (!checking && animated && row) {
+      // Reverse: the step opens at once, then its strike erases.
+      void animateHeight(row, () => undefined);
+      this.stepPhases.set(
+        index,
+        setTimeout(() => {
+          this.stepPhases.delete(index);
+          phase(this.unstriking, false);
+        }, motionMs(200)),
+      );
+    }
     this.completedSteps.update((current) => {
       const next = new Set(current);
       next.has(index) ? next.delete(index) : next.add(index);
       return next;
     });
     this.saveCookingSession();
+    // Measure after the checked step has collapsed.
+    if (checking && !animated)
+      afterNextRender(() => this.revealNextStep(), { injector: this.injector });
+  }
+  private clearStepPhases(): void {
+    for (const timer of this.stepPhases.values()) clearTimeout(timer);
+    this.stepPhases.clear();
+    this.striking.set(new Set());
+    this.unstriking.set(new Set());
+  }
+  /** Scrolls only when the next step starts above the sticky tabs or near the bottom edge. */
+  private revealNextStep(): void {
+    const index = this.nextStep();
+    const step = index < 0 ? null : document.getElementById('recipe-step-' + (index + 1));
+    if (!step) return;
+    const { top } = step.getBoundingClientRect();
+    const covered = parseFloat(getComputedStyle(step).scrollMarginTop) || 0;
+    if (top >= covered && top <= window.innerHeight - 96) return;
+    step.scrollIntoView({
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start',
+    });
   }
 
   tabKey(event: KeyboardEvent): void {
@@ -304,6 +483,8 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       this.timers.removeRecipe(recipe.id);
     }
     this.completedSteps.set(new Set());
+    this.checkedIngredients.set(new Set());
+    this.clearStepPhases();
     this.saveCookingSession();
   }
 
@@ -315,6 +496,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.loadRequest++;
+    this.clearStepPhases();
     this.readingMedia?.removeEventListener('change', this.syncReadingLayout);
     this.focusMedia?.removeEventListener('change', this.syncFocusOrientation);
     if (this.layoutFocusFrame !== undefined) cancelAnimationFrame(this.layoutFocusFrame);
@@ -329,6 +511,10 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       completed: [...this.completedSteps()].map((index) => ({
         index,
         fingerprint: stepFingerprint(recipe, index),
+      })),
+      ingredients: [...this.checkedIngredients()].map((index) => ({
+        index,
+        fingerprint: ingredientFingerprint(recipe, index),
       })),
     });
   }
@@ -348,6 +534,17 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
               step.fingerprint === stepFingerprint(recipe, step.index),
           )
           .map((step) => step.index),
+      ),
+    );
+    this.checkedIngredients.set(
+      new Set(
+        (saved.ingredients ?? [])
+          .filter(
+            (item) =>
+              item.index < recipe.ingredients.length &&
+              item.fingerprint === ingredientFingerprint(recipe, item.index),
+          )
+          .map((item) => item.index),
       ),
     );
   }
@@ -418,13 +615,13 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   }
   ingredientGroups = computed(() => {
     const recipe = this.recipe();
-    const groups: { section: string; ingredients: string[] }[] = [];
+    const groups: { section: string; ingredients: { text: string; index: number }[] }[] = [];
     recipe?.ingredients.forEach((ingredient, index) => {
-      ingredient = scaleIngredient(ingredient, this.baseServings(), this.selectedServings());
+      const text = scaleIngredient(ingredient, this.baseServings(), this.selectedServings());
       const section = recipe.ingredientSections?.[index] ?? '';
       const previous = groups.at(-1);
-      if (previous?.section === section) previous.ingredients.push(ingredient);
-      else groups.push({ section, ingredients: [ingredient] });
+      if (previous?.section === section) previous.ingredients.push({ text, index });
+      else groups.push({ section, ingredients: [{ text, index }] });
     });
     return groups;
   });
@@ -451,6 +648,8 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       this.recipe.set(undefined);
       this.loading.set(true);
       this.completedSteps.set(new Set());
+      this.checkedIngredients.set(new Set());
+      this.clearStepPhases();
       this.activeSection.set('ingredients');
       this.loadedStepPhotos.set({});
       this.loadingStepPhotos.set(new Set());
@@ -497,6 +696,8 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       }
       if (!current()) return;
       this.recipe.set(result);
+      // Step photos sit below the fold; they need no part in the page capture.
+      if (result) void this.images.prepare([result, ...(result.stepDetails ?? [])], 'full');
       this.error.set(result ? '' : 'This recipe is no longer available.');
       this.selectedServings.set(this.baseServings());
       const collections = ready ? ready.collections : await this.recipeService.getCollections();

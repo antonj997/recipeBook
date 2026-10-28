@@ -103,9 +103,9 @@
               <li>
                 <button type="button" class="recipe-choice" (click)="chooseRecipe(choice)">
                   <span class="recipe-thumbnail">
-                    @if (choice.imageDataUrl && !failedPhotos().has(choice.id)) {
+                    @if (hasPhoto(choice) && !failedPhotos().has(choice.id)) {
                       <img
-                        [src]="choice.imageDataUrl"
+                        [attr.src]="photoUrl(choice) ?? null"
                         alt=""
                         loading="lazy"
                         (error)="hidePhoto(choice.id)"

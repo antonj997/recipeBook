@@ -112,9 +112,15 @@
             </h2>
           }
           <ul class="shopping-items">
-            @for (group of department.groups; track group.key) {
+            @for (group of department.groups; track group.items[0]?.id ?? group.key) {
               @let sources = sourceLabels(group);
-              <li class="shopping-row" [class.is-checked]="group.checked">
+              <li
+                class="shopping-row"
+                [class.is-checked]="group.checked"
+                [attr.data-flip]="group.items[0]?.id"
+                [animate.enter]="moving() ? '' : 'row-enter'"
+                [animate.leave]="moving() ? '' : 'row-leave'"
+              >
                 @if (editor()?.key === group.key) {
                   <form
                     class="item-editor"

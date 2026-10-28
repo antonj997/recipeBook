@@ -1,4 +1,4 @@
-import { effect, inject, Service, signal } from '@angular/core';
+import { DestroyRef, effect, inject, Service, signal } from '@angular/core';
 import type Dexie from 'dexie';
 import { db } from '../database';
 import type { Recipe } from '../models/recipe.model';
@@ -6,25 +6,32 @@ import type { RecipeCollection } from '../models/recipe-collection.model';
 import { readShoppingItem, type ShoppingItem, type ShoppingSource } from '../models/shopping-item';
 import {
   AccountDatabase,
+  type CookbookDatabase,
   type CookbookTable,
   type CookbookValue,
   type PendingChange,
 } from './account-database';
 import { SupabaseService } from './supabase.service';
-import { downloadPhotos, uploadPhotos, type RecipePhotos } from './cloud-photos';
-import { readRecipeMetadata, isRecipeImage, isHttpsUrl } from '../models/recipe-metadata';
+import { StorageDurabilityService } from './storage-durability.service';
+import { uploadPhotos, type RecipePhotos } from './cloud-photos';
+import {
+  canonicalRecord,
+  missingShoppingTable,
+  pullTable,
+  readCloudRecipe,
+  remoteTable,
+} from './cloud-pull';
+import { extractPhotos, photoRefs, putImages, type PreparedImage } from '../models/recipe-image';
 
-type CookbookDatabase = typeof db | AccountDatabase;
-interface CloudRow {
-  id: string;
-  payload: unknown;
-  photos?: RecipePhotos | null;
-  deleted: boolean;
-}
+// Server limits stay far away and one request carries a burst of edits.
+const uploadBatchSize = 100;
+const writeSyncDelay = 1500;
+const returnSyncInterval = 30_000;
 
 @Service()
 export class CloudCookbookService {
   readonly auth = inject(SupabaseService);
+  private readonly durability = inject(StorageDurabilityService);
   readonly syncing = signal(false);
   readonly pending = signal(0);
   readonly online = signal(navigator.onLine);
@@ -35,19 +42,35 @@ export class CloudCookbookService {
   private cache: AccountDatabase | null = null;
   private running = new Map<AccountDatabase, Promise<void>>();
   private caches = new Map<string, AccountDatabase>();
+  private syncTimer?: ReturnType<typeof setTimeout>;
+  private lastSuccess = 0;
 
   constructor() {
     effect(() => this.selectAccount(this.auth.user()?.id ?? null));
-    window.addEventListener('online', () => {
-      this.online.set(true);
-      void this.initialize().then(() => this.sync());
+    const listeners = new AbortController();
+    inject(DestroyRef).onDestroy(() => {
+      listeners.abort();
+      clearTimeout(this.syncTimer);
     });
-    window.addEventListener('offline', () => this.online.set(false));
-    document.addEventListener('visibilitychange', () => {
-      // Refresh recipes from other devices, and retry queued changes after returning to the app.
-      if (document.visibilityState === 'visible' && navigator.onLine)
-        void this.initialize().then(() => this.sync());
-    });
+    const { signal: until } = listeners;
+    window.addEventListener(
+      'online',
+      () => {
+        this.online.set(true);
+        void this.initialize().then(() => this.requestSync('online'));
+      },
+      { signal: until },
+    );
+    window.addEventListener('offline', () => this.online.set(false), { signal: until });
+    document.addEventListener(
+      'visibilitychange',
+      () => {
+        // Refresh recipes from other devices, and retry queued changes after returning to the app.
+        if (document.visibilityState === 'visible' && navigator.onLine && !this.recentlySynced())
+          void this.initialize().then(() => this.requestSync('visible'));
+      },
+      { signal: until },
+    );
   }
 
   async initialize(): Promise<void> {
@@ -70,6 +93,7 @@ export class CloudCookbookService {
     this.syncing.set(false);
     this.error.set('');
     this.lastSynced.set(null);
+    this.lastSuccess = 0;
     this.revision.update((value) => value + 1);
     const cache = this.cache;
     if (cache) {
@@ -81,12 +105,16 @@ export class CloudCookbookService {
   }
 
   async put(table: CookbookTable, value: CookbookValue, database = this.database): Promise<void> {
+    if (table === 'recipes') return this.putRecipes([value as Recipe], database);
     await this.write(database, [{ table, id: value.id, value }]);
   }
   async putRecipes(recipes: Recipe[], database = this.database): Promise<void> {
+    // Hashing and scaling happen before the transaction; Web Crypto must not suspend it.
+    const stored = await extractPhotos(recipes);
     await this.write(
       database,
-      recipes.map((value) => ({ table: 'recipes', id: value.id, value })),
+      stored.recipes.map((value) => ({ table: 'recipes', id: value.id, value })),
+      stored.images,
     );
   }
   async remove(table: CookbookTable, id: string, database = this.database): Promise<void> {
@@ -192,7 +220,7 @@ export class CloudCookbookService {
       const pending = await database.outbox.count();
       if (current()) {
         this.pending.set(pending);
-        void this.sync();
+        this.requestSync('write');
       }
     }
   }
@@ -202,11 +230,17 @@ export class CloudCookbookService {
     changes:
       | Pick<PendingChange, 'table' | 'id' | 'value'>[]
       | (() => Promise<Pick<PendingChange, 'table' | 'id' | 'value'>[]>),
+    images: readonly PreparedImage[] = [],
   ): Promise<void> {
     const version = this.auth.accountVersion();
     const current = () => database === this.database && version === this.auth.accountVersion();
     if (!current()) throw new Error('Account changed. Try again.');
-    const tables = [database.recipes, database.collections, database.shoppingItems];
+    const tables = [
+      database.recipes,
+      database.collections,
+      database.shoppingItems,
+      ...(images.length ? [database.images, database.thumbs] : []),
+    ];
     const transactions: Dexie = database;
     await transactions.transaction(
       'rw',
@@ -214,6 +248,18 @@ export class CloudCookbookService {
       async () => {
         if (!current()) throw new Error('Account changed. Try again.');
         const records = typeof changes === 'function' ? await changes() : changes;
+        // Photos commit with the records that reference them; skipped records leave none behind.
+        const used = new Set(
+          records.flatMap((change) =>
+            change.table === 'recipes' && change.value
+              ? photoRefs(change.value as Recipe).flatMap((ref) => ref.photoId ?? [])
+              : [],
+          ),
+        );
+        await putImages(
+          database,
+          images.filter((image) => used.has(image.image.id)),
+        );
         for (const change of records) {
           if (!current()) throw new Error('Account changed. Try again.');
           const table = database.table(change.table);
@@ -230,11 +276,13 @@ export class CloudCookbookService {
       },
     );
     if (current()) this.revision.update((value) => value + 1);
+    // The device copy is the only copy until it syncs; ask the browser not to evict it.
+    void this.durability.ensurePersisted();
     if (database instanceof AccountDatabase && current()) {
       const pending = await database.outbox.count();
       if (current()) {
         this.pending.set(pending);
-        void this.sync();
+        this.requestSync('write');
       }
     }
   }
@@ -247,31 +295,41 @@ export class CloudCookbookService {
   ) {
     const shopping = shoppingItems.map(readShoppingItem);
     let result = { added: 0, skipped: recipes.length, shoppingAdded: 0 };
-    await this.write(database, async () => {
-      const existing = await database.recipes.bulkGet(recipes.map((recipe) => recipe.id));
-      const savedCollections = new Set((await database.collections.toArray()).map((c) => c.id));
-      const existingShopping = new Set(
-        (await database.shoppingItems.toArray()).map((item) => item.id),
-      );
-      const added = recipes.filter((_, index) => !existing[index]);
-      const shoppingAdded = shopping.filter((item) => !existingShopping.has(item.id));
-      result = {
-        added: added.length,
-        skipped: recipes.length - added.length,
-        shoppingAdded: shoppingAdded.length,
-      };
-      return [
-        ...collections
-          .filter((c) => !savedCollections.has(c.id))
-          .map((value) => ({
-            table: 'collections' as const,
+    const stored = await extractPhotos(recipes);
+    recipes = stored.recipes;
+    await this.write(
+      database,
+      async () => {
+        const existing = await database.recipes.bulkGet(recipes.map((recipe) => recipe.id));
+        const savedCollections = new Set((await database.collections.toArray()).map((c) => c.id));
+        const existingShopping = new Set(
+          (await database.shoppingItems.toArray()).map((item) => item.id),
+        );
+        const added = recipes.filter((_, index) => !existing[index]);
+        const shoppingAdded = shopping.filter((item) => !existingShopping.has(item.id));
+        result = {
+          added: added.length,
+          skipped: recipes.length - added.length,
+          shoppingAdded: shoppingAdded.length,
+        };
+        return [
+          ...collections
+            .filter((c) => !savedCollections.has(c.id))
+            .map((value) => ({
+              table: 'collections' as const,
+              id: value.id,
+              value,
+            })),
+          ...added.map((value) => ({ table: 'recipes' as const, id: value.id, value })),
+          ...shoppingAdded.map((value) => ({
+            table: 'shoppingItems' as const,
             id: value.id,
             value,
           })),
-        ...added.map((value) => ({ table: 'recipes' as const, id: value.id, value })),
-        ...shoppingAdded.map((value) => ({ table: 'shoppingItems' as const, id: value.id, value })),
-      ];
-    });
+        ];
+      },
+      stored.images,
+    );
     return result;
   }
 
@@ -326,14 +384,23 @@ export class CloudCookbookService {
           ),
         ),
       );
+      // Account copies reference the same photo ids, so their bytes move with them.
+      const stored = await extractPhotos(source.recipes);
+      const movedRecipes = new Map(stored.recipes.map((recipe) => [recipe.id, recipe]));
+      const images = [...stored.images, ...(await deviceImages(stored.recipes))];
       assertCurrent();
       await database.transaction(
         'rw',
-        database.recipes,
-        database.collections,
-        database.shoppingItems,
-        database.outbox,
+        [
+          database.recipes,
+          database.collections,
+          database.shoppingItems,
+          database.outbox,
+          database.images,
+          database.thumbs,
+        ],
         async () => {
+          await putImages(database, images);
           const remapped = new Map<string, string>();
           const remappedRecipes = new Map<string, string>();
           const save = async (table: CookbookTable, value: CookbookValue) => {
@@ -367,7 +434,7 @@ export class CloudCookbookService {
           for (const recipe of source.recipes) {
             assertCurrent();
             const value = {
-              ...recipe,
+              ...movedRecipes.get(recipe.id)!,
               collectionIds: recipe.collectionIds?.map((id) => remapped.get(id) ?? id),
             };
             const existing = await database.recipes.get(recipe.id);
@@ -415,7 +482,8 @@ export class CloudCookbookService {
     assertCurrent();
     // Account cache and outbox are durable before removing anything from the guest database.
     // Concurrent guest edits and new records stay available for another explicit choice.
-    await db.transaction('rw', db.recipes, db.collections, db.shoppingItems, async () => {
+    const deviceTables = [db.recipes, db.collections, db.shoppingItems, db.images, db.thumbs];
+    await db.transaction('rw', deviceTables, async () => {
       for (const recipe of source.recipes) {
         assertCurrent();
         if (sameDeviceRecord(await db.recipes.get(recipe.id), recipe)) {
@@ -423,6 +491,13 @@ export class CloudCookbookService {
         }
       }
       const remaining = await db.recipes.toArray();
+      // Photos no remaining device recipe uses now live only in the account.
+      const kept = new Set(
+        remaining.flatMap((recipe) => photoRefs(recipe).map((ref) => ref.photoId)),
+      );
+      const unused = (await db.images.toCollection().primaryKeys()).filter((id) => !kept.has(id));
+      await db.images.bulkDelete(unused);
+      await db.thumbs.bulkDelete(unused);
       for (const category of source.collections) {
         assertCurrent();
         if (remaining.some((recipe) => recipe.collectionIds?.includes(category.id))) continue;
@@ -451,7 +526,27 @@ export class CloudCookbookService {
     return cache instanceof AccountDatabase ? cache.outbox.count() : 0;
   }
 
+  /**
+   * Writes wait briefly so a burst of edits uploads together. Returning to the app syncs only
+   * when the last successful sync is older than thirty seconds; coming online syncs at once.
+   */
+  requestSync(reason: 'write' | 'visible' | 'online'): void {
+    if (reason === 'visible' && this.recentlySynced()) return;
+    clearTimeout(this.syncTimer);
+    this.syncTimer = undefined;
+    if (reason === 'write') this.syncTimer = setTimeout(() => void this.sync(), writeSyncDelay);
+    else void this.sync();
+  }
+
+  private recentlySynced(): boolean {
+    // The user can change before the effect that selects their cache has run.
+    this.selectAccount(this.auth.user()?.id ?? null);
+    return Date.now() - this.lastSuccess < returnSyncInterval;
+  }
+
   sync(): Promise<void> {
+    clearTimeout(this.syncTimer);
+    this.syncTimer = undefined;
     this.selectAccount(this.auth.user()?.id ?? null);
     const cache = this.cache;
     const userId = this.accountId;
@@ -484,105 +579,37 @@ export class CloudCookbookService {
       if (!current()) return;
       this.pending.set(pending);
       if (!navigator.onLine) return;
-      for (const change of await cache.outbox.toArray()) {
-        if (!current()) return;
-        if (change.table === 'shoppingItems' && shoppingUnavailable) continue;
-        let payload: CookbookValue | null = change.value;
-        let photos: RecipePhotos = {};
-        if (change.table === 'recipes' && payload) {
-          const uploaded = await uploadPhotos(client, userId, readCloudRecipe(payload));
-          payload = uploaded.payload;
-          photos = uploaded.photos;
-        }
-        if (!current()) return;
-        const { error } = await client.from(remoteTable(change.table)).upsert(
-          {
-            user_id: userId,
-            id: change.id,
-            payload,
-            ...(change.table === 'shoppingItems' ? {} : { photos }),
-            deleted: change.value === null,
-          },
-          { onConflict: 'user_id,id' },
-        );
-        if (error) {
-          if (change.table === 'shoppingItems' && missingShoppingTable(error)) {
-            shoppingUnavailable = true;
-            continue;
-          }
-          throw new Error(error.message);
-        }
-        await cache.transaction('rw', cache.outbox, cache.photos, async () => {
-          // An edit made during upload must stay queued, rather than being acknowledged away.
-          if (!current() || (await cache.outbox.get(change.key))?.revision !== change.revision)
-            return;
-          await cache.outbox.delete(change.key);
-          if (change.table === 'recipes') await cache.photos.put({ id: change.id, paths: photos });
-        });
-      }
-      for (const tableName of ['collections', 'recipes', 'shoppingItems'] as const) {
-        if (tableName === 'shoppingItems' && shoppingUnavailable) continue;
-        const rows: CloudRow[] = [];
-        for (let offset = 0; ; offset += 500) {
+      const changes = await cache.outbox.toArray();
+      for (const table of ['collections', 'recipes', 'shoppingItems'] as const) {
+        const queued = changes.filter((change) => change.table === table);
+        for (let start = 0; start < queued.length; start += uploadBatchSize) {
           if (!current()) return;
-          const { data, error } = await client
-            .from(remoteTable(tableName))
-            .select(
-              tableName === 'shoppingItems' ? 'id,payload,deleted' : 'id,payload,photos,deleted',
-            )
-            .eq('user_id', userId)
-            .order('id')
-            .range(offset, offset + 499);
-          if (error) {
-            if (tableName === 'shoppingItems' && missingShoppingTable(error)) {
-              shoppingUnavailable = true;
-              break;
-            }
-            throw new Error(error.message);
-          }
-          const page = (data ?? []) as unknown as CloudRow[];
-          rows.push(...page);
-          if (page.length < 500) break;
-        }
-        for (const row of rows) {
-          if (!current()) return;
-          const key = `${tableName}:${row.id}`;
-          if (await cache.outbox.get(key)) continue;
-          let value: CookbookValue | null = null;
-          if (!row.deleted) {
-            if (tableName === 'recipes') {
-              value = await downloadPhotos(
-                client,
-                userId,
-                readCloudRecipe(row.payload),
-                row.photos ?? {},
-                await cache.recipes.get(row.id),
-                (await cache.photos.get(row.id))?.paths,
-              );
-            } else if (tableName === 'shoppingItems') {
-              value = readShoppingItem(row.payload);
-              if (value.id !== row.id) throw new Error('Invalid cloud shopping item ID.');
-            } else value = readCloudCollection(row.payload);
-          }
-          if (!current()) return;
-          await cache.transaction(
-            'rw',
-            cache.table(tableName),
-            cache.outbox,
-            cache.photos,
-            async () => {
-              if (!current() || (await cache.outbox.get(key))) return;
-              if (value) await cache.table(tableName).put(value);
-              else await cache.table(tableName).delete(row.id);
-              if (tableName === 'recipes')
-                await cache.photos.put({ id: row.id, paths: row.photos ?? {} });
-              if (!current()) throw new Error('Account changed. Try again.');
-            },
+          const outcome = await this.upload(
+            cache,
+            client,
+            userId,
+            current,
+            queued.slice(start, start + uploadBatchSize),
           );
+          if (outcome === 'stale') return;
+          if (outcome === 'missing') {
+            shoppingUnavailable = true;
+            break;
+          }
         }
+      }
+      let written = 0;
+      for (const table of ['collections', 'recipes', 'shoppingItems'] as const) {
+        if (table === 'shoppingItems' && shoppingUnavailable) continue;
+        const outcome = await pullTable({ cache, client, userId, current }, table);
+        if (outcome.status === 'stale') return;
+        if (outcome.status === 'missing') shoppingUnavailable = true;
+        written += outcome.written;
       }
       if (current()) {
-        this.revision.update((value) => value + 1);
+        // Views reload their records only when this device's copy actually changed.
+        if (written) this.revision.update((value) => value + 1);
+        this.lastSuccess = Date.now();
         if (shoppingUnavailable)
           this.error.set(
             'Shopping list sync is not ready yet. Your items are saved on this device.',
@@ -618,6 +645,72 @@ export class CloudCookbookService {
       }
     }
   }
+
+  /** One upsert for up to a hundred queued changes of one table, acknowledged together. */
+  private async upload(
+    cache: AccountDatabase,
+    client: NonNullable<SupabaseService['client']>,
+    userId: string,
+    current: () => boolean,
+    changes: readonly PendingChange[],
+  ): Promise<'done' | 'stale' | 'missing'> {
+    const table = changes[0]!.table;
+    const rows: Record<string, unknown>[] = [];
+    const paths = new Map<string, RecipePhotos>();
+    for (const change of changes) {
+      let payload: CookbookValue | null = change.value;
+      let photos: RecipePhotos = {};
+      if (table === 'recipes' && payload) {
+        const uploaded = await uploadPhotos(
+          client,
+          userId,
+          payload as Recipe,
+          cache,
+          (await cache.photos.get(change.id))?.paths,
+        );
+        payload = readCloudRecipe(uploaded.payload);
+        photos = uploaded.photos;
+      }
+      if (!current()) return 'stale';
+      paths.set(change.key, photos);
+      rows.push({
+        user_id: userId,
+        id: change.id,
+        payload,
+        ...(table === 'shoppingItems' ? {} : { photos }),
+        deleted: change.value === null,
+      });
+    }
+    const { error } = await client
+      .from(remoteTable(table))
+      .upsert(rows, { onConflict: 'user_id,id' });
+    if (error) {
+      if (table === 'shoppingItems' && missingShoppingTable(error)) return 'missing';
+      throw new Error(error.message);
+    }
+    await cache.transaction('rw', cache.outbox, cache.photos, async () => {
+      for (const change of changes) {
+        // An edit made during upload must stay queued, rather than being acknowledged away.
+        if (!current() || (await cache.outbox.get(change.key))?.revision !== change.revision)
+          continue;
+        await cache.outbox.delete(change.key);
+        if (table === 'recipes')
+          await cache.photos.put({ id: change.id, paths: paths.get(change.key)! });
+      }
+    });
+    return 'done';
+  }
+}
+
+/** Bytes of photos the device database already stores for these recipes. */
+async function deviceImages(recipes: readonly Recipe[]): Promise<PreparedImage[]> {
+  const ids = [
+    ...new Set(recipes.flatMap((recipe) => photoRefs(recipe).flatMap((ref) => ref.photoId ?? []))),
+  ];
+  const [images, thumbs] = await Promise.all([db.images.bulkGet(ids), db.thumbs.bulkGet(ids)]);
+  return images.flatMap((image, index) =>
+    image ? [{ image, ...(thumbs[index] ? { thumb: thumbs[index] } : {}) }] : [],
+  );
 }
 
 // Stable IDs preserve different recipes with the same ID and make interrupted transfers retryable.
@@ -647,66 +740,4 @@ function sameDeviceContent(a: CookbookValue, b: CookbookValue): boolean {
 function deviceContent(value: CookbookValue): string {
   const { createdAt, updatedAt, ...content } = value as Recipe;
   return canonicalRecord(content);
-}
-
-function remoteTable(table: CookbookTable): string {
-  return table === 'shoppingItems' ? 'shopping_items' : table;
-}
-
-function missingShoppingTable(error: { code?: string }): boolean {
-  return error.code === 'PGRST205' || error.code === '42P01';
-}
-
-function canonicalRecord(value: unknown): string {
-  return JSON.stringify(value, (_, item: unknown) => {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
-}
-
-function readCloudRecipe(value: unknown): Recipe {
-  if (!value || typeof value !== 'object') throw new Error('Invalid cloud recipe.');
-  const raw = value as Record<string, unknown>;
-  if (
-    typeof raw['id'] !== 'string' ||
-    typeof raw['title'] !== 'string' ||
-    !Array.isArray(raw['ingredients']) ||
-    !raw['ingredients'].every((v) => typeof v === 'string') ||
-    !Array.isArray(raw['instructions']) ||
-    !raw['instructions'].every((v) => typeof v === 'string')
-  )
-    throw new Error('Invalid cloud recipe.');
-  const recipe: Recipe = {
-    ...readRecipeMetadata(value, true),
-    id: raw['id'],
-    title: raw['title'],
-    ingredients: raw['ingredients'],
-    instructions: raw['instructions'],
-  };
-  if (typeof raw['servings'] === 'number') recipe.servings = raw['servings'];
-  if (raw['imageDataUrl'] != null) {
-    if (!isRecipeImage(raw['imageDataUrl'])) throw new Error('Invalid recipe photo.');
-    recipe.imageDataUrl = raw['imageDataUrl'];
-  }
-  if (raw['sourceUrl'] != null) {
-    if (!isHttpsUrl(raw['sourceUrl'])) throw new Error('Invalid recipe link.');
-    recipe.sourceUrl = raw['sourceUrl'];
-  }
-  for (const field of ['notes', 'createdAt', 'updatedAt'] as const)
-    if (typeof raw[field] === 'string') recipe[field] = raw[field];
-  for (const field of ['collectionIds'] as const)
-    if (Array.isArray(raw[field]) && raw[field].every((v) => typeof v === 'string'))
-      recipe[field] = raw[field];
-  return recipe;
-}
-function readCloudCollection(value: unknown): RecipeCollection {
-  if (!value || typeof value !== 'object') throw new Error('Invalid cloud collection.');
-  const raw = value as Record<string, unknown>;
-  if (
-    typeof raw['id'] !== 'string' ||
-    typeof raw['name'] !== 'string' ||
-    typeof raw['sortOrder'] !== 'number'
-  )
-    throw new Error('Invalid cloud collection.');
-  return { id: raw['id'], name: raw['name'], sortOrder: raw['sortOrder'] };
 }

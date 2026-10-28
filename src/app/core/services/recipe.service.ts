@@ -3,6 +3,7 @@ import type { RecipeCollection } from '../models/recipe-collection.model';
 import { readRecipeMetadata, isHttpsUrl } from '../models/recipe-metadata';
 import { Injectable, inject } from '@angular/core';
 import type { Recipe } from '../models/recipe.model';
+import { inlinePhotos } from '../models/recipe-image';
 import { CloudCookbookService } from './cloud-cookbook.service';
 import { readShoppingItem, type ShoppingItem } from '../models/shopping-item';
 import type Dexie from 'dexie';
@@ -130,6 +131,8 @@ export class RecipeService {
     const current = await database.recipes.get(id);
     if (!current) throw new Error('Recipe not found');
     const recipe = { ...current, ...changes } as Recipe & Record<string, unknown>;
+    // The editor speaks for the cover as a data URL; leaving it out removes the stored photo.
+    if ('imageDataUrl' in changes && !('photoId' in changes)) delete recipe.photoId;
     for (const key of [
       'sourceRating',
       'difficulty',
@@ -181,6 +184,8 @@ export class RecipeService {
         ),
       }),
     );
+    // Backups carry photo bytes as data URLs, so they restore on any device and older versions.
+    const portable = await Promise.all(recipes.map((recipe) => inlinePhotos(database, recipe)));
     if (database !== this.cloud.database || version !== this.accountVersion())
       throw new Error('Account changed. Try again.');
 
@@ -190,7 +195,7 @@ export class RecipeService {
       exportedAt: new Date().toISOString(),
       collections,
       shoppingItems,
-      recipes: recipes.map((recipe) => {
+      recipes: portable.map((recipe) => {
         const clean = { ...recipe } as Recipe & Record<string, unknown>;
         for (const key of [
           'sourceRating',

@@ -1,3 +1,11 @@
+## Project rules
+
+- Read `docs/product.md` (product description and decisions) and the relevant parts of `DESIGN.md`, `IMPORTING.md`, `SECURITY.md` and `SUPABASE.md` before changing behaviour.
+- A change in behaviour updates the matching text in those documents in the same commit, and removes the text it replaces. Never leave two descriptions of the same behaviour.
+- Use Node.js from `.nvmrc`. Before committing run `npx ng test --watch=false`, `npm run test:importer`, `npm run catalog:test` and `npm run build`.
+- Keep screenshots, measurement scripts and other review artefacts out of the repository.
+- Every new animation uses the tokens in `src/styles/_motion.scss` and has an immediate alternative under Reduce Motion.
+
 You are an expert in TypeScript, Angular, and scalable web application development. You write functional, maintainable, performant, and accessible code following Angular and TypeScript best practices.
 
 ## TypeScript Best Practices

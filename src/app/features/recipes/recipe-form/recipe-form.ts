@@ -28,6 +28,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { RecipeService } from '../../../core/services/recipe.service';
+import { RecipeImagesService } from '../../../core/services/recipe-images.service';
 
 import { FeedbackService } from '../../../core/services/feedback.service';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
@@ -114,6 +115,7 @@ export class RecipeFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private feedback = inject(FeedbackService);
   private recipeService = inject(RecipeService);
+  private images = inject(RecipeImagesService);
   private readonly accountVersion = this.recipeService.accountVersion();
   private accountChanged(): boolean {
     return this.accountVersion !== this.recipeService.accountVersion();
@@ -249,7 +251,10 @@ export class RecipeFormComponent implements OnInit {
   // Load an existing recipe into the form.
   private async loadRecipe(id: string): Promise<void> {
     try {
-      const recipe = await this.recipeService.getRecipe(id);
+      const stored = await this.recipeService.getRecipe(id);
+      if (this.accountChanged()) return;
+      // The editor works on data URLs; saving turns unchanged photos back into the same ids.
+      const recipe = stored && (await this.images.withPhotoData(stored));
       if (this.accountChanged()) return;
 
       if (!recipe) {

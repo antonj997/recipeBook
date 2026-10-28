@@ -1,0 +1,35 @@
+// Phone shelf depth (global: recipe-rail.scss is at its size budget): the centred card sits forward while its neighbours recede slightly, and the
+// photo drifts a little inside its frame. Scroll-driven, so it costs no script per frame.
+@media (max-width: 600px) and (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    // One named timeline per card: the photo's own frame clips it, so it follows the card.
+    .recipe-card,
+    .rail-add-card {
+      view-timeline: --rail-card inline;
+      animation: rail-depth linear both;
+      animation-timeline: --rail-card;
+    }
+    .recipe-card .recipe-image {
+      scale: 1.08;
+      animation: rail-drift linear both;
+      animation-timeline: --rail-card;
+    }
+  }
+}
+@keyframes rail-depth {
+  0%,
+  100% {
+    scale: 0.93;
+  }
+  50% {
+    scale: 1;
+  }
+}
+@keyframes rail-drift {
+  from {
+    translate: 4% 0;
+  }
+  to {
+    translate: -4% 0;
+  }
+}

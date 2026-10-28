@@ -15,6 +15,8 @@ export interface RecipeStepDetail {
   section?: string;
   title?: string;
   imageUrl?: string;
+  /** Id of the step photo in the device image store. */
+  photoId?: string;
   imageDataUrl?: string;
 }
 export interface RecipeMetadata {

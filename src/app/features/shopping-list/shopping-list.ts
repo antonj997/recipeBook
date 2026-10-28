@@ -1,7 +1,9 @@
 import {
+  afterNextRender,
   Component,
   DestroyRef,
   ElementRef,
+  Injector,
   computed,
   effect,
   inject,
@@ -21,6 +23,8 @@ import {
   type ConfirmBeforeLeaving,
 } from '../../core/services/leave-confirmation.service';
 import { CheckboxMarkComponent } from '../../shared/components/checkbox-mark';
+import { animateLayout } from '../../shared/motion/flip';
+import { motionMs } from '../../core/motion';
 import { IconComponent } from '../../shared/components/icon';
 import { RecipeShoppingPickerComponent } from '../../shared/components/recipe-shopping-picker';
 
@@ -91,11 +95,27 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
   readonly error = computed(() => this.localError() || this.shopping.error());
   readonly toBuy = computed(() => this.shopping.groups().filter((group) => !group.checked));
   readonly checked = computed(() => this.shopping.groups().filter((group) => group.checked));
-  readonly departments = computed(() => [
-    ...groupByShoppingDepartment(this.toBuy()),
-    // Checked items stay visible after all departments, without repeating their headings.
-    { id: 'checked', label: '', groups: this.checked() },
-  ]);
+  /**
+   * Item IDs checked just now: their row stays struck through in place for a moment before
+   * moving down. Group keys name the checked state, so they cannot follow a row.
+   */
+  private readonly settling = signal<ReadonlySet<string>>(new Set());
+  /** Moves between lists re-create rows; they travel instead of fading out and in. */
+  readonly moving = signal(false);
+  readonly departments = computed(() => {
+    const settling = this.settling();
+    const groups = this.shopping.groups();
+    const stays = (group: ShoppingGroup) =>
+      !group.checked || group.items.some((item) => settling.has(item.id));
+    return [
+      ...groupByShoppingDepartment(groups.filter(stays)),
+      // Checked items stay visible after all departments, without repeating their headings.
+      { id: 'checked', label: '', groups: groups.filter((group) => !stays(group)) },
+    ];
+  });
+  private settleTimer?: ReturnType<typeof setTimeout>;
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   private active = true;
   private loadVersion = 0;
   private focusFrame = 0;
@@ -142,6 +162,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
     });
     inject(DestroyRef).onDestroy(() => {
       this.active = false;
+      clearTimeout(this.settleTimer);
       this.cancelItemHold();
       this.allowItemClick();
       cancelAnimationFrame(this.focusFrame);
@@ -221,18 +242,36 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
     if (this.busy()) return;
     const ids = group.items.map((item) => item.id);
     const input = event?.target instanceof HTMLElement ? event.target : null;
-    const next = this.nextItem(input);
+    const checking = !group.checked;
     const account = this.shopping.accountVersion();
     this.busy.set(true);
     this.localError.set('');
+    clearTimeout(this.settleTimer);
     try {
-      await this.shopping.setChecked(ids, !group.checked);
-      if (this.current(account) && input) this.focusAfterRemoval(input, next);
+      await this.moveRows(async () => {
+        // An item checked earlier moves now, together with this one.
+        this.settling.set(new Set());
+        await this.shopping.setChecked(ids, checking);
+        if (checking) this.settling.set(new Set(ids));
+      });
+      if (!this.current(account)) return;
+      if (checking) this.settleTimer = setTimeout(() => void this.settle(), motionMs(900));
     } catch (error) {
       if (this.current(account)) this.showError(error, 'Could not update this item. Try again.');
     } finally {
       if (this.current(account)) this.busy.set(false);
     }
+    // The checkbox was disabled while saving, and an unchecked row returns as a new element:
+    // keep focus on the item that was toggled once it is enabled again.
+    if (input && this.current(account))
+      afterNextRender(
+        () => {
+          if (!input.isConnected) this.focusRow(group.items[0]?.id);
+          else if (!document.activeElement || document.activeElement === document.body)
+            input.focus({ preventScroll: true });
+        },
+        { injector: this.injector },
+      );
   }
   holdItem(group: ShoppingGroup, event: PointerEvent): void {
     this.cancelItemHold();
@@ -434,6 +473,27 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
   }
   openPicker(): void {
     if (!this.busy()) this.pickerOpen.set(true);
+  }
+  /** The struck-through row joins the checked items; focus moves on as it did before. */
+  private async settle(): Promise<void> {
+    if (!this.active || !this.settling().size) return;
+    const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const row = focused?.closest<HTMLElement>('.shopping-row');
+    const leaving = !!row && this.settling().has(row.dataset['flip'] ?? '');
+    const next = leaving ? this.nextItem(focused) : null;
+    await this.moveRows(() => this.settling.set(new Set()));
+    if (leaving && focused) this.focusAfterRemoval(focused, next);
+  }
+  private async moveRows(update: () => unknown): Promise<void> {
+    this.moving.set(true);
+    try {
+      await animateLayout(this.host.nativeElement, update, {
+        selector: '.shopping-row[data-flip]',
+        key: (row) => row.dataset['flip'],
+      });
+    } finally {
+      this.moving.set(false);
+    }
   }
   private showError(error: unknown, fallback: string): void {
     this.localError.set(error instanceof Error ? error.message : fallback);

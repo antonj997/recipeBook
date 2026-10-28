@@ -1,8 +1,10 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import Dexie from 'dexie';
 import { db } from '../database';
 import { AccountDatabase } from './account-database';
+import { fakeSelect } from './cloud-testing';
 import { CloudCookbookService } from './cloud-cookbook.service';
 import { SupabaseService } from './supabase.service';
 import { RecipeService } from './recipe.service';
@@ -10,80 +12,8 @@ import { StepTimerService } from './step-timer.service';
 import { GuestRecipesService } from './guest-recipes.service';
 import { GuestRecipesDialogComponent } from '../../shared/components/guest-recipes-dialog';
 import { FeedbackService } from './feedback.service';
+import { StorageDurabilityService } from './storage-durability.service';
 import type { ShoppingItem } from '../models/shopping-item';
-
-// jsdom has no IndexedDB. Keep the actual services and emulate only the database boundary.
-vi.mock('dexie', () => {
-  class Table {
-    rows = new Map<string, Record<string, unknown>>();
-    failPut = false;
-    constructor(readonly key: string) {}
-    async put(value: Record<string, unknown>) {
-      if (this.failPut) throw new Error('Disk full');
-      this.rows.set(value[this.key] as string, structuredClone(value));
-    }
-    async get(id: string) {
-      return structuredClone(this.rows.get(id));
-    }
-    async delete(id: string) {
-      this.rows.delete(id);
-    }
-    async clear() {
-      this.rows.clear();
-    }
-    async count() {
-      return this.rows.size;
-    }
-    async toArray() {
-      return structuredClone([...this.rows.values()]);
-    }
-    async bulkGet(ids: string[]) {
-      return Promise.all(ids.map((id) => this.get(id)));
-    }
-    orderBy() {
-      return this;
-    }
-  }
-  return {
-    default: class Database {
-      [key: string]: unknown;
-      tables: Record<string, Table> = {};
-      transactions: Table[][] = [];
-      private transactionTail: Promise<unknown> = Promise.resolve();
-      version() {
-        return {
-          stores: (schema: Record<string, string>) => {
-            for (const [name, indexes] of Object.entries(schema)) {
-              const table = (this.tables[name] ??= new Table(indexes.split(',')[0]));
-              this[name] = table;
-            }
-          },
-        };
-      }
-      table(name: string) {
-        if (!this.tables[name]) throw new Error(`Missing table: ${name}`);
-        return this.tables[name];
-      }
-      async transaction(_mode: string, ...args: unknown[]) {
-        const callback = args.pop() as () => Promise<unknown>;
-        const tables = args.flat() as Table[];
-        // IndexedDB serializes overlapping rw transactions, including different tabs.
-        const operation = this.transactionTail.then(async () => {
-          this.transactions.push(tables);
-          const snapshots = tables.map((table) => structuredClone(table.rows));
-          try {
-            return await callback();
-          } catch (error) {
-            tables.forEach((table, index) => (table.rows = snapshots[index]));
-            throw error;
-          }
-        });
-        this.transactionTail = operation.catch(() => undefined);
-        return operation;
-      }
-    },
-  };
-});
 
 const time = '2026-10-25T12:00:00.000Z';
 const item = (id = 'onions', text = '2 onions') => ({
@@ -101,7 +31,6 @@ const recipe = {
   instructions: ['Cook.'],
 };
 const shoppingTable = (database: typeof db | AccountDatabase) => database.shoppingItems;
-const memoryTable = (value: unknown) => value as { failPut: boolean; rows: Map<string, unknown> };
 const shoppingSource = (ingredientIndex = 0) => ({
   recipeId: 'soup',
   recipeTitle: 'Soup',
@@ -132,6 +61,7 @@ describe('private shopping persistence', () => {
   let remoteRows: Record<string, Record<string, unknown>[]>;
   let onUpload: (() => Promise<void>) | undefined;
   let shoppingMissing = false;
+  const durability = { ensurePersisted: vi.fn(async () => true) };
   function account(id = 'alice') {
     user.set({ id });
     accountVersion.update((version) => version + 1);
@@ -140,8 +70,8 @@ describe('private shopping persistence', () => {
   function enableNetwork() {
     auth.client = {
       from: (table: string) => ({
-        upsert: async (row: Record<string, unknown>) => {
-          writes.push({ table, row });
+        upsert: async (rows: Record<string, unknown>[]) => {
+          for (const row of rows) writes.push({ table, row });
           await onUpload?.();
           return {
             error:
@@ -152,19 +82,13 @@ describe('private shopping persistence', () => {
         },
         select: (columns: string) => {
           selects.push({ table, columns });
-          return {
-            eq: () => ({
-              order: () => ({
-                range: async () => ({
-                  data: remoteRows[table] ?? [],
-                  error:
-                    table === 'shopping_items' && shoppingMissing
-                      ? { code: 'PGRST205', message: 'Table unavailable' }
-                      : null,
-                }),
-              }),
-            }),
-          };
+          return fakeSelect(table, () => ({
+            rows: (remoteRows[table] ?? []) as never,
+            error:
+              table === 'shopping_items' && shoppingMissing
+                ? { code: 'PGRST205', message: 'Table unavailable' }
+                : null,
+          }))(columns);
         },
       }),
     };
@@ -182,6 +106,7 @@ describe('private shopping persistence', () => {
       providers: [
         { provide: SupabaseService, useValue: auth },
         { provide: StepTimerService, useValue: { removeRecipe: vi.fn() } },
+        { provide: StorageDurabilityService, useValue: durability },
       ],
     });
     cloud = TestBed.inject(CloudCookbookService);
@@ -189,13 +114,22 @@ describe('private shopping persistence', () => {
     await db.collections.clear();
     await shoppingTable(db).clear();
   });
-  afterEach(() => {
+  afterEach(async () => {
     TestBed.resetTestingModule();
     vi.restoreAllMocks();
+    // Every test starts with empty account caches, as a new device would.
+    for (const { name } of await indexedDB.databases())
+      if (name?.startsWith('RecipebookAccount-')) await Dexie.delete(name);
   });
 
+  it('asks the browser to keep local storage once something is saved', async () => {
+    durability.ensurePersisted.mockClear();
+    await cloud.put('recipes', recipe, db);
+    expect(durability.ensurePersisted).toHaveBeenCalled();
+  });
   it('commits a shopping batch and tombstones in the same account transaction', async () => {
     const cache = account();
+    const transaction = vi.spyOn(cache as Dexie, 'transaction');
     await cache.recipes.put(recipe);
     await cloud.applyShoppingChanges([item('keep'), item('remove')], [], cache);
     await cloud.applyShoppingChanges([item('new')], ['remove'], cache);
@@ -209,13 +143,13 @@ describe('private shopping persistence', () => {
     });
     expect(await cache.outbox.get('shoppingItems:new')).toMatchObject({ value: item('new') });
     expect(await cache.recipes.get('soup')).toEqual(recipe);
-    const transactions = (cache as unknown as { transactions: unknown[][] }).transactions;
-    expect(transactions.at(-1)).toContain(shoppingTable(cache));
-    expect(transactions.at(-1)).toContain(cache.outbox);
+    const tables = transaction.mock.calls.at(-1)!.flat();
+    expect(tables).toContain(shoppingTable(cache));
+    expect(tables).toContain(cache.outbox);
   });
   it('rolls back local changes if the durable outbox fails', async () => {
     const cache = account();
-    memoryTable(cache.outbox).failPut = true;
+    vi.spyOn(cache.outbox, 'put').mockRejectedValue(new Error('Disk full'));
     await expect(cloud.applyShoppingChanges([item()], [], cache)).rejects.toThrow('Disk full');
     expect(await shoppingTable(cache).toArray()).toEqual([]);
   });
@@ -294,7 +228,10 @@ describe('private shopping persistence', () => {
   it('aborts the whole batch if the account changes while committing', async () => {
     const alice = account();
     const table = shoppingTable(alice);
-    const boundary = table as unknown as { put(value: ShoppingItem): Promise<string> };
+    // Writes resolve their table by name inside the transaction.
+    const boundary = alice.table('shoppingItems') as unknown as {
+      put(value: ShoppingItem): Promise<string>;
+    };
     const put = boundary.put.bind(boundary);
     vi.spyOn(boundary, 'put').mockImplementation(async (value) => {
       await put(value);
@@ -337,7 +274,10 @@ describe('private shopping persistence', () => {
       table: 'shopping_items',
       row: { user_id: 'alice', id: 'onions', payload: item(), deleted: false },
     });
-    expect(selects).toContainEqual({ table: 'shopping_items', columns: 'id,payload,deleted' });
+    expect(selects).toContainEqual({
+      table: 'shopping_items',
+      columns: 'id,payload,deleted,updated_at',
+    });
     expect(await cache.outbox.count()).toBe(0);
   });
   it('retains a newer shopping edit while an earlier revision uploads', async () => {
@@ -393,11 +333,13 @@ describe('private shopping persistence', () => {
       await cloud.put('recipes', recipe, cache);
     };
     await cloud.sync();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(writes.some((write) => write.table === 'recipes' && write.row['id'] === 'soup')).toBe(
-      true,
-    );
-    expect(await cache.outbox.get('recipes:soup')).toBeUndefined();
+    // The follow-up sync starts after this one settles and needs several IndexedDB round trips.
+    await vi.waitFor(async () => {
+      expect(writes.some((write) => write.table === 'recipes' && write.row['id'] === 'soup')).toBe(
+        true,
+      );
+      expect(await cache.outbox.get('recipes:soup')).toBeUndefined();
+    });
     expect(await cache.outbox.get('shoppingItems:onions')).toMatchObject({ value: item() });
   });
   it('does not hydrate malformed shopping payloads', async () => {
@@ -442,7 +384,7 @@ describe('private shopping persistence', () => {
   it('keeps guest shopping data if account persistence fails', async () => {
     if (shoppingTable(db)) await shoppingTable(db).put(item() as never);
     const cache = account();
-    memoryTable(cache.outbox).failPut = true;
+    vi.spyOn(cache.outbox, 'put').mockRejectedValue(new Error('Disk full'));
     await expect(cloud.resolveDeviceRecipes('add')).rejects.toThrow('Disk full');
     expect(await shoppingTable(db).toArray()).toEqual([item()]);
     expect(await shoppingTable(cache).toArray()).toEqual([]);
@@ -548,11 +490,16 @@ describe('private shopping persistence', () => {
     });
     it('rejects an export if the account changes during its snapshot read', async () => {
       const cache = account();
-      const boundary = cache.shoppingItems as unknown as { toArray(): Promise<ShoppingItem[]> };
-      vi.spyOn(boundary, 'toArray').mockImplementation(async () => {
-        user.set(null);
-        accountVersion.update((version) => version + 1);
-        return [item()];
+      const orderBy = cache.shoppingItems.orderBy.bind(cache.shoppingItems);
+      vi.spyOn(cache.shoppingItems, 'orderBy').mockImplementation((index) => {
+        const collection = orderBy(index);
+        const read = collection.toArray.bind(collection);
+        collection.toArray = (() => {
+          user.set(null);
+          accountVersion.update((version) => version + 1);
+          return read();
+        }) as typeof collection.toArray;
+        return collection;
       });
       await expect(recipes.exportBackup()).rejects.toThrow('Account changed');
     });

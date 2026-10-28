@@ -1,4 +1,3 @@
-import { TimerRulerPreferencesService } from '../../core/services/timer-ruler-preferences.service';
 import { AppUpdateService } from '../../core/services/app-update.service';
 import { IconComponent } from '../../shared/components/icon';
 import { AccountAccessComponent } from './account-access';
@@ -9,11 +8,23 @@ import { Component, DestroyRef, computed, effect, inject, signal } from '@angula
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { RecipeService } from '../../core/services/recipe.service';
+import { LeaveConfirmationService } from '../../core/services/leave-confirmation.service';
 import { CloudCookbookService } from '../../core/services/cloud-cookbook.service';
+import {
+  StorageDurabilityService,
+  storageSummary,
+} from '../../core/services/storage-durability.service';
+import { SlowMotionSwitchComponent } from '../../shared/components/slow-motion-switch';
 
 @Component({
   selector: 'app-settings',
-  imports: [IconComponent, RouterLink, AccountAccessComponent, TimerAlertPreferencesComponent],
+  imports: [
+    SlowMotionSwitchComponent,
+    IconComponent,
+    RouterLink,
+    AccountAccessComponent,
+    TimerAlertPreferencesComponent,
+  ],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
@@ -22,8 +33,8 @@ export class SettingsComponent {
   readonly cloud = inject(CloudCookbookService);
   readonly auth = this.cloud.auth;
   readonly app = inject(AppUpdateService);
-  readonly rulerPreferences = inject(TimerRulerPreferencesService);
   private readonly timerAlerts = inject(TimerPushService);
+  private readonly confirmation = inject(LeaveConfirmationService);
   readonly returnToImport =
     inject(ActivatedRoute).snapshot.queryParamMap.get('returnTo') === '/recipes/import';
   private active = true;
@@ -31,6 +42,22 @@ export class SettingsComponent {
     return this.active && version === this.auth.accountVersion();
   }
   readonly feedbackSection = signal<'account' | 'backup'>('account');
+  private readonly durability = inject(StorageDurabilityService);
+  readonly storageStatus = computed(() =>
+    storageSummary(this.durability.status(), !!this.auth.user(), this.durability.browserTab()),
+  );
+  readonly lastBackup = computed(() => {
+    const at = this.durability.lastBackupAt();
+    return at
+      ? 'Last backup from this device: ' +
+          new Date(at).toLocaleDateString(undefined, {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }) +
+          '.'
+      : 'No backup downloaded on this device yet.';
+  });
   readonly syncStatus = computed(() => {
     if (!this.cloud.online()) return 'Offline · changes saved on this device';
     if (this.cloud.syncing()) return 'Syncing your cookbook…';
@@ -91,12 +118,14 @@ export class SettingsComponent {
       if (!this.current(version)) return;
       if (
         pending &&
-        !window.confirm(
+        !(await this.confirmation.confirm(
           pending +
-            ' changes are saved only on this device. They will upload when you sign back into this account. Keep this browser’s site data until then, or download a backup before leaving. Sign out anyway?',
-        )
+            ' changes are saved only on this device. They will upload when you sign back into this account. Keep this browser’s site data until then, or download a backup before leaving.',
+          { title: 'Sign out anyway?', confirm: 'Sign out', cancel: 'Stay signed in' },
+        ))
       )
         return;
+      if (!this.current(version)) return;
       await this.timerAlerts.disableForSignOut().catch(() => undefined);
       if (!this.current(version)) return;
       await this.auth.signOut();
@@ -162,6 +191,7 @@ export class SettingsComponent {
       setTimeout(() => {
         URL.revokeObjectURL(url);
       }, 60_000);
+      this.durability.markBackup(backup.exportedAt);
 
       this.message.set(
         `Prepared a backup containing ${backup.recipes.length} recipes and ${backup.shoppingItems?.length ?? 0} shopping items.`,
@@ -206,9 +236,10 @@ export class SettingsComponent {
       // Validate before requesting confirmation.
       const backup = this.recipeService.validateBackup(data);
 
-      const confirmed = window.confirm(
-        `Import ${backup.recipes.length} recipes and ${backup.shoppingItems?.length ?? 0} shopping items?\n\n` +
-          'Existing recipes and shopping items will be kept. Items already imported will be skipped.',
+      const confirmed = await this.confirmation.confirm(
+        `Import ${backup.recipes.length} recipes and ${backup.shoppingItems?.length ?? 0} shopping items? ` +
+          'Existing recipes and shopping items are kept. Items already imported are skipped.',
+        { title: 'Restore this backup?', confirm: 'Import', cancel: 'Cancel' },
       );
 
       if (!confirmed || !this.current(version)) {

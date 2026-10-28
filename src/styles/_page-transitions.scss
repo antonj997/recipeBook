@@ -18,16 +18,16 @@ html[data-page-transition='expand']::view-transition-group(root) {
   animation: none;
 }
 html[data-page-transition='expand']::view-transition-old(root) {
-  animation: book-expand-out 120ms ease-out both;
+  animation: book-expand-out calc(120ms * var(--motion-scale)) ease-out both;
   mix-blend-mode: normal;
 }
 html[data-page-transition='expand']::view-transition-new(root) {
-  animation: book-expand-in var(--motion-page) var(--ease-out) both;
+  animation: book-expand-in var(--motion-page) var(--motion-ease-out) both;
   mix-blend-mode: normal;
 }
 html[data-page-transition='expand'][data-recipe-morph]::view-transition-new(root) {
   animation-duration: var(--motion-surface);
-  animation-delay: 100ms;
+  animation-delay: var(--motion-list-lead);
 }
 html[data-page-transition='expand']::view-transition-group(book-recipe-surface),
 html[data-page-transition='expand']::view-transition-group(book-recipe-image),
@@ -104,7 +104,7 @@ html[data-page-transition='expand']::view-transition-group(book-recipe-categorie
 }
 /* The surface yields secondary content while shared elements remain continuously visible. */
 html[data-page-transition='expand']::view-transition-old(book-recipe-surface) {
-  animation: book-part-out 180ms ease-out both;
+  animation: book-part-out var(--motion-fast) ease-out both;
   mix-blend-mode: normal;
 }
 html[data-page-transition='expand']::view-transition-new(book-recipe-surface) {
@@ -173,7 +173,7 @@ html[data-page-transition='expand']::view-transition-old(book-recipe-title) {
   width: var(--book-title-width-from);
   height: var(--book-title-height-from);
   animation:
-    book-title-old var(--book-expand-duration) var(--book-expand-delay) var(--ease-out) both,
+    book-title-old var(--book-expand-duration) var(--book-expand-delay) var(--motion-ease-out) both,
     book-part-out var(--motion-reveal)
       calc(var(--book-expand-delay) + var(--book-expand-duration) - var(--motion-reveal)) linear
       both;
@@ -182,7 +182,7 @@ html[data-page-transition='expand']::view-transition-new(book-recipe-title) {
   width: var(--book-title-width-to);
   height: var(--book-title-height-to);
   animation:
-    book-title-new var(--book-expand-duration) var(--book-expand-delay) var(--ease-out) both,
+    book-title-new var(--book-expand-duration) var(--book-expand-delay) var(--motion-ease-out) both,
     book-part-in var(--motion-reveal)
       calc(var(--book-expand-delay) + var(--book-expand-duration) - var(--motion-reveal)) linear
       both;
@@ -209,7 +209,7 @@ html[data-page-transition='expand']::view-transition-group(.book-title-word) {
   z-index: 4;
   animation-duration: var(--book-expand-duration);
   animation-delay: var(--book-expand-delay);
-  animation-timing-function: var(--ease-out);
+  animation-timing-function: var(--motion-ease-out);
 }
 html[data-page-transition='expand']::view-transition-old(.book-title-word) {
   display: none;
@@ -234,7 +234,7 @@ html[data-page-transition='expand']::view-transition-old(.book-title-word):only-
 html[data-page-transition='expand']::view-transition-old(book-recipe-categories):only-child,
 html[data-page-transition='expand']::view-transition-old(book-recipe-time):only-child {
   display: block;
-  animation: book-part-out 180ms ease-out both;
+  animation: book-part-out var(--motion-fast) ease-out both;
 }
 html[data-page-transition='expand']::view-transition-group(book-header) {
   z-index: 5;
@@ -305,8 +305,8 @@ html[data-page-transition='expand'][data-recipe-morph]:not([data-expand-back])::
     root
   ) {
   z-index: 2;
-  animation: book-recipe-open var(--book-expand-duration) var(--book-expand-delay) var(--ease-out)
-    both;
+  animation: book-recipe-open var(--book-expand-duration) var(--book-expand-delay)
+    var(--motion-ease-out) both;
 }
 html[data-page-transition='expand'][data-recipe-morph][data-expand-back]::view-transition-old(
     root
@@ -330,7 +330,8 @@ html[data-page-transition='expand'][data-recipe-morph][data-expand-list]:not(
     [data-expand-back]
   )::view-transition-new(root) {
   animation:
-    book-recipe-open var(--book-expand-duration) var(--book-expand-delay) var(--ease-out) both,
+    book-recipe-open var(--book-expand-duration) var(--book-expand-delay) var(--motion-ease-out)
+      both,
     book-list-wait var(--book-expand-delay) linear backwards;
 }
 /* Returns contract only the flat recipe color, never a white reading-page snapshot. */
@@ -347,7 +348,7 @@ html[data-page-transition='expand'][data-recipe-morph][data-expand-back]::view-t
     book-recipe-color
   ) {
   display: block;
-  animation: book-recipe-close var(--book-expand-duration) var(--ease-out) both;
+  animation: book-recipe-close var(--book-expand-duration) var(--motion-ease-out) both;
 }
 /* The outgoing card description fades quickly. Other recipe-only content is
    revealed as live DOM after the flight; it needs no separate native snapshots. */
@@ -366,7 +367,7 @@ html[data-page-transition='expand']::view-transition-old(book-recipe-card-descri
   }
   #{math.div(motion.$list-lead, motion.$travel + motion.$list-lead) * 100%} {
     clip-path: inset(var(--book-expand-inset) round var(--book-surface-corners-from, 0px));
-    animation-timing-function: var(--ease-out);
+    animation-timing-function: var(--motion-ease-out);
   }
   100% {
     clip-path: inset(0px round 0px);
@@ -408,6 +409,18 @@ html[data-page-transition='expand']::view-transition-old(book-recipe-card-descri
   to {
     opacity: 0;
     transform: translateY(-4px) scale(0.99);
+  }
+}
+/* The shopping list grows as a circle out of the header basket. */
+html[data-page-transition='expand'][data-expand-basket]::view-transition-new(root) {
+  animation: book-basket-grow var(--motion-surface) var(--motion-spring-calm) both;
+}
+@keyframes book-basket-grow {
+  from {
+    clip-path: circle(0 at var(--book-basket-x) var(--book-basket-y));
+  }
+  to {
+    clip-path: circle(150vmax at var(--book-basket-x) var(--book-basket-y));
   }
 }
 @keyframes book-expand-in {

@@ -1,6 +1,14 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Recipe } from '../models/recipe.model';
-import { isRecipeImage } from '../models/recipe-metadata';
+import {
+  dataUrlBytes,
+  imageId,
+  isImageId,
+  prepareImage,
+  type ImageTables,
+  type PhotoRef,
+  type PreparedImage,
+} from '../models/recipe-image';
 
 export interface RecipePhotos {
   cover?: string;
@@ -8,69 +16,93 @@ export interface RecipePhotos {
 }
 const bucket = 'recipe-photos';
 
-// Store files in private Storage, keeping the existing recipe and backup image format.
-export async function uploadPhotos(client: SupabaseClient, userId: string, recipe: Recipe) {
+/**
+ * Store files in private Storage, named by the SHA-256 of their bytes. Paths this recipe already
+ * synced are reused without uploading, so editing a title never sends a photo again.
+ */
+export async function uploadPhotos(
+  client: SupabaseClient,
+  userId: string,
+  recipe: Recipe,
+  images: ImageTables,
+  known: RecipePhotos = {},
+) {
   const photos: RecipePhotos = {};
   const payload = structuredClone(recipe);
-  async function upload(data: string): Promise<string> {
+  const synced = new Set([known.cover, ...Object.values(known.steps ?? {})]);
+  async function upload(ref: PhotoRef): Promise<string | undefined> {
     // Data URLs are local bytes, not network requests. Fetching one is blocked by our CSP.
-    if (!isRecipeImage(data)) throw new Error('Invalid recipe photo.');
-    const encoded = data.slice(data.indexOf(',') + 1);
-    const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
-    const blob = new Blob([bytes], { type: 'image/jpeg' });
-    const hash = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
-    const name = Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('');
+    const bytes = ref.imageDataUrl ? dataUrlBytes(ref.imageDataUrl) : undefined;
+    const name = bytes ? await imageId(bytes) : ref.photoId;
+    if (!isImageId(name)) return undefined;
     const path = `${userId}/${name}.jpg`;
+    if (synced.has(path)) return path;
+    const stored = bytes ?? (await images.images.get(name))?.bytes;
+    // A stored photo that is gone from this device cannot be uploaded; the recipe still syncs.
+    if (!stored) return undefined;
+    const blob = new Blob([stored as BlobPart], { type: 'image/jpeg' });
     const { error } = await client.storage.from(bucket).upload(path, blob, {
       contentType: 'image/jpeg',
       upsert: true,
     });
     if (error) throw new Error('Could not upload a recipe photo. ' + error.message);
+    synced.add(path);
     return path;
   }
-  if (payload.imageDataUrl) {
-    photos.cover = await upload(payload.imageDataUrl);
-    delete payload.imageDataUrl;
-  }
+  const cover = await upload(payload);
+  if (cover) photos.cover = cover;
+  delete payload.photoId;
+  delete payload.imageDataUrl;
   for (const [i, step] of (payload.stepDetails ?? []).entries()) {
-    if (!step.imageDataUrl) continue;
-    (photos.steps ??= {})[String(i)] = await upload(step.imageDataUrl);
+    const path = await upload(step);
+    if (path) (photos.steps ??= {})[String(i)] = path;
+    delete step.photoId;
     delete step.imageDataUrl;
   }
   return { payload, photos };
 }
 
+/**
+ * Point a cloud recipe at photos in the image store. A photo already on this device is never
+ * downloaded again; new bytes are returned as prepared images for the caller's transaction.
+ */
 export async function downloadPhotos(
   client: SupabaseClient,
   userId: string,
   recipe: Recipe,
   photos: RecipePhotos,
+  images: ImageTables,
   cached?: Recipe,
   previous: RecipePhotos = {},
-): Promise<Recipe> {
+): Promise<{ recipe: Recipe; images: PreparedImage[] }> {
   const result = structuredClone(recipe);
-  async function download(path: string): Promise<string> {
+  const downloaded = new Map<string, PreparedImage>();
+  async function resolve(target: PhotoRef, path: string, prior?: string, cachedRef?: PhotoRef) {
+    delete target.photoId;
+    delete target.imageDataUrl;
     if (!path.startsWith(userId + '/')) throw new Error('Invalid recipe photo path.');
+    const name = path.slice(userId.length + 1).replace(/\.jpg$/, '');
+    if (isImageId(name) && (downloaded.has(name) || (await images.images.get(name)))) {
+      target.photoId = name;
+      return;
+    }
+    // Records saved before the image store keep their unchanged photo until migration.
+    if (prior === path && cachedRef?.imageDataUrl) {
+      target.imageDataUrl = cachedRef.imageDataUrl;
+      return;
+    }
     const { data, error } = await client.storage.from(bucket).download(path);
     if (error || !data) throw new Error('Could not download a recipe photo.');
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(new Error('Could not read a recipe photo.'));
-      reader.readAsDataURL(data);
-    });
+    // The id is the hash of the bytes that arrived, whatever the file is called.
+    const prepared = await prepareImage(new Uint8Array(await data.arrayBuffer()));
+    downloaded.set(prepared.image.id, prepared);
+    target.photoId = prepared.image.id;
   }
-  if (photos.cover)
-    result.imageDataUrl =
-      previous.cover === photos.cover && cached?.imageDataUrl
-        ? cached.imageDataUrl
-        : await download(photos.cover);
+  if (photos.cover) await resolve(result, photos.cover, previous.cover, cached);
   for (const [index, path] of Object.entries(photos.steps ?? {})) {
     const step = result.stepDetails?.[Number(index)];
-    const cachedPhoto = cached?.stepDetails?.[Number(index)]?.imageDataUrl;
     if (step)
-      step.imageDataUrl =
-        previous.steps?.[index] === path && cachedPhoto ? cachedPhoto : await download(path);
+      await resolve(step, path, previous.steps?.[index], cached?.stepDetails?.[Number(index)]);
   }
-  return result;
+  return { recipe: result, images: [...downloaded.values()] };
 }
