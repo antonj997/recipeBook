@@ -10,7 +10,6 @@
       animation-timeline: --rail-card;
     }
     .recipe-card .recipe-image {
-      scale: 1.08;
       animation: rail-drift linear both;
       animation-timeline: --rail-card;
     }
@@ -25,11 +24,19 @@
     scale: 1;
   }
 }
+// The centred photo sits exactly in its frame: page transitions capture it without the frame's
+// clip, so any zoom or drift there would fly oversized and snap back on landing.
 @keyframes rail-drift {
   from {
     translate: 4% 0;
+    scale: 1.08;
+  }
+  50% {
+    translate: 0 0;
+    scale: 1;
   }
   to {
     translate: -4% 0;
+    scale: 1.08;
   }
 }

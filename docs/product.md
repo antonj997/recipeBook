@@ -616,7 +616,7 @@ Vi har gått ifrån bakgrundsfyllningar och att knappar lyfter på hover eller s
 
 Receptkort har ett avsiktligt undantag vid tryck: kanten blir tydligare och kortytan krymper mycket lite, till cirka 98,5 procent. Den blir inte ljusare. Detta ska kännas som att trycka på ett fysiskt objekt utan ett vitt blink.
 
-På telefon ligger kortet i mitten lite framför sina grannar, som krymper något när de glider åt sidan, och matbilden förskjuts svagt inne i sin ram när hyllan rullar. Effekten drivs av rullningen i webbläsaren utan skript per bildruta och stängs av med Reduce Motion. På dator kan kortytan följa musen med en mjuk perspektivlutning. Beräkningen samordnas per bildruta och stannar när inget rör sig. Touchskärmar ska inte få en onödig perspektivnivå som stör svepning eller belastar bildhanteringen.
+På telefon ligger kortet i mitten lite framför sina grannar, som krymper något när de glider åt sidan, och matbilden zoomar och förskjuts svagt inne i sin ram när kortet glider bort från mitten. Kortet i mitten visar bilden exakt i ramen, så att bilden har rätt storlek hela vägen när man öppnar ett recept och går tillbaka. Effekten drivs av rullningen i webbläsaren utan skript per bildruta och stängs av med Reduce Motion. På dator kan kortytan följa musen med en mjuk perspektivlutning. Beräkningen samordnas per bildruta och stannar när inget rör sig. Touchskärmar ska inte få en onödig perspektivnivå som stör svepning eller belastar bildhanteringen.
 
 ### 14.6 Logotyp
 
