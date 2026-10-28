@@ -115,4 +115,36 @@ describe('edge swipe back', () => {
     expect(page.style.transform).toBe('');
     expect(page.style.borderRadius).toBe('');
   });
+
+  function touchStart(target: EventTarget, x: number) {
+    const event = new Event('touchstart', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'touches', { value: [{ clientX: x, clientY: 300 }] });
+    target.dispatchEvent(event);
+    return event;
+  }
+
+  it('claims touches at the very edge so the system back swipe cannot start first', () => {
+    const { fixture, page, host } = render();
+    expect(touchStart(page, 10).defaultPrevented).toBe(true);
+    expect(touchStart(page, 100).defaultPrevented).toBe(false);
+    host.enabled.set(false);
+    fixture.detectChanges();
+    expect(touchStart(page, 10).defaultPrevented).toBe(false);
+  });
+
+  it('still taps what lies under a claimed edge touch', () => {
+    const { page } = render();
+    const button = document.createElement('button');
+    page.append(button);
+    const click = vi.fn();
+    button.addEventListener('click', click);
+    document.elementFromPoint = vi.fn(() => button);
+    pointer(page, 'pointerdown', 10);
+    touchStart(page, 10);
+    pointer(page, 'pointerup', 11);
+    expect(click).toHaveBeenCalledOnce();
+    // A swipe is not a tap.
+    swipe(page, 8, 300, 300);
+    expect(click).toHaveBeenCalledOnce();
+  });
 });

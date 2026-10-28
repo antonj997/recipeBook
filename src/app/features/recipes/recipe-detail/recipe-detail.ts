@@ -106,7 +106,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   readonly drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
   readonly isDraft = !!this.route.snapshot.data['draft'];
-  /** iPhone Home Screen apps have no system back swipe; elsewhere the system owns the edge. */
+  /** In the iPhone Home Screen app the edge swipe is ours (taken from iOS where it has one). */
   readonly edgeSwipe =
     !this.isDraft && (navigator as Navigator & { standalone?: boolean }).standalone === true;
   private readonly edgeSwipeBack = viewChild(EdgeSwipeBackDirective);

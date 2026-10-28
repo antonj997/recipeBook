@@ -2,6 +2,8 @@ import { DestroyRef, Directive, ElementRef, inject, input, output } from '@angul
 import { motionMs } from '../../core/motion';
 
 const edge = 24;
+// Touches this close to the edge are claimed before the system's own back swipe can start.
+const claimEdge = 20;
 const threshold = 0.35;
 const flick = 0.5; // pixels per millisecond
 
@@ -12,7 +14,7 @@ const flick = 0.5; // pixels per millisecond
  */
 @Directive({ selector: '[appEdgeSwipeBack]', host: { '(pointerdown)': 'down($event)' } })
 export class EdgeSwipeBackDirective {
-  /** Only where the system has no back swipe of its own, such as an iPhone Home Screen app. */
+  /** Where this swipe should replace the system's own, such as an iPhone Home Screen app. */
   readonly enabled = input(false, { alias: 'edgeSwipeEnabled' });
   readonly swipeBack = output<void>();
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
@@ -24,15 +26,31 @@ export class EdgeSwipeBackDirective {
     active: boolean;
     samples: { x: number; at: number }[];
   };
+  /** The current touch was claimed at the edge, which also cancels its tap. */
+  private claimed = false;
+  private readonly claim = (event: TouchEvent) => {
+    const touch = event.touches[0];
+    if (!this.enabled() || event.touches.length !== 1 || !touch) return;
+    if (touch.clientX - this.element.getBoundingClientRect().left > claimEdge) return;
+    // Newer iOS gives Home Screen apps a back swipe that slides the whole page aside; claiming
+    // the touch first lets this one run instead.
+    event.preventDefault();
+    this.claimed = true;
+  };
   private readonly move = (event: PointerEvent) => this.track(event);
   private readonly up = (event: PointerEvent) => this.release(event);
   private readonly cancel = () => this.settle();
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.stopListening());
+    this.element.addEventListener('touchstart', this.claim, { passive: false });
+    inject(DestroyRef).onDestroy(() => {
+      this.stopListening();
+      this.element.removeEventListener('touchstart', this.claim);
+    });
   }
 
   protected down(event: PointerEvent): void {
+    this.claimed = false;
     if (!this.enabled() || this.gesture || event.pointerType !== 'touch' || !event.isPrimary)
       return;
     const box = this.element.getBoundingClientRect();
@@ -79,7 +97,17 @@ export class EdgeSwipeBackDirective {
   private release(event: PointerEvent): void {
     const gesture = this.gesture;
     if (!gesture || event.pointerId !== gesture.id) return;
-    if (!gesture.active) return this.settle();
+    if (!gesture.active) {
+      // A claimed touch lost its tap; replay it on whatever lies under the finger.
+      const tap =
+        this.claimed && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) < 10;
+      this.settle();
+      if (tap)
+        (
+          this.element.ownerDocument.elementFromPoint(event.clientX, event.clientY) as HTMLElement
+        )?.click();
+      return;
+    }
     const progress = (event.clientX - gesture.x) / gesture.width;
     const first = gesture.samples[0]!;
     const last = gesture.samples.at(-1)!;
