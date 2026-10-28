@@ -237,6 +237,18 @@
                 <div class="instruction-tools">
                   @if (!isDraft) {
                     <p role="status">
+                      <span
+                        class="step-progress"
+                        aria-hidden="true"
+                        [style.--steps]="selectedRecipe.instructions.length"
+                      >
+                        @for (step of selectedRecipe.instructions; track $index) {
+                          <span
+                            [class.done]="completedSteps().has($index)"
+                            [class.now]="nextStep() === $index"
+                          ></span>
+                        }
+                      </span>
                       {{ completedSteps().size }} of
                       {{ selectedRecipe.instructions.length }} completed
                     </p>

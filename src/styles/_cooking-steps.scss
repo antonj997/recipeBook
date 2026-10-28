@@ -1,0 +1,78 @@
+// Where cooking continues (global: recipe-detail.scss is at its size budget). Once cooking has
+// begun, the step to continue with sits on a soft card in the recipe colour, crossfading as it
+// moves on, and segments beside the count show the whole recipe: done steps filled, the current
+// one half filled.
+app-recipe-detail {
+  .cooking-step {
+    isolation: isolate;
+    transition: border-color var(--motion-surface) var(--motion-ease-out);
+  }
+  .cooking-step::before {
+    content: '';
+    position: absolute;
+    inset: 4px -12px;
+    z-index: -1;
+    border-radius: 14px;
+    background: color-mix(
+      in srgb,
+      var(--page-background, var(--color-canvas)) 45%,
+      var(--color-surface)
+    );
+    opacity: 0;
+    scale: 0.97;
+    pointer-events: none;
+    transition:
+      opacity var(--motion-surface) var(--motion-ease-out),
+      scale var(--motion-surface) var(--motion-spring-calm);
+  }
+  .cooking-step.is-next::before {
+    opacity: 1;
+    scale: 1;
+  }
+  // The card stands in for the rules around it.
+  .cooking-step.is-next,
+  .cooking-step:has(+ .is-next) {
+    --step-rule: transparent;
+  }
+  .cooking-step.is-next app-checkbox-mark {
+    color: var(--color-ink);
+  }
+  .instruction-tools p {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .step-progress {
+    display: flex;
+    gap: 3px;
+    width: min(calc(var(--steps) * 16px), 36vw);
+  }
+  .step-progress span {
+    flex: 1 1 0;
+    height: 6px;
+    border-radius: 3px;
+    background-color: color-mix(
+      in srgb,
+      var(--recipe-tone, var(--color-ink)) 20%,
+      var(--color-surface)
+    );
+    transition: background-color var(--motion-surface) var(--motion-ease-out);
+  }
+  .step-progress .done {
+    background-color: var(--recipe-tone, var(--color-ink));
+  }
+  .step-progress .now {
+    background-image: linear-gradient(
+      90deg,
+      var(--recipe-tone, var(--color-ink)) 50%,
+      transparent 50%
+    );
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  app-recipe-detail .cooking-step,
+  app-recipe-detail .cooking-step::before,
+  app-recipe-detail .step-progress span {
+    transition: none;
+  }
+}

@@ -297,6 +297,28 @@ describe('recipe detail', () => {
     expect(c.nextStep()).toBe(0);
   });
 
+  it('shows where cooking stands with one progress segment per step', async () => {
+    const f = await timerFixture();
+    const c = f.host.componentInstance;
+    c.switchSection('instructions');
+    f.host.detectChanges();
+    const root = f.host.nativeElement as HTMLElement;
+    const segments = () =>
+      [...root.querySelectorAll('.step-progress span')].map((s) => s.className);
+    expect(segments()).toEqual(['', '', '', '', '']);
+    expect(root.querySelector('.step-progress')?.getAttribute('aria-hidden')).toBe('true');
+    c.toggleStep(0);
+    c.toggleStep(1);
+    f.host.detectChanges();
+    await vi.waitFor(() => {
+      f.host.detectChanges();
+      expect(segments()).toEqual(['done', 'done', 'now', '', '']);
+    });
+    expect(root.querySelector('.instruction-tools [role="status"]')?.textContent).toContain(
+      '2 of 5 completed',
+    );
+  });
+
   it('marks the next step once cooking starts and scrolls only when it is out of view', async () => {
     const f = await timerFixture();
     const c = f.host.componentInstance;

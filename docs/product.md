@@ -203,7 +203,7 @@ Instruktionerna visas som numrerade steg. Numret ligger i samma rundade kvadrati
 
 Steg kan ligga i namngivna avsnitt och kan ha bilder. Bilder som redan finns sparade visas utan att originalwebbplatsen behöver vara tillgänglig. Vissa kvarvarande bildlänkar kan användaren välja att hämta separat.
 
-När första steget är avbockat får nästa steg en tunn kant i receptets ton: det första omarkerade steget efter det senast markerade, eller det första omarkerade om alla efter är klara. Sidan scrollar dit bara om steget ligger dolt bakom sidhuvud och flikar eller nära nederkanten, direkt utan animation när Reduce Motion är på.
+När första steget är avbockat lyfts nästa steg fram på ett mjukt, rundat kort i en ljus ton av receptfärgen, och kortet tonar över till nästa steg när man bockar vidare. Bredvid texten om hur många steg som är klara visar en rad små segment hela receptet, ett per steg: klara steg är fyllda och det aktuella halvfyllt. Nästa steg är det första omarkerade steget efter det senast markerade, eller det första omarkerade om alla efter är klara. Sidan scrollar dit bara om steget ligger dolt bakom sidhuvud och flikar eller nära nederkanten, direkt utan animation när Reduce Motion är på.
 
 Ovanför stegen finns en liten progressangivelse och Reset. Reset återställer receptets avbockade steg och dess timers tillsammans, inklusive larm och schemalagda påminnelser. Portionsantalet och andra recept påverkas inte.
 
