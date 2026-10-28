@@ -116,6 +116,27 @@ Deno.test('a keyset page after a cursor reads the owner index in order', async (
   }
 });
 
+Deno.test('signed-in users write through the trigger under row level security', async () => {
+  const db = await database();
+  try {
+    await db.exec(`
+      create or replace function auth.uid() returns uuid language sql
+        as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
+      grant usage on schema auth to authenticated;
+    `);
+    await db.exec(`set test.uid = '${user}'; set role authenticated`);
+    for (const table of tables) {
+      await put(db, table, 'mine', '2000-01-01T00:00:00Z');
+      await put(db, table, 'mine', '2000-01-01T00:00:00Z');
+    }
+    await db.exec('reset role');
+    for (const table of tables)
+      assert.ok((await stamp(db, table, 'mine')) > Date.parse('2001-01-01'), `${table} is stamped`);
+  } finally {
+    await db.close();
+  }
+});
+
 Deno.test('clients cannot call the trigger function directly', async () => {
   const db = await database();
   try {
