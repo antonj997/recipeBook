@@ -7,6 +7,11 @@
   gap: 28px;
   padding-bottom: 20px;
 }
+@media (max-width: 600px) {
+  .recipe-form {
+    gap: 20px;
+  }
+}
 .field {
   scroll-margin-bottom: 110px;
 }
@@ -30,7 +35,17 @@
   gap: 12px;
   align-items: center;
 }
+// With a photo, its two actions stack beside the preview instead of wrapping below it.
+.photo-controls:has(.photo-preview) {
+  display: grid;
+  grid-template-columns: 80px auto;
+  justify-content: start;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 0;
+}
 .photo-preview {
+  grid-row: span 2;
   width: 80px;
   height: 80px;
   object-fit: cover;

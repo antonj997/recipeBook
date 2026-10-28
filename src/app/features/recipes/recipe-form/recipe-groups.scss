@@ -10,17 +10,14 @@
 }
 .editor-heading {
   flex-wrap: wrap;
-  padding-bottom: 20px;
+  padding-bottom: 8px;
 }
 .editor-heading h2 {
   margin: 0;
 }
 .item-group {
-  padding-block: 12px 24px;
+  padding-block: 4px;
   border-top: 1px solid var(--color-border);
-}
-.item-group header {
-  margin-bottom: 8px;
 }
 .item-group h3 {
   font-size: 1rem;
@@ -68,27 +65,30 @@
   background: transparent;
   border-color: transparent;
 }
+// Flat rows on thin rules: a field shows its frame only while it is being edited.
 .editor-row {
   scroll-margin-bottom: 110px;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding-block: 4px;
+  border-bottom: 1px solid var(--color-border);
 }
 .row-content {
   flex: 1;
   min-width: 0;
 }
-.row-content input,
-.row-content textarea {
-  width: 100%;
-  border-color: var(--color-border);
-}
-.row-content label {
+.row-content > :is(input, textarea) {
   display: block;
-  font-weight: 400;
-  font-size: 0.85rem;
-  margin-bottom: 8px;
+  padding: 8px;
+  border-color: transparent;
+  background: transparent;
+}
+.row-content > :is(input, textarea):focus {
+  border-color: var(--color-control-border);
+  background: var(--color-surface);
+}
+.row-content > [aria-invalid='true'] {
+  border-color: var(--color-danger);
 }
 .drag-handle {
   width: 44px;
@@ -118,7 +118,6 @@
 .group-footer {
   display: flex;
   justify-content: flex-start;
-  margin-top: 8px;
 }
 .row-remove {
   flex: 0 0 44px;
@@ -136,13 +135,46 @@
   touch-action: none;
   user-select: none;
 }
+// Steps: the number sits in the gutter above the remove button; timer and photo follow the text.
 .step-row {
-  align-items: flex-start;
-  padding-block: 12px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: start;
+  gap: 0 6px;
+  padding-block: 4px;
 }
-.step-row .drag-handle,
+.step-row .row-content {
+  display: contents;
+}
+.step-row .row-content > label {
+  grid-area: 1 / 1;
+  padding-top: 8px;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.55rem;
+  text-align: center;
+}
+// The number lines up with the first line of text, the remove button with the second.
 .step-row .row-remove {
-  margin-top: 28px;
+  grid-area: 2 / 1;
+  margin-top: -8px;
+}
+.step-row textarea {
+  grid-area: 1 / 2 / 3;
+}
+.step-row .drag-handle {
+  grid-area: 1 / 3 / 3;
+}
+.step-row .row-content > :not(label, textarea) {
+  grid-column: 2;
+}
+// A step without a timer offers one as a clock under its handle, so it needs no extra line.
+.step-row .row-content > .timer-add {
+  grid-area: 2 / 3;
+}
+.step-row:has(.timer-add) .drag-handle {
+  grid-row: 1;
 }
 .drop-slot {
   height: 0;
@@ -156,6 +188,17 @@
   font-size: 0.85rem;
   color: var(--color-muted);
   margin: 8px 0;
+}
+// Touch screens drag the handle directly; the keyboard hint stays for assistive technology.
+@media (pointer: coarse) {
+  .move-hint {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 .add-menu {
   padding: 8px;
@@ -215,7 +258,7 @@
 @media (max-width: 600px) {
   .editor-row {
     scroll-margin-bottom: 110px;
-    gap: 4px;
+    column-gap: 4px;
   }
   .add-move {
     padding-inline: 4px;
@@ -274,11 +317,7 @@
   gap: 6px;
   width: fit-content;
   max-width: 100%;
-  margin-top: 10px;
-  padding-left: 10px;
-  border: 1px solid var(--color-control-border);
-  border-radius: 8px;
-  background: var(--color-surface);
+  padding-left: 8px;
   font-size: 0.8125rem;
 }
 .step-timer-editor app-icon {
@@ -297,6 +336,7 @@
   border: 0;
   border-bottom: 1px solid var(--color-control-border);
   border-radius: 0;
+  background: transparent;
   font-size: 0.875rem;
 }
 .timer-remove {
@@ -307,11 +347,11 @@
   background: transparent;
 }
 .timer-add {
-  padding: 4px 0;
+  width: 44px;
+  padding: 0;
   border: 0;
   background: transparent;
-  font-size: 0.8125rem;
-  gap: 6px;
+  color: var(--color-muted);
 }
 .timer-error {
   color: var(--color-danger);

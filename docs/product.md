@@ -344,7 +344,7 @@ Bild kan läggas till, ersättas eller tas bort. JPEG, PNG och WebP behandlas oc
 
 ### 9.2 Återanvända rad- och gruppredigerare
 
-Ingredienser och instruktioner använder samma grundmönster för att lägga till, ta bort, ordna och gruppera rader. Varje rad har minus till vänster och draghandtag till höger. Vi har valt bort små separata upp- och nedpilar på mobil. Tangentbordsanvändare kan flytta från handtaget med piltangenter.
+Ingredienser och instruktioner använder samma grundmönster för att lägga till, ta bort, ordna och gruppera rader. Varje rad har minus till vänster och draghandtag till höger. Raderna är platta: ett fält får ram och bakgrund först när man skriver i det, och tunna linjer skiljer raderna åt. Det gör långa recept betydligt kortare att bläddra igenom på mobil. Ett stegs nummer står i vänstermarginalen ovanför minus, och ett steg utan timer har en klockknapp under draghandtaget för att lägga till en. Vi har valt bort små separata upp- och nedpilar på mobil. Tangentbordsanvändare kan flytta från handtaget med piltangenter.
 
 Grupper kan skapas och döpas om. Rader kan flyttas mellan grupper genom dragning eller via Add / move, där flera rader kan väljas samtidigt. Lägg till-kontrollen finns efter gruppens befintliga rader i stället för långt ovanför den punkt där den nya raden ska hamna.
 

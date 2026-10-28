@@ -60,4 +60,22 @@ describe('editor row motion', () => {
       expect(document.activeElement?.getAttribute('aria-label')).toBe('Move ingredient 2'),
     );
   });
+
+  it('tells each drag handle how to move rows, even where the hint is not shown', async () => {
+    const { root } = await editor();
+    const handle = root.querySelector<HTMLButtonElement>('.drag-handle')!;
+    const hint = document.getElementById(handle.getAttribute('aria-describedby') ?? '');
+    expect(hint?.textContent).toContain('focus the handle and use the arrow keys');
+    expect(root.contains(hint)).toBe(true);
+  });
+
+  it('keeps "Step" in the accessible label while the gutter shows only the number', async () => {
+    const { fixture, root } = await editor();
+    fixture.componentRef.setInput('kind', 'step');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const label = root.querySelector<HTMLLabelElement>('.step-row label')!;
+    expect(label.textContent?.replace(/\s+/g, ' ').trim()).toBe('Step 1');
+    expect(label.querySelector('.sr-only')?.textContent?.trim()).toBe('Step');
+  });
 });
