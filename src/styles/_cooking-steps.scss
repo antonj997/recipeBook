@@ -1,41 +1,31 @@
 // Where cooking continues (global: recipe-detail.scss is at its size budget). Once cooking has
-// begun, the step to continue with sits on a soft card in the recipe colour, crossfading as it
-// moves on, and segments beside the count show the whole recipe: done steps filled, the current
-// one half filled.
+// begun, the number of the step to continue with takes the recipe tone, and segments beside the
+// count show the whole recipe: done steps filled, the current one half filled.
 app-recipe-detail {
-  .cooking-step {
-    isolation: isolate;
-    transition: border-color var(--motion-surface) var(--motion-ease-out);
-  }
-  .cooking-step::before {
-    content: '';
-    position: absolute;
-    inset: 4px -12px;
-    z-index: -1;
-    border-radius: 14px;
-    background: color-mix(
-      in srgb,
-      var(--page-background, var(--color-canvas)) 45%,
-      var(--color-surface)
-    );
-    opacity: 0;
-    scale: 0.97;
-    pointer-events: none;
+  // Only the step's own number square marks it: a deeper frame in the recipe tone, a faint
+  // tint inside and an ink number. The text and the rules around it stay as they are.
+  .cooking-step app-checkbox-mark {
     transition:
-      opacity var(--motion-surface) var(--motion-ease-out),
+      color var(--motion-fast),
       scale var(--motion-surface) var(--motion-spring-calm);
   }
-  .cooking-step.is-next::before {
-    opacity: 1;
-    scale: 1;
-  }
-  // The card stands in for the rules around it.
-  .cooking-step.is-next,
-  .cooking-step:has(+ .is-next) {
-    --step-rule: transparent;
+  .cooking-step .checkbox-frame {
+    transition:
+      stroke var(--motion-fast),
+      fill var(--motion-surface) var(--motion-ease-out),
+      stroke-width var(--motion-surface) var(--motion-ease-out);
   }
   .cooking-step.is-next app-checkbox-mark {
     color: var(--color-ink);
+    animation: step-mark-in var(--motion-surface) var(--motion-spring-calm);
+  }
+  .cooking-step.is-next .checkbox-frame {
+    stroke: var(--recipe-tone, var(--color-ink));
+    stroke-width: 2;
+    fill: color-mix(in srgb, var(--recipe-tone, var(--color-ink)) 12%, transparent);
+  }
+  .cooking-step.is-next .checkbox-number {
+    font-weight: 700;
   }
   .instruction-tools p {
     display: flex;
@@ -69,10 +59,16 @@ app-recipe-detail {
     );
   }
 }
+@keyframes step-mark-in {
+  from {
+    scale: 0.82;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  app-recipe-detail .cooking-step,
-  app-recipe-detail .cooking-step::before,
+  app-recipe-detail .cooking-step app-checkbox-mark,
+  app-recipe-detail .cooking-step .checkbox-frame,
   app-recipe-detail .step-progress span {
     transition: none;
+    animation: none;
   }
 }
