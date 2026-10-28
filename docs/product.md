@@ -227,7 +227,7 @@ I liggande telefonläge och upp till tabletlika bredder används skärmens bredd
 
 ### 6.8 Näringsinformation och originalkälla
 
-Om uppgifterna finns visas en utfällbar sektion med näring per portion: energi i kcal, protein, kolhydrater och fett. På breda skärmar sträcker sig sektionen över ingrediens- och instruktionskolumnernas gemensamma bredd.
+Om uppgifterna finns visas en utfällbar sektion med näring per portion: energi i kcal, protein, kolhydrater och fett. Vissa webbplatser anger energin i cal i stället för kcal, vilket ger sexsiffriga värden. Värden på 10 000 eller mer per portion räknas därför om till kcal, så att 654897 visas som 655 kcal. På breda skärmar sträcker sig sektionen över ingrediens- och instruktionskolumnernas gemensamma bredd.
 
 Appen räknar inte fram näringsvärden från råvarorna. De kommer från importen eller användarens redigering. Därför ska felaktiga eller saknade källvärden inte döljas bakom en skenbart exakt automatisk beräkning.
 

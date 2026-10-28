@@ -167,7 +167,7 @@ export function perPortionNutrition(value: unknown): RecipeNutrition | undefined
   for (const { key, unit } of nutritionFields) {
     const raw = typeof value[key] === 'string' ? value[key].replace(/,/g, '.') : '';
     let match = raw.match(
-      key === 'calories' ? /(\d+(?:\.\d+)?)\s*(?:kcal|calories)/i : /(\d+(?:\.\d+)?)\s*g\b/i,
+      key === 'calories' ? /(\d+(?:\.\d+)?)\s*(?:kcal|calories|cal)\b/i : /(\d+(?:\.\d+)?)\s*g\b/i,
     );
     let amount = match ? Number(match[1]) : undefined;
     if (amount === undefined && key === 'calories') {
@@ -175,6 +175,9 @@ export function perPortionNutrition(value: unknown): RecipeNutrition | undefined
       if (match) amount = Math.round(Number(match[1]) / 4.184);
     }
     if (amount === undefined && /^\d+(?:\.\d+)?$/.test(raw)) amount = Number(raw);
+    // No portion holds 10 000 kcal: such sites give small calories, a thousandth of a kcal.
+    if (amount !== undefined && key === 'calories' && amount >= 10_000)
+      amount = Math.round(amount / 1000);
     if (amount !== undefined) result[key] = amount + ' ' + unit;
   }
   return Object.keys(result).length > 1 ? result : undefined;

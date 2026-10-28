@@ -10,7 +10,7 @@ Foreign pages receive a fixed GET request without account tokens, cookies, API k
 
 ## Imported data
 
-Import title, description, ingredients, instructions, servings, total time, photos and nutrition per portion (kcal, protein, carbs and fat). Do not collect author, rating, difficulty, yield, separate preparation/cooking times or cooking tips. Explicit substitutions can join the description. ICA “För alla” and “Klimatanpassa” advice is ignored. Existing descriptions containing unlabelled advice are not rewritten automatically because it cannot be separated safely from user text.
+Import title, description, ingredients, instructions, servings, total time, photos and nutrition per portion (kcal, protein, carbs and fat). Energy given in kJ converts to kcal; a value of 10 000 or more per portion is read as small calories and divided by 1000 (654897 → 655 kcal), also for recipes imported before this rule. Do not collect author, rating, difficulty, yield, separate preparation/cooking times or cooking tips. Explicit substitutions can join the description. ICA “För alla” and “Klimatanpassa” advice is ignored. Existing descriptions containing unlabelled advice are not rewritten automatically because it cannot be separated safely from user text.
 
 Imported categories match existing collection names after trimming and ignoring case. Unmatched categories never create collections. Keywords, cuisine and dietary labels are ignored. Categories are created manually in the app.
 
