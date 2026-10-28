@@ -113,7 +113,7 @@ Kortet har en tunn kant i en mörkare ton av sin egen bakgrundsfärg. Bilden lig
 
 Karusellen använder naturlig horisontell scroll med tydliga stopp per kort. Mjuka toningar vid skärmkanterna gör delvis synliga grannkort mindre abrupta. På mobil används svepning och indikatorn under korten. På större skärmar finns också diskreta navigationspilar och tangentbordsstöd.
 
-Första och sista kortet ska kunna ligga centrerade i mobil- och tabletliknande bredder, även i liggande läge. På mycket breda skrivbordsskärmar används en mer hyllik vänsterjustering.
+Första och sista kortet ska kunna ligga centrerade i mobil- och tabletliknande bredder, även i liggande läge. På mycket breda skrivbordsskärmar används en mer hyllik vänsterjustering. På stående surfplattor fyller hyllan skärmens höjd: korten blir bredare och lika höga som utrymmet tillåter, och fotot tar den extra höjden. I listvyn ligger receptraderna i två kolumner från 64rem, så breda skärmar inte visar en enda utdragen rad.
 
 ### 5.3 Karusellens indikator
 

@@ -329,6 +329,17 @@
   align-items: center;
   gap: 12px;
 }
+/* Wide screens fill the line with a second column of rows. */
+@media (min-width: 64rem) {
+  .recipe-index {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 48px;
+  }
+  .recipe-index > :not(.index-row, .index-add-row) {
+    grid-column: 1 / -1;
+  }
+}
 @media (max-width: 600px) {
   .index-heading {
     gap: 8px;
