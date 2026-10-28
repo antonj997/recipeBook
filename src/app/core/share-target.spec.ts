@@ -20,6 +20,19 @@ describe('shareTargetRoute', () => {
     );
   });
 
+  it('imports shared recipe text as text even when it names its source link', () => {
+    const text = 'Soup\n1 onion\nCook it.\nSource: https://example.com/soup';
+    expect(shareTargetRoute('?text=' + encodeURIComponent(text))).toBe(
+      '/recipes/import?text=' + encodeURIComponent(text),
+    );
+  });
+
+  it('still opens the link when the text is only a title above it', () => {
+    expect(shareTargetRoute('?text=' + encodeURIComponent('Soup\nhttps://example.com/soup'))).toBe(
+      '/recipes/import?url=https%3A%2F%2Fexample.com%2Fsoup',
+    );
+  });
+
   it('ignores ordinary starts', () => {
     expect(shareTargetRoute('')).toBeNull();
     expect(shareTargetRoute('?utm_source=homescreen')).toBeNull();
