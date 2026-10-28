@@ -71,6 +71,9 @@
 .brand-mark {
   flex: 0 0 24px;
   object-fit: contain;
+}
+// An R while the header is tall, a book on its spine once it compacts (see swingHeaderMark).
+:host(.compact-header) .brand-mark {
   transform: rotate(-90deg);
 }
 .brand-word {

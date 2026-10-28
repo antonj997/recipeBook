@@ -23,6 +23,7 @@ import { RecipeImagesService } from './core/services/recipe-images.service';
 import { ImageMigrationService } from './core/services/image-migration.service';
 import { BasketService } from './core/services/basket.service';
 import { motionMs } from './core/motion';
+import { swingHeaderMark } from './core/brand-mark-motion';
 import {
   afterNextRender,
   Component,
@@ -94,6 +95,7 @@ export class App {
   private images = inject(RecipeImagesService);
   protected readonly basket = inject(BasketService);
   private readonly basketLink = viewChild<ElementRef<HTMLElement>>('basketLink');
+  private readonly brandMark = viewChild<ElementRef<HTMLElement>>('brandMark');
   readonly accountChanging = signal(false);
 
   private syncThemeColor = (): void => {};
@@ -121,6 +123,16 @@ export class App {
         ],
         { duration: motionMs(360), easing: 'ease-out' },
       );
+    });
+    // The mark stands as an R in the tall header and tips onto its spine as the header compacts.
+    let compact = this.compactHeader();
+    let swing: Animation | undefined;
+    effect(() => {
+      const next = this.compactHeader();
+      const mark = this.brandMark()?.nativeElement;
+      if (next === compact || !mark) return;
+      compact = next;
+      swing = swingHeaderMark(mark, next, swing);
     });
     this.destroyRef.onDestroy(() => {
       this.stopSnapshotGesture?.();

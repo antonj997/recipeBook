@@ -622,7 +622,7 @@ På telefon ligger kortet i mitten lite framför sina grannar, som krymper någo
 
 Logotypen är användarens egna vektorform från Final version.svg, inte bokstaven R satt i ett typsnitt. Formen kombinerar en boklik silhuett med ett R: en smal bindning, en rundad övre sida och en svängd nedre sida.
 
-Installerad appikon och favicon behåller R-orienteringen. Appikonen använder en ljus markering mot mörk bakgrund. Headern använder en liten svart version roterad 90 grader moturs, så att bindningen ligger ned och märket uppfattas som en öppen bok.
+Installerad appikon och favicon behåller R-orienteringen. Appikonen använder en ljus markering mot mörk bakgrund. I den höga headern står den lilla svarta versionen upprätt som ett R. När man scrollar och headern blir smal tippar R:et över på bokens rygg och ligger som en bok, roterad 90 grader moturs med bindningen nedåt. Det reser sig upp på sitt hörn, balanserar ett ögonblick vid tippunkten och dunsar sedan ned precis när headern har krympt klart. Scrollar man tillbaka upp reser sig boken till ett R igen.
 
 Vid laddning kan R-märket tippa över till bokorienteringen. Den aktuella rörelsen har en liten förberedelse, en accelererande fallrörelse och ett bestämt stopp vid kontakten. Det ska kännas som att en bok slår ned mot en yta, inte studsar eller landar fjäderlätt. Rörelsen delas av appens laddningsvyer.
 
