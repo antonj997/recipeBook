@@ -159,4 +159,51 @@ describe('calmer cloud sync', () => {
     await cloud.sync();
     expect(cloud.revision()).toBe(before + 1);
   });
+
+  it('does not refresh views when a sync reads back its own upload', async () => {
+    const cache = account();
+    await cloud.sync();
+    // The server keeps what it receives and stamps it, as the real table does.
+    const original = cloud.auth.client!.from;
+    vi.spyOn(cloud.auth.client!, 'from').mockImplementation((table: string) => {
+      const query = original(table);
+      return {
+        ...query,
+        upsert: async (rows: Record<string, unknown>[]) => {
+          for (const row of rows)
+            tables[table]!.rows.push({
+              id: row['id'] as string,
+              payload: row['payload'],
+              photos: row['photos'] ?? {},
+              deleted: row['deleted'] as boolean,
+              updated_at: '2026-10-28T08:00:00Z',
+            });
+          return query.upsert(rows as never);
+        },
+      } as never;
+    });
+    await queue(cache, 2);
+    const put = vi.spyOn(cache.table('recipes'), 'put');
+    const before = cloud.revision();
+    await cloud.sync();
+    expect(tables['recipes']!.rows).toHaveLength(2);
+    expect(put).not.toHaveBeenCalled();
+    expect(cloud.revision()).toBe(before);
+    // The version is still remembered, so the next pull skips the row without comparing it.
+    expect(await cache.remote.get('recipes:r000')).toEqual({
+      key: 'recipes:r000',
+      updatedAt: '2026-10-28T08:00:00Z',
+    });
+  });
+
+  it('syncs on return right after an account switch, before the switch has settled', async () => {
+    account();
+    await cloud.sync();
+    // Auth callbacks can change the user before Angular runs the effect that selects its cache.
+    user.set({ id: 'bob' });
+    accountVersion.update((version) => version + 1);
+    const sync = vi.spyOn(cloud, 'sync').mockResolvedValue();
+    cloud.requestSync('visible');
+    expect(sync).toHaveBeenCalled();
+  });
 });

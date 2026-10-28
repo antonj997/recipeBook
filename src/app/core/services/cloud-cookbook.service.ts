@@ -14,7 +14,13 @@ import {
 import { SupabaseService } from './supabase.service';
 import { StorageDurabilityService } from './storage-durability.service';
 import { uploadPhotos, type RecipePhotos } from './cloud-photos';
-import { pullTable, readCloudRecipe, remoteTable, missingShoppingTable } from './cloud-pull';
+import {
+  canonicalRecord,
+  missingShoppingTable,
+  pullTable,
+  readCloudRecipe,
+  remoteTable,
+} from './cloud-pull';
 import { extractPhotos, photoRefs, putImages, type PreparedImage } from '../models/recipe-image';
 
 // Server limits stay far away and one request carries a burst of edits.
@@ -533,6 +539,8 @@ export class CloudCookbookService {
   }
 
   private recentlySynced(): boolean {
+    // The user can change before the effect that selects their cache has run.
+    this.selectAccount(this.auth.user()?.id ?? null);
     return Date.now() - this.lastSuccess < returnSyncInterval;
   }
 
@@ -732,11 +740,4 @@ function sameDeviceContent(a: CookbookValue, b: CookbookValue): boolean {
 function deviceContent(value: CookbookValue): string {
   const { createdAt, updatedAt, ...content } = value as Recipe;
   return canonicalRecord(content);
-}
-
-function canonicalRecord(value: unknown): string {
-  return JSON.stringify(value, (_, item: unknown) => {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
-    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
-  });
 }

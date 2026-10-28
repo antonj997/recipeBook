@@ -172,12 +172,16 @@ async function applyPage(
         if (!current()) throw new Error('Account changed. Try again.');
         // Edited while the page downloaded: the local change stays and uploads later.
         if (await cache.outbox.get(key)) continue;
-        await putImages(cache, images);
-        if (value) await cache.table(table).put(value);
-        else await cache.table(table).delete(row.id);
+        // A row this device already holds, such as its own upload read back, changes nothing.
+        const local: unknown = await cache.table(table).get(row.id);
+        if (value ? canonicalRecord(local) !== canonicalRecord(value) : local !== undefined) {
+          await putImages(cache, images);
+          if (value) await cache.table(table).put(value);
+          else await cache.table(table).delete(row.id);
+          written++;
+        }
         if (table === 'recipes') await cache.photos.put({ id: row.id, paths: row.photos ?? {} });
         if (row.updated_at) await cache.remote.put({ key, updatedAt: row.updated_at });
-        written++;
       }
       if (last?.updated_at)
         await cache.syncState.put({ table, cursor: { at: last.updated_at, id: last.id } });
@@ -185,6 +189,14 @@ async function applyPage(
   );
   tally.written += written;
   return true;
+}
+
+/** JSON with sorted keys, so records that differ only in key order compare equal. */
+export function canonicalRecord(value: unknown): string {
+  return JSON.stringify(value, (_, item: unknown) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+    return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)));
+  });
 }
 
 /** A PostgREST logic-tree value; quoting keeps commas, dots and parentheses in ids literal. */
