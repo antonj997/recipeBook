@@ -171,13 +171,27 @@
                     (valueChange)="changeServings($event)"
                   />
                   @if (!isDraft && selectedRecipe.ingredients.length) {
+                    @let toBuy = checkedIngredients().size;
                     <button
+                      #shoppingButton
                       type="button"
                       class="recipe-shopping-button"
-                      aria-haspopup="dialog"
-                      (click)="shoppingPickerOpen.set(true)"
+                      [attr.aria-haspopup]="toBuy ? null : 'dialog'"
+                      [disabled]="addingToShopping()"
+                      (click)="addToShopping(shoppingButton)"
                     >
-                      <app-icon name="basket" />Add to shopping list
+                      <app-icon name="basket" />
+                      @if (toBuy) {
+                        Add
+                        @for (count of [toBuy]; track count) {
+                          <span class="shopping-count" animate.enter="shopping-count-in">{{
+                            count
+                          }}</span>
+                        }
+                        to shopping list
+                      } @else {
+                        Add to shopping list
+                      }
                     </button>
                   }
                 }

@@ -18,6 +18,8 @@ import { RecipeTitleComponent } from '../../../shared/components/recipe-title';
 import { RecipeTransitionPartDirective } from '../../../shared/components/recipe-transition-part';
 import { PageAppearanceService } from '../../../core/services/page-appearance.service';
 import { recipeBackground } from '../../../core/models/recipe-color';
+import { ShoppingListService } from '../../../core/services/shopping-list.service';
+import { BasketService } from '../../../core/services/basket.service';
 import { hasPhoto, type PhotoRef } from '../../../core/models/recipe-image';
 import { RecipeImagesService } from '../../../core/services/recipe-images.service';
 import { RecipeActionsService } from '../../../core/services/recipe-actions.service';
@@ -596,6 +598,57 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   }
   recipe = signal<Recipe | undefined>(undefined);
   readonly shoppingPickerOpen = signal(false);
+  private readonly shopping = inject(ShoppingListService);
+  private readonly basket = inject(BasketService);
+  readonly addingToShopping = signal(false);
+  /**
+   * Checked ingredients go to the shopping list as they are, their count on the button; with
+   * none checked the picker opens to choose. A selection already on the list offers Add again.
+   */
+  async addToShopping(button: HTMLElement, allowDuplicate = false): Promise<void> {
+    const recipe = this.recipe();
+    if (!recipe || this.isDraft || this.accountChanged() || this.addingToShopping()) return;
+    const indices = [...this.checkedIngredients()].sort((a, b) => a - b);
+    if (!indices.length) {
+      this.shoppingPickerOpen.set(true);
+      return;
+    }
+    const servings = this.selectedServings();
+    const account = this.shopping.accountVersion();
+    this.addingToShopping.set(true);
+    try {
+      const count = await this.shopping.addRecipe(recipe, servings, indices, allowDuplicate);
+      if (this.recipe() !== recipe || account !== this.shopping.accountVersion()) return;
+      if (button.isConnected)
+        void this.basket.flyFrom(
+          button.getBoundingClientRect(),
+          count,
+          `color-mix(in srgb, ${recipeBackground(recipe)} 52%, var(--color-ink))`,
+        );
+      this.checkedIngredients.set(new Set());
+      this.saveCookingSession();
+      this.feedback.show(count + (count === 1 ? ' item added' : ' items added'), {
+        label: 'View list',
+        run: async () => {
+          if (account === this.shopping.accountVersion())
+            await this.router.navigateByUrl('/shopping-list');
+        },
+      });
+    } catch (error) {
+      if (account !== this.shopping.accountVersion()) return;
+      if (error instanceof Error && error.message === 'These ingredients are already on your list.')
+        this.feedback.show('Already on your list', {
+          label: 'Add again',
+          run: () => this.addToShopping(button, true),
+        });
+      else
+        this.feedback.show(
+          error instanceof Error ? error.message : 'Could not add these ingredients. Try again.',
+        );
+    } finally {
+      this.addingToShopping.set(false);
+    }
+  }
   selectedServings = signal(4);
   baseServings = computed(() => {
     const value = this.recipe()?.servings;

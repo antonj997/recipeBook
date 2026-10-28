@@ -193,9 +193,9 @@ Beräkningen utgår alltid från receptets sparade originalmängder och standard
 
 Portionsmenyn stöder vanligt tryck, tangentbord och att hålla inne och dra genom alternativen. Förhandsvisningen följer det markerade värdet. Släpp utanför menyn avbryter valet.
 
-Under matlagning kan ingredienserna bockas av när de är framtagna. De stryks inte över och texten behåller sin färg, så att mängden fortfarande går att läsa. I stället har varje rad en rund markering som fylls med receptets ton och får en bock, medan en liten nypa smulor stänks ut från den. Markeringarna sparas lokalt med receptets steg, följer med till fokusläget och nollställs av Reset. Portionsbyte behåller dem, men en ändrad ingrediensrad släpper sin markering. De påverkar inte inköpslistan och visas inte i utkastgranskningen.
+Under matlagning kan ingredienserna bockas av när de är framtagna. De stryks inte över och texten behåller sin färg, så att mängden fortfarande går att läsa. I stället har varje rad en rund markering som fylls med receptets ton och får en bock, medan en liten nypa smulor stänks ut från den. Markeringarna sparas lokalt med receptets steg, följer med till fokusläget och nollställs av Reset. Portionsbyte behåller dem, men en ändrad ingrediensrad släpper sin markering. De visas inte i utkastgranskningen.
 
-Portionskontrollen ligger före Add to shopping list. Inköpsknappen öppnar ett urval av receptets ingredienser med det valda portionsantalet.
+Portionskontrollen ligger före Add to shopping list. Bockade ingredienser är också urvalet för inköpslistan: är några bockade visar knappen antalet, till exempel Add 3 to shopping list, med siffran i en liten bricka i markeringarnas färg. Ett tryck lägger till just de bockade ingredienserna med det valda portionsantalet, de flyger till korgen och bockarna nollställs. Finns samma urval redan i listan erbjuds Add again. Är inget bockat öppnar knappen i stället ett urval av receptets ingredienser. Tidigare öppnade knappen alltid urvalet, vilket var förvirrande när man redan hade bockat i listan.
 
 ### 6.5 Instruktioner och tillagningsprogress
 
@@ -436,7 +436,7 @@ En tom lista får en vänlig, centrerad introduktion och tydliga vägar att läg
 
 ### 12.2 Lägg till från recept
 
-Från listan väljer man först ett recept, vid behov med sökning. Från receptsidan är receptet redan valt. Därefter kan man ändra portionsantal och markera de ingredienser som behövs.
+Från listan väljer man först ett recept, vid behov med sökning. Från receptsidan är receptet redan valt, och urvalet öppnas bara när inga ingredienser är bockade. Därefter kan man ändra portionsantal och markera de ingredienser som behövs.
 
 Inga ingredienser är markerade från början. Det är ett medvetet beslut för att undvika att salt, olja och sådant man redan har läggs till automatiskt. Select all och Deselect all finns för större urval. Ingrediensgrupper och skalade mängder följer med i väljaren.
 

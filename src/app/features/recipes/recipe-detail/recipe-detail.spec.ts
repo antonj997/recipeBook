@@ -20,12 +20,16 @@ import {
 import { RecipeDraftService } from '../../../core/services/recipe-draft.service';
 import { StorageDurabilityService } from '../../../core/services/storage-durability.service';
 import { WakeLockService } from '../../../core/services/wake-lock.service';
+import { ShoppingListService } from '../../../core/services/shopping-list.service';
+import { BasketService } from '../../../core/services/basket.service';
 
 describe('recipe detail', () => {
   const stepToReveal = signal<StepTimerTarget | null>(null);
   let routeData = new BehaviorSubject({});
+  let shopping: { addRecipe: ReturnType<typeof vi.fn>; accountVersion: ReturnType<typeof signal> };
   beforeEach(() => {
     localStorage.clear();
+    shopping = { addRecipe: vi.fn(async () => 1), accountVersion: signal(0) };
     stepToReveal.set(null);
     routeData = new BehaviorSubject({});
     vi.stubGlobal('matchMedia', () => ({
@@ -81,6 +85,8 @@ describe('recipe detail', () => {
           },
         },
         { provide: FeedbackService, useFactory: () => new FeedbackService() },
+        { provide: ShoppingListService, useFactory: () => shopping },
+        { provide: BasketService, useValue: { flyFrom: vi.fn(async () => undefined) } },
       ],
     });
   });
@@ -996,6 +1002,65 @@ describe('recipe detail', () => {
     expect(TestBed.inject(CookingSessionService).read('tab-test')).toMatchObject({
       ingredients: [{ index: 0, fingerprint: JSON.stringify(['Salt', '']) }],
     });
+  });
+
+  it('adds checked ingredients straight to the shopping list, counted on the button', async () => {
+    const f = await fixture();
+    const button = () =>
+      f.host.nativeElement.querySelector('.recipe-shopping-button') as HTMLButtonElement;
+    const label = () => button().textContent?.replace(/\s+/g, ' ').trim();
+    expect(label()).toBe('Add to shopping list');
+    f.ingredients.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    f.host.detectChanges();
+    expect(label()).toBe('Add 1 to shopping list');
+    button().click();
+    const feedback = TestBed.inject(FeedbackService);
+    await vi.waitFor(() => expect(feedback.message()).toBe('1 item added'));
+    expect(shopping.addRecipe).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'tab-test' }),
+      4,
+      [0],
+      false,
+    );
+    expect(f.host.componentInstance.shoppingPickerOpen()).toBe(false);
+    f.host.detectChanges();
+    // The checks did their job; the list is ready for cooking or the next shop.
+    expect(f.ingredients.querySelector('li.gathered')).toBeNull();
+    expect(label()).toBe('Add to shopping list');
+  });
+
+  it('opens the ingredient picker when nothing is checked', async () => {
+    const f = await fixture();
+    for (const method of ['showModal', 'close'] as const)
+      if (!HTMLDialogElement.prototype[method])
+        Object.defineProperty(HTMLDialogElement.prototype, method, {
+          configurable: true,
+          value() {},
+        });
+    (f.host.nativeElement.querySelector('.recipe-shopping-button') as HTMLButtonElement).click();
+    expect(f.host.componentInstance.shoppingPickerOpen()).toBe(true);
+    expect(shopping.addRecipe).not.toHaveBeenCalled();
+  });
+
+  it('offers to add checked ingredients again when they are already on the list', async () => {
+    shopping.addRecipe.mockRejectedValueOnce(
+      new Error('These ingredients are already on your list.'),
+    );
+    const f = await fixture();
+    f.ingredients.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
+    f.host.detectChanges();
+    (f.host.nativeElement.querySelector('.recipe-shopping-button') as HTMLButtonElement).click();
+    const feedback = TestBed.inject(FeedbackService);
+    await vi.waitFor(() => expect(feedback.message()).toBe('Already on your list'));
+    expect(feedback.action()?.label).toBe('Add again');
+    await feedback.runAction();
+    expect(shopping.addRecipe).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: 'tab-test' }),
+      4,
+      [0],
+      true,
+    );
+    expect(feedback.message()).toBe('1 item added');
   });
 
   it('restores checked ingredients only while their text is unchanged', async () => {
