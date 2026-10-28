@@ -4,7 +4,8 @@ import { RecipeDraftService } from '../../../core/services/recipe-draft.service'
 import { RecipeService } from '../../../core/services/recipe.service';
 import { IconComponent } from '../../../shared/components/icon';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { parseRecipeText } from '../../../core/models/recipe-text';
 import { ImportCookingComponent } from '../../../shared/components/import-cooking';
 import { motionMs } from '../../../core/motion';
 
@@ -28,6 +29,9 @@ export class RecipeImportComponent {
   // This tab's link survives the sign-in detour; no account data or credentials are stored here.
   private readonly urlKey = 'recipebook:import-url:' + this.auth.cacheScope;
   url = '';
+  /** A recipe pasted or shared as plain text, imported without a link. */
+  readonly text = signal('');
+  readonly canPaste = typeof navigator.clipboard?.readText === 'function';
   importing = signal(false);
   error = signal('');
   notice = signal('');
@@ -38,6 +42,14 @@ export class RecipeImportComponent {
     } catch {
       /* Optional continuity. */
     }
+    // A link or text shared to the app, or a ?url= link, starts the import right away.
+    const query = inject(ActivatedRoute).snapshot.queryParamMap;
+    const shared = query.get('url')?.trim();
+    if (shared && isLink(shared)) {
+      this.url = shared;
+      queueMicrotask(() => void this.start());
+    }
+    this.text.set(query.get('text') ?? '');
     this.destroyRef.onDestroy(() => {
       this.active = false;
       this.controller?.abort();
@@ -62,8 +74,62 @@ export class RecipeImportComponent {
     queueMicrotask(() => document.getElementById('recipe-url')?.focus());
   }
 
-  async importRecipe(event: Event): Promise<void> {
+  /** A lone link pasted into the empty field imports at once. */
+  pasteIntoField(event: ClipboardEvent): void {
+    const pasted = event.clipboardData?.getData('text/plain').trim() ?? '';
+    if (this.url.trim() || !isLink(pasted)) return;
     event.preventDefault();
+    this.url = pasted;
+    void this.start();
+  }
+
+  /** One tap: read the link from the clipboard and import it. */
+  async pasteLink(): Promise<void> {
+    this.error.set('');
+    let pasted = '';
+    try {
+      pasted = (await navigator.clipboard.readText()).trim();
+    } catch {
+      this.error.set('Recipebook could not read the clipboard. Paste the link into the field.');
+      return;
+    }
+    if (isLink(pasted)) {
+      this.url = pasted;
+      await this.start();
+    } else if (pasted.includes('\n')) {
+      this.text.set(pasted);
+      this.notice.set('That looks like recipe text. Check it below and choose Use text.');
+    } else this.error.set('There is no link on the clipboard. Copy the recipe link first.');
+  }
+
+  updateText(event: Event): void {
+    this.text.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  /** Recipe text skips the importer: it is parsed here and opens in the same review. */
+  async importText(): Promise<void> {
+    if (this.importing()) return;
+    this.error.set('');
+    this.notice.set('');
+    const accountVersion = this.auth.accountVersion();
+    try {
+      const parsed = parseRecipeText(this.text());
+      const prepared = await this.drafts.fromImport(parsed, this.recipes);
+      if (!this.active || this.auth.accountVersion() !== accountVersion) return;
+      this.drafts.set(prepared);
+      await this.router.navigate(['/recipes/new']);
+    } catch (error) {
+      if (this.active)
+        this.error.set(error instanceof Error ? error.message : 'Could not read the recipe text.');
+    }
+  }
+
+  importRecipe(event: Event): Promise<void> {
+    event.preventDefault();
+    return this.start();
+  }
+
+  private async start(): Promise<void> {
     if (this.localOnly() || this.needsSignIn() || this.importing() || !this.url.trim()) return;
     this.rememberUrl();
     this.importing.set(true);
@@ -131,4 +197,8 @@ export class RecipeImportComponent {
       if (this.controller === controller) this.importing.set(false);
     }
   }
+}
+
+function isLink(value: string): boolean {
+  return /^https?:\/\/\S+$/i.test(value);
 }

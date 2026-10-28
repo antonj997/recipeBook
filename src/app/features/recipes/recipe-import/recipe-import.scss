@@ -57,3 +57,41 @@ form button {
 form .hint {
   margin: 0;
 }
+.paste-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.paste-link app-icon {
+  width: 18px;
+  height: 18px;
+}
+// Recipes that arrive as text: a note, a message or a page without a link.
+.text-import {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-border);
+}
+.text-import h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+.text-import .hint {
+  margin: 0;
+  max-width: 60ch;
+}
+.text-import textarea {
+  width: 100%;
+  min-height: 9rem;
+  resize: vertical;
+}
+.import-text {
+  align-self: flex-start;
+}
+@media (max-width: 600px) {
+  .import-text {
+    width: 100%;
+  }
+}

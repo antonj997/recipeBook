@@ -27,8 +27,14 @@
       [value]="url"
       [disabled]="importing()"
       (input)="updateUrl($event)"
+      (paste)="pasteIntoField($event)"
       placeholder="https://www.ica.se/recept/..."
     />
+    @if (canPaste && !localOnly() && !needsSignIn()) {
+      <button type="button" class="paste-link" [disabled]="importing()" (click)="pasteLink()">
+        <app-icon name="link" />Paste link and import
+      </button>
+    }
     @if (localOnly()) {
       <p id="import-hint">
         Link import needs the local import server or a configured cloud account.
@@ -60,6 +66,29 @@
       <p role="status">{{ notice() }}</p>
     }
   </form>
+  <section class="text-import" aria-labelledby="text-import-heading">
+    <h2 id="text-import-heading">Or paste the recipe text</h2>
+    <p class="hint">
+      From a note, a message or a page without a link. The first line becomes the title.
+    </p>
+    <textarea
+      id="recipe-text"
+      aria-labelledby="text-import-heading"
+      rows="6"
+      [value]="text()"
+      [disabled]="importing()"
+      (input)="updateText($event)"
+      placeholder="Pancakes&#10;3 dl flour&#10;6 dl milk&#10;Whisk and fry thin pancakes."
+    ></textarea>
+    <button
+      type="button"
+      class="import-text"
+      [disabled]="importing() || !text().trim()"
+      (click)="importText()"
+    >
+      Use text
+    </button>
+  </section>
   @if (importing()) {
     <app-import-cooking [ready]="ready()" [cancellable]="true" (cancelled)="cancelImport()" />
   }
