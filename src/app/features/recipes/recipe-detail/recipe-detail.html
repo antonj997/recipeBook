@@ -62,7 +62,7 @@
             />
           }
           <header class="recipe-summary">
-            <h1 [appRecipeTransition]="selectedRecipe.id" transitionPart="title">
+            <h1 #titleHeading [appRecipeTransition]="selectedRecipe.id" transitionPart="title">
               <app-recipe-title [title]="selectedRecipe.title || 'New recipe'" />
             </h1>
             <app-recipe-summary-details

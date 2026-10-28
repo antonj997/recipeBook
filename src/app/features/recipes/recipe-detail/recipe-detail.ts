@@ -198,6 +198,13 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   wideReading = signal(false);
   readonly focusMode = signal(false);
   private readonly readingSurface = viewChild<ElementRef<HTMLElement>>('readingSurface');
+  private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
+  private readonly headingPassed = signal(false);
+  private readonly headerTitle = computed(() => {
+    const recipe = this.recipe();
+    if (!recipe || this.accountChanged()) return null;
+    return { text: recipe.title || 'New recipe', shown: this.headingPassed() };
+  });
   focusReadingHeight = 0;
   focusScroll = { left: 0, top: 0 };
   openFocus(): void {
@@ -313,6 +320,24 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       const recipe = this.recipe();
       if (recipe && !this.accountChanged())
         onCleanup(this.appearance.useBackground(recipeBackground(recipe)));
+    });
+    // The compact header takes over the title once the heading has scrolled under it.
+    this.destroyRef.onDestroy(this.appearance.useHeaderTitle(this.headerTitle));
+    effect((onCleanup) => {
+      const heading = this.titleHeading()?.nativeElement;
+      const top = Math.round(this.appearance.headerHeight());
+      if (!heading || typeof IntersectionObserver === 'undefined') return;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry)
+            this.headingPassed.set(
+              !entry.isIntersecting && entry.boundingClientRect.top < (entry.rootBounds?.top ?? 0),
+            );
+        },
+        { rootMargin: `-${top}px 0px 0px 0px` },
+      );
+      observer.observe(heading);
+      onCleanup(() => observer.disconnect());
     });
     effect(() => {
       if (this.accountChanged()) {

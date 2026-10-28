@@ -57,6 +57,7 @@ import { FeedbackService } from './core/services/feedback.service';
     '[style.--page-background]': 'appearance.background()',
     '[style.--app-header-height]': 'headerHeight()',
     '[class.recipe-page]': '!!appearance.background()',
+    '[class.header-title-shown]': '!!appearance.headerTitle()?.shown',
     '[class.compact-header]': 'compactHeader()',
     '[class.focus-surface]': '!!appearance.browserColor()',
     '[style.--browser-surface]': 'appearance.browserColor()',
@@ -157,7 +158,9 @@ export class App {
       // Keep sticky tabs below the real header, including safe-area changes and enlarged text.
       const updateHeight = () => {
         const height = header.getBoundingClientRect().height;
-        if (height > 0) this.headerHeight.set(height + 'px');
+        if (height <= 0) return;
+        this.headerHeight.set(height + 'px');
+        this.appearance.setHeaderHeight(height);
       };
       updateHeight();
       const observer = new ResizeObserver(updateHeight);

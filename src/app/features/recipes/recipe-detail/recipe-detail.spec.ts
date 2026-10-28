@@ -170,6 +170,61 @@ describe('recipe detail', () => {
     expect(tools.lastElementChild?.textContent).toContain('Add to shopping list');
   });
 
+  it('hands its title to the header once the heading scrolls under it', async () => {
+    const observers: {
+      callback: IntersectionObserverCallback;
+      options?: IntersectionObserverInit;
+      targets: Element[];
+      disconnected: boolean;
+    }[] = [];
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        private record;
+        constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+          this.record = { callback, options, targets: [] as Element[], disconnected: false };
+          observers.push(this.record);
+        }
+        observe(target: Element) {
+          this.record.targets.push(target);
+        }
+        disconnect() {
+          this.record.disconnected = true;
+        }
+      },
+    );
+    const appearance = TestBed.inject(PageAppearanceService);
+    appearance.setHeaderHeight(57.4);
+    const f = await fixture();
+    const live = () => observers.filter((observer) => !observer.disconnected);
+    expect(live()).toHaveLength(1);
+    const [observer] = live();
+    expect(observer!.targets[0]?.tagName).toBe('H1');
+    expect(observer!.options?.rootMargin).toBe('-57px 0px 0px 0px');
+    expect(appearance.headerTitle()).toEqual({ text: 'Recipe section test', shown: false });
+    const report = (isIntersecting: boolean, top: number) =>
+      observer!.callback(
+        [
+          {
+            isIntersecting,
+            boundingClientRect: { top } as DOMRectReadOnly,
+            rootBounds: { top: 57, bottom: 800 } as DOMRectReadOnly,
+          } as IntersectionObserverEntry,
+        ],
+        observer as never,
+      );
+    report(false, -20);
+    expect(appearance.headerTitle()?.shown).toBe(true);
+    report(true, 40);
+    expect(appearance.headerTitle()?.shown).toBe(false);
+    // Below the screen, as after a jump to a far step, the heading has not been passed yet.
+    report(false, 900);
+    expect(appearance.headerTitle()?.shown).toBe(false);
+    f.host.destroy();
+    expect(appearance.headerTitle()).toBeNull();
+    expect(observer!.disconnected).toBe(true);
+  });
+
   async function openFocus(f: Awaited<ReturnType<typeof fixture>>, beforeRender?: () => void) {
     if (!HTMLDialogElement.prototype.showModal)
       Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {

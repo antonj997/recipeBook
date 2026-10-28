@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import { PageAppearanceService } from './page-appearance.service';
@@ -23,5 +24,19 @@ describe('page appearance', () => {
     expect(appearance.browserColor()).toBe('#ffffff');
     leaveNew();
     expect(appearance.browserColor()).toBeNull();
+  });
+
+  it('shows the title of the page that owns the header, and drops it on release', () => {
+    const appearance = TestBed.inject(PageAppearanceService);
+    const soup = signal({ text: 'Soup', shown: false });
+    const leaveSoup = appearance.useHeaderTitle(soup);
+    expect(appearance.headerTitle()).toEqual({ text: 'Soup', shown: false });
+    soup.set({ text: 'Soup', shown: true });
+    expect(appearance.headerTitle()).toEqual({ text: 'Soup', shown: true });
+    const leaveBread = appearance.useHeaderTitle(signal({ text: 'Bread', shown: false }));
+    leaveSoup();
+    expect(appearance.headerTitle()).toEqual({ text: 'Bread', shown: false });
+    leaveBread();
+    expect(appearance.headerTitle()).toBeNull();
   });
 });

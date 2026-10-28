@@ -171,6 +171,8 @@ I början är headern och dess safe area benvita. När man scrollar ned komprime
 
 Headern ska upplevas som en sammanhängande yta med området bakom telefonens klocka och batteri. Det finns ingen separat färgremsa som ska glida undan. Färgövergång och komprimering är mjuka i stället för att byta storlek abrupt. Knapparna behåller tillräckligt stora tryckytor trots den visuellt smala raden.
 
+På en receptsida tar receptets titel ordmärkets plats i den komprimerade headern när sidans egen rubrik har scrollat in under den. Titeln tonas in och stiger lätt upp medan ordet Recipebook tonas bort, och den kortas med ellips före inköpskorgen. När rubriken syns igen återkommer ordmärket. På så vis vet man alltid vilket recept man läser långt ned i ett långt recept. Skärmläsare får rubriken från sidan och inte en gång till från headern.
+
 Vi har valt en opak färgad yta framför Liquid Glass i denna del. Telefonens operativsystem bestämmer fortfarande hur själva statusfältet ritas; webbappen kan påverka bakgrunden och webbläsarens temafärg men äger inte systemets ikoner.
 
 ### 6.3 Håll skärmen vaken
