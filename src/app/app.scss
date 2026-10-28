@@ -76,12 +76,15 @@
 :host(.compact-header) .brand-mark {
   transform: rotate(-90deg);
 }
+// The wordmark and the recipe title take turns: the one leaving slides away and fades first,
+// and the other rises into place only once it has gone, so they never show on top of each other.
 .brand-word {
   display: inline-block;
   transform-origin: left center;
   transition:
     transform var(--motion-header) cubic-bezier(0.4, 0, 0.2, 1),
-    opacity var(--motion-control) var(--motion-ease-out);
+    opacity var(--motion-surface) var(--motion-ease-out) var(--motion-reveal),
+    translate var(--motion-surface) var(--motion-ease-out) var(--motion-reveal);
 }
 :host(.compact-header) .brand-word {
   transform: scale(0.8);
@@ -100,8 +103,8 @@
   translate: 0 40%;
   pointer-events: none;
   transition:
-    opacity var(--motion-control) var(--motion-ease-out),
-    translate var(--motion-control) var(--motion-ease-out);
+    opacity var(--motion-reveal) cubic-bezier(0.4, 0, 1, 1),
+    translate var(--motion-reveal) cubic-bezier(0.4, 0, 1, 1);
 }
 .header-title span {
   min-width: 0;
@@ -116,6 +119,20 @@
 }
 :host(.compact-header.header-title-shown) .brand-word {
   opacity: 0;
+  translate: 0 -40%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  :host(.compact-header.header-title-shown) .header-title {
+    transition:
+      opacity var(--motion-surface) var(--motion-ease-out) var(--motion-reveal),
+      translate var(--motion-surface) var(--motion-ease-out) var(--motion-reveal);
+  }
+  :host(.compact-header.header-title-shown) .brand-word {
+    transition:
+      transform var(--motion-header) cubic-bezier(0.4, 0, 0.2, 1),
+      opacity var(--motion-reveal) cubic-bezier(0.4, 0, 1, 1),
+      translate var(--motion-reveal) cubic-bezier(0.4, 0, 1, 1);
+  }
 }
 .settings-link {
   position: relative;
