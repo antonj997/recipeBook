@@ -149,6 +149,21 @@ describe('deadline-based step countdowns', () => {
     });
     expect(feedback.message()).toBe('');
   });
+  it('stops a finished timer when its toast is closed', async () => {
+    const timers = TestBed.inject(StepTimerService),
+      feedback = TestBed.inject(FeedbackService);
+    timers.start({ ...target, seconds: 2 });
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(timers.state({ ...target, seconds: 2 }).done).toBe(true);
+    feedback.close();
+    expect(feedback.message()).toBe('');
+    expect(timers.state({ ...target, seconds: 2 })).toMatchObject({
+      done: false,
+      running: false,
+      remaining: 2,
+    });
+  });
   it('keeps a failed timer navigation available to retry', async () => {
     const timers = TestBed.inject(StepTimerService),
       feedback = TestBed.inject(FeedbackService);

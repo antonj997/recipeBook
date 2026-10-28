@@ -480,6 +480,12 @@ export class StepTimerService {
           if (!opened || !current()) throw new Error('Step navigation cancelled');
           this.stepToReveal.set({ ...timer.target });
         },
+        // Closing the toast is the quickest way to silence the kitchen: it stops the timers.
+        closed: () => {
+          if (scope !== this.scope() || version !== this.auth.accountVersion()) return;
+          for (const saved of finished)
+            if (this.entries().get(saved.target.key)?.done) this.reset(saved.target);
+        },
       },
     );
   }

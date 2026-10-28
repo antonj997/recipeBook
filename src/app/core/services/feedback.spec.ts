@@ -52,4 +52,16 @@ describe('toast actions', () => {
     await action;
     expect(feedback.message()).toBe('Another timer finished');
   });
+
+  it('tells the action owner only when a person closes the toast', () => {
+    const feedback = new FeedbackService();
+    const closed = vi.fn();
+    feedback.show('Timer finished', { label: 'View', run: async () => undefined, closed });
+    feedback.dismiss();
+    expect(closed).not.toHaveBeenCalled();
+    feedback.show('Timer finished', { label: 'View', run: async () => undefined, closed });
+    feedback.close();
+    expect(closed).toHaveBeenCalledOnce();
+    expect(feedback.message()).toBe('');
+  });
 });

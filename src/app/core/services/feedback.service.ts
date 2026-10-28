@@ -5,6 +5,8 @@ export interface FeedbackAction {
   successMessage?: string;
   errorMessage?: string;
   run: () => Promise<void>;
+  /** Called when a person closes the toast with its X, not when it times out or is replaced. */
+  closed?: () => void;
 }
 // Ephemeral feedback; data restoration belongs to the caller's account-bound action.
 @Injectable({ providedIn: 'root' })
@@ -37,6 +39,12 @@ export class FeedbackService {
     } finally {
       if (this.action() === action) this.busy.set(false);
     }
+  }
+  /** The toast's X: a person closing it, which can mean something to the action's owner. */
+  close(): void {
+    const closed = this.action()?.closed;
+    this.dismiss();
+    closed?.();
   }
   dismiss(): void {
     clearTimeout(this.timeout);

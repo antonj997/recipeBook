@@ -305,7 +305,7 @@ När nedräkningen passerar noll blir tidsvärdet rött och börjar räkna upp �
 
 Om appen är synlig kan ett kort ljud upprepas i högst 30 sekunder från den ursprungliga sluttiden. Ljudet avbryts vid bland annat paus, återställning, avbockning eller när appen går till bakgrunden.
 
-En tunn toast berättar vilket steg som är klart och vilken timerlängd som har förflutit. View step öppnar receptet och rätt instruktion när användaren själv väljer det. Appen byter inte sida automatiskt.
+En tunn toast berättar vilket steg som är klart och vilken timerlängd som har förflutit. View step öppnar receptet och rätt instruktion när användaren själv väljer det. Appen byter inte sida automatiskt. Stänger man toasten med X stoppas den färdiga timern: ljudet tystnar och timern återställs till sin tid. Låter man toasten försvinna av sig själv fortsätter övertiden att räknas.
 
 Om ett steg bockas av döljs dess timer, klockan pausas med den tid som är kvar och larmet och schemalagda påminnelser avbryts. Tas bocken bort syns timern pausad där den stannade. Reset återställer fortfarande allt.
 
