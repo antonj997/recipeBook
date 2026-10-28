@@ -89,6 +89,23 @@ describe('book logo motion', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('tips the loading mark exactly like the header mark', async () => {
+    const loader = document.createElement('div');
+    loader.animate = vi.fn(
+      () => ({ finished: Promise.resolve(), cancel: vi.fn() }) as unknown as Animation,
+    );
+    const header = document.createElement('div');
+    header.animate = vi.fn(() => ({ playState: 'running' }) as unknown as Animation);
+    await tipRecipebookMark(loader).finished;
+    swingHeaderMark(header, true);
+    const [loading, timing] = vi.mocked(loader.animate).mock.calls[0]!;
+    const [heading, headerTiming] = vi.mocked(header.animate).mock.calls[0]!;
+    expect(loading).toEqual(heading);
+    expect((timing as KeyframeAnimationOptions).duration).toBe(
+      (headerTiming as KeyframeAnimationOptions).duration,
+    );
+  });
+
   describe('header mark', () => {
     const angle = (frame: Keyframe) =>
       Number(/rotate\((-?[\d.]+)deg\)/.exec(String(frame['transform']))?.[1] ?? 0);

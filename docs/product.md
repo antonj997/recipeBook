@@ -624,7 +624,7 @@ Logotypen är användarens egna vektorform från Final version.svg, inte bokstav
 
 Installerad appikon och favicon behåller R-orienteringen. Appikonen använder en ljus markering mot mörk bakgrund. I den höga headern står den lilla svarta versionen upprätt som ett R. När man scrollar och headern blir smal tippar R:et över på bokens rygg och ligger som en bok, roterad 90 grader moturs med bindningen nedåt. Det reser sig upp på sitt hörn, balanserar ett ögonblick vid tippunkten och dunsar sedan ned precis när headern har krympt klart. Scrollar man tillbaka upp reser sig boken till ett R igen.
 
-Vid laddning kan R-märket tippa över till bokorienteringen. Den aktuella rörelsen har en liten förberedelse, en accelererande fallrörelse och ett bestämt stopp vid kontakten. Det ska kännas som att en bok slår ned mot en yta, inte studsar eller landar fjäderlätt. Rörelsen delas av appens laddningsvyer.
+Vid laddning tippar R-märket över till bokorienteringen med exakt samma rörelse som i headern: upp på hörnet, ett ögonblicks balans och sedan ett fall som tar emot med en kort duns. Det ska kännas som att en bok slår ned mot en yta, inte studsar eller landar fjäderlätt. Rörelsen delas av appens laddningsvyer.
 
 ## 15. Rörelse, responsivitet och kvalitet
 

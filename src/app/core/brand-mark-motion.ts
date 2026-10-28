@@ -6,27 +6,11 @@ export interface BrandMarkMotion {
 }
 
 const still: BrandMarkMotion = { finished: Promise.resolve(), cancel() {} };
-const tipFrames: Keyframe[] = [
-  {
-    transform: 'translateY(-3px) rotate(0deg)',
-    offset: 0,
-    easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-  },
-  {
-    transform: 'translateY(-3px) rotate(6deg)',
-    offset: 0.18,
-    easing: 'cubic-bezier(0.55, 0, 0.85, 0.35)',
-  },
-  {
-    transform: 'translateY(0) rotate(-90deg)',
-    offset: 0.8,
-    easing: 'linear',
-  },
-  // Contact stops the fall abruptly; hold flat without a rebound or settling.
-  { transform: 'rotate(-90deg)', offset: 1 },
-];
 
-/** One R-to-book tip, shared by the first-paint cover and route loading states. */
+/**
+ * One R-to-book tip for the first-paint cover and route loading states: the same corner balance
+ * and fall as the header mark (toBookFrames below).
+ */
 export function tipRecipebookMark(mark: HTMLElement | null): BrandMarkMotion {
   if (!mark) return still;
   if (
@@ -63,7 +47,7 @@ export function tipRecipebookMark(mark: HTMLElement | null): BrandMarkMotion {
     fallback = setTimeout(finish, motionMs(620));
     mark.style.transform = 'rotate(-90deg)';
     try {
-      animation = mark.animate(tipFrames, {
+      animation = mark.animate(toBookFrames, {
         duration: motionMs(520),
         easing: 'linear',
         fill: 'both',
