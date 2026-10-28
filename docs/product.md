@@ -337,8 +337,9 @@ Ett nytt manuellt recept börjar i redigeringsläget. Ordningen är byggd efter 
 6. Instruktioner och eventuella steggrupper samt timers.
 7. Kategorier.
 8. Utfällbara valfria receptdetaljer.
+9. Utfällbar näring per portion.
 
-Receptdetaljer omfattar beskrivning, total tid och näringsvärden per portion. Näring består av kcal, protein, kolhydrater och fett. Fälten för tid och näring valideras så att negativa värden inte sparas. Ett receptnamn behövs, men appen tvingar inte fram påhittad bild eller metadata.
+Kategorier, receptdetaljer och näring är tre jämbördiga utfällbara rader med samma utseende. Receptdetaljer omfattar beskrivning och total tid. Näring består av kcal, protein, kolhydrater och fett; den stängda raden visar energin, till exempel 655 kcal, eller Optional när den saknas. Fälten för tid och näring valideras så att negativa värden inte sparas, och en rad med ett felaktigt värde öppnas av sig själv. Ett receptnamn behövs, men appen tvingar inte fram påhittad bild eller metadata.
 
 Bild kan läggas till, ersättas eller tas bort. JPEG, PNG och WebP behandlas och komprimeras till en lämplig egen kopia. Bildbearbetning visar status och sparandet väntar tills bearbetningen är klar.
 

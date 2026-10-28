@@ -113,16 +113,22 @@
       <app-recipe-groups kind="step" [items]="instructions" [stepDetails]="stepDetails" />
 
       <app-recipe-collections [control]="collectionIds" [collections]="collections()" />
-      <details class="optional-details" [open]="metadataForm.invalid && metadataForm.touched">
+      <details
+        class="optional-details"
+        [open]="metadataForm.controls.totalTime.invalid && metadataForm.touched"
+      >
         <summary class="disclosure">
           Recipe details <span>Optional<app-icon name="chevron" /></span>
         </summary>
         <app-recipe-extra-fields [form]="metadataForm" />
       </details>
+      <app-recipe-nutrition-fields [form]="metadataForm" />
 
       <!-- Submit -->
       @if (metadataForm.invalid && metadataForm.touched) {
-        <p class="error" role="alert">Check the values in Recipe details before saving.</p>
+        <p class="error" role="alert">
+          Check the values in Recipe details and Nutrition before saving.
+        </p>
       }
       @if (saveError()) {
         <p class="error" role="alert">{{ saveError() }}</p>

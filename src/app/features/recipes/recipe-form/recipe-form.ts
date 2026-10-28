@@ -10,6 +10,7 @@ import { RecipeCollectionsComponent } from './recipe-collections';
 import type { RecipeCollection } from '../../../core/models/recipe-collection.model';
 import {
   RecipeExtraFieldsComponent,
+  RecipeNutritionFieldsComponent,
   createMetadataForm,
   populateMetadataForm,
   metadataFromForm,
@@ -43,6 +44,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
     IconComponent,
     ReactiveFormsModule,
     RecipeExtraFieldsComponent,
+    RecipeNutritionFieldsComponent,
     RecipeGroupsComponent,
     RecipeCollectionsComponent,
     RouterLink,
