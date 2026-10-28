@@ -235,6 +235,18 @@ main:focus {
 :host(.focus-surface) .app-header {
   transition: none;
 }
+// iOS takes its status bar tint from fixed elements at the top edge, ignoring the focus dialog in
+// the top layer. While the page is locked behind focus mode, its scrolled content would lend the
+// recipe colour; a fixed strip of the focus surface keeps the status bar matching the dialog.
+:host(.focus-surface)::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 100;
+  height: calc(var(--app-top-inset) + 48px);
+  background: var(--browser-surface);
+  pointer-events: none;
+}
 
 // How much is still to buy; the list itself stays one tap away.
 .basket-count {

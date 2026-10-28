@@ -248,7 +248,7 @@ Fokusvyn har följande egenskaper:
 - Två separata scrollbara kolumner, så att man kan ha rätt ingrediens och rätt steg synliga samtidigt.
 - En mycket smal, benvit topprad med endast en X-knapp.
 - Ingen synlig recepttitel och ingen färgad remsa i toppraden.
-- Direkt benvit bakgrund även bakom statusområdet vid inträde i stående läge.
+- Direkt benvit bakgrund även bakom statusområdet vid inträde i stående läge. Nyare iOS hämtar statusradens färg från sidan under fokusvyn, så en fast benvit remsa längst upp på sidan ser till att statusraden inte behåller receptfärgen.
 - Kompakt portionskontroll i ingredienskolumnen.
 - Samma steg, avbockning och timers som i den vanliga receptvyn.
 - Ingen Add to shopping list-knapp och ingen uppmaning att slå på aviseringar.
