@@ -1,14 +1,10 @@
 <section class="settings-page page page--narrow">
-  <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
-  <h1>Settings</h1>
-  <p class="description">Your account, cookbook backups and app.</p>
-  <nav class="settings-nav" aria-label="Settings sections">
-    <a href="#account" (click)="$event.preventDefault(); scrollTo('account')">Account</a>
-    <a href="#import-cookbook" (click)="$event.preventDefault(); scrollTo('import-cookbook')"
-      >Backups</a
-    >
-    <a href="#app-settings" (click)="$event.preventDefault(); scrollTo('app-settings')">App</a>
-  </nav>
+  <header class="settings-header">
+    <a routerLink="/" class="back-link" aria-label="Back to recipes" title="Back to recipes"
+      ><app-icon name="chevron"
+    /></a>
+    <h1>Settings</h1>
+  </header>
   @if (returnToImport) {
     <div class="import-return">
       <p>
@@ -23,66 +19,92 @@
     </div>
   }
 
-  <section class="settings-section" id="account" aria-labelledby="account-heading">
-    <h2 id="account-heading">Account</h2>
-    @if (auth.configured()) {
-      @if (auth.passwordRecovery()) {
-        <app-account-access [blocked]="importing() || exporting()" />
-      } @else if (auth.user(); as user) {
-        <div class="account-summary">
-          <div>
-            <p class="account-email">{{ user.email }}</p>
-            <p class="scope-note">You’re viewing this account’s cookbook.</p>
-            <p class="sync-status" role="status" aria-live="polite">
+  <section class="settings-group" id="account" aria-labelledby="account-heading">
+    <h2 id="account-heading" class="group-label">Account</h2>
+    <div class="settings-card account-card">
+      @if (auth.configured() && auth.passwordRecovery()) {
+        <div class="card-body">
+          <app-account-access [blocked]="importing() || exporting()" />
+        </div>
+      } @else if (auth.configured() && auth.user(); as user) {
+        <div class="settings-row account-head">
+          <span class="account-avatar" aria-hidden="true">{{ initial(user.email) }}</span>
+          <div class="row-copy">
+            <p class="row-title account-email">{{ user.email }}</p>
+            <p
+              class="row-note sync-status"
+              [class.needs-attention]="!!cloud.error() || !cloud.online()"
+              role="status"
+              aria-live="polite"
+            >
               {{ syncStatus() }}
             </p>
           </div>
           <button
             type="button"
+            class="row-action"
             (click)="cloud.sync()"
             [disabled]="cloud.syncing() || accountBusy()"
           >
             {{ cloud.syncing() ? 'Syncing…' : 'Sync now' }}
           </button>
         </div>
-        @if (cloud.error()) {
-          <p class="error" role="alert">{{ cloud.error() }}</p>
-        }
-        @if (auth.callbackNotice()) {
-          <p role="status">{{ auth.callbackNotice() }}</p>
-        }
-        <details class="account-options">
-          <summary class="disclosure">Account options<app-icon name="chevron" /></summary>
-          <div class="account-actions">
-            <button
-              type="button"
-              (click)="requestPasswordReset()"
-              [disabled]="accountBusy() || importing() || exporting()"
-            >
-              Reset password
-            </button>
-            <button
-              type="button"
-              (click)="signOut()"
-              [disabled]="accountBusy() || importing() || exporting()"
-            >
-              Sign out
-            </button>
+        @if (cloud.error() || auth.callbackNotice()) {
+          <div class="card-body">
+            @if (cloud.error()) {
+              <p class="error" role="alert">{{ cloud.error() }}</p>
+            }
+            @if (auth.callbackNotice()) {
+              <p role="status">{{ auth.callbackNotice() }}</p>
+            }
           </div>
-          <p class="privacy-note">
-            Signing out keeps your offline copy on this device. On a shared device, sync or download
-            a backup before clearing Recipebook’s site data.
-          </p>
-        </details>
+        }
+        <div class="settings-row">
+          <button
+            type="button"
+            class="row-button"
+            (click)="requestPasswordReset()"
+            [disabled]="accountBusy() || importing() || exporting()"
+          >
+            Reset password
+          </button>
+        </div>
+        <div class="settings-row">
+          <button
+            type="button"
+            class="row-button sign-out"
+            (click)="signOut()"
+            [disabled]="accountBusy() || importing() || exporting()"
+          >
+            Sign out
+          </button>
+        </div>
       } @else {
-        <p class="scope-note">
-          Recipes and shopping items saved while signed out stay on this device. When you sign in,
-          choose to add them to your account or delete them before continuing.
-        </p>
-        <app-account-access [blocked]="importing() || exporting()" />
+        <div class="settings-row account-head">
+          <span class="account-avatar is-device" aria-hidden="true">R</span>
+          <div class="row-copy">
+            <p class="row-title">This device</p>
+            <p class="row-note">
+              {{
+                auth.configured()
+                  ? 'Recipes saved while signed out stay here. When you sign in, add them to your account or delete them.'
+                  : 'Your cookbook is saved on this device. Account sign-in is unavailable.'
+              }}
+            </p>
+          </div>
+        </div>
+        @if (auth.configured()) {
+          <div class="card-body">
+            <app-account-access [blocked]="importing() || exporting()" />
+          </div>
+        }
       }
-    } @else {
-      <p>Your cookbook is saved on this device. Account sign-in is unavailable.</p>
+    </div>
+    @if (auth.user()) {
+      <p class="group-note">
+        Signing out keeps your offline copy on this device. On a shared device, sync or download a
+        backup before clearing Recipebook’s site data.
+      </p>
     }
     @if (feedbackSection() === 'account') {
       @if (message()) {
@@ -94,33 +116,28 @@
     }
   </section>
 
-  <section class="settings-section" id="import-cookbook" aria-labelledby="backups-heading">
-    <h2 id="backups-heading">Backups</h2>
-    <p>
-      {{
-        auth.user()
-          ? 'Back up the recipes, categories and shopping list in your signed-in
-      account.'
-          : 'Back up the recipes, categories and shopping list saved on this device.'
-      }}
-      Photos are included.
-    </p>
-    <p class="storage-status">{{ storageStatus() }} {{ lastBackup() }}</p>
-    <div class="backup-actions">
-      <div>
-        <h3>Download a copy</h3>
-        <p>Keep a backup somewhere safe.</p>
+  <section class="settings-group" id="import-cookbook" aria-labelledby="backups-heading">
+    <h2 id="backups-heading" class="group-label">Backups</h2>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="row-copy">
+          <p class="row-title">Download a backup</p>
+          <p class="row-note">{{ lastBackup() }}</p>
+        </div>
         <button
           type="button"
+          class="row-action"
           [disabled]="exporting() || importing() || accountBusy()"
           (click)="exportBackup()"
         >
-          {{ exporting() ? 'Preparing…' : 'Download backup' }}
+          {{ exporting() ? 'Preparing…' : 'Download' }}
         </button>
       </div>
-      <div>
-        <h3>Restore a cookbook</h3>
-        <p>Add recipes and shopping items from a Recipebook backup. Existing data stays intact.</p>
+      <div class="settings-row">
+        <div class="row-copy">
+          <p class="row-title">Restore from a backup</p>
+          <p class="row-note">Adds its recipes and shopping items. Nothing is replaced.</p>
+        </div>
         <input
           #backupFile
           type="file"
@@ -131,13 +148,22 @@
         />
         <button
           type="button"
+          class="row-action"
           [disabled]="importing() || exporting() || accountBusy()"
           (click)="backupFile.click()"
         >
-          {{ importing() ? 'Importing…' : 'Choose backup file' }}
+          {{ importing() ? 'Importing…' : 'Choose file' }}
         </button>
       </div>
     </div>
+    <p class="group-note">
+      {{
+        auth.user()
+          ? 'Backups hold the recipes, categories and shopping list in your account, photos included.'
+          : 'Backups hold the recipes, categories and shopping list on this device, photos included.'
+      }}
+      {{ storageStatus() }}
+    </p>
     @if (feedbackSection() === 'backup') {
       @if (message()) {
         <p class="feedback" role="status">{{ message() }}</p>
@@ -148,25 +174,41 @@
     }
   </section>
 
-  <section class="settings-section" id="app-settings" aria-labelledby="app-heading">
-    <h2 id="app-heading">App</h2>
-    <app-timer-alert-preferences />
-    @if (app.available()) {
-      <div class="app-update">
-        <p>A new version is ready.</p>
-        <button type="button" (click)="app.reload()">Reload to update</button>
-      </div>
-    }
-    @if (app.installed()) {
-      <p>Recipebook is installed on this device.</p>
-    } @else {
-      <p>Install Recipebook from your browser, or choose Add to Home Screen.</p>
-      @if (app.installable()) {
-        <button type="button" (click)="app.install()">Install Recipebook</button>
+  <section class="settings-group" id="app-settings" aria-labelledby="app-heading">
+    <h2 id="app-heading" class="group-label">App</h2>
+    <div class="settings-card">
+      @if (app.available()) {
+        <div class="settings-row">
+          <div class="row-copy">
+            <p class="row-title">Update ready</p>
+            <p class="row-note">A new version of Recipebook is ready.</p>
+          </div>
+          <button type="button" class="row-action" (click)="app.reload()">Reload</button>
+        </div>
       }
-    }
-    <p class="hint catalog-credit">
-      Product categories:
+      <app-timer-alert-preferences />
+      <div class="settings-row">
+        <div class="row-copy">
+          <p class="row-title">{{ app.installed() ? 'Installed' : 'Install Recipebook' }}</p>
+          <p class="row-note">
+            {{
+              app.installed()
+                ? 'Recipebook is installed on this device.'
+                : 'From your browser, or choose Add to Home Screen.'
+            }}
+            @if (app.offlineReady()) {
+              Saved recipes work offline.
+            }
+          </p>
+        </div>
+        @if (!app.installed() && app.installable()) {
+          <button type="button" class="row-action" (click)="app.install()">Install</button>
+        }
+      </div>
+      <app-slow-motion-switch />
+    </div>
+    <p class="group-note catalog-credit">
+      Product categories from
       <a href="https://world.openfoodfacts.org/" target="_blank" rel="noopener noreferrer"
         >Open Food Facts</a
       >
@@ -181,11 +223,5 @@
         >Data &amp; licence</a
       >
     </p>
-    @if (app.offlineReady()) {
-      <p class="hint" role="status">
-        Ready for offline use. Saved recipes are available without a connection.
-      </p>
-    }
-    <app-slow-motion-switch />
   </section>
 </section>

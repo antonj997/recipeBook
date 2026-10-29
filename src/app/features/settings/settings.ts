@@ -65,11 +65,9 @@ export class SettingsComponent {
     if (this.cloud.pending()) return this.cloud.pending() + ' changes waiting to sync';
     return this.cloud.lastSynced() ? 'Your cookbook is synced' : 'Checking your cloud cookbook…';
   });
-  scrollTo(id: string): void {
-    document.getElementById(id)?.scrollIntoView({
-      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-      block: 'start',
-    });
+  /** The account card's monogram: the first letter of the email address. */
+  initial(email?: string | null): string {
+    return (email?.trim()[0] ?? '?').toLocaleUpperCase();
   }
   constructor() {
     let account = this.auth.accountVersion();

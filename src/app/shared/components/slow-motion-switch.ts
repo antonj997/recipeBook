@@ -5,23 +5,47 @@ import { setSlowMotion, slowMotion } from '../../core/motion';
 @Component({
   selector: 'app-slow-motion-switch',
   template: `
-    <button type="button" role="switch" [attr.aria-checked]="on()" (click)="toggle()">
+    <div class="copy">
+      <span class="title" id="slow-motion-title">Slow motion</span>
+      <p class="hint" id="slow-motion-note">
+        Test: plays every animation five times slower on this device.
+      </p>
+    </div>
+    <button
+      type="button"
+      role="switch"
+      aria-labelledby="slow-motion-title"
+      aria-describedby="slow-motion-note"
+      [attr.aria-checked]="on()"
+      (click)="toggle()"
+    >
       <span class="track" aria-hidden="true"><span class="thumb"></span></span>
-      Slow motion (test)
     </button>
-    <p class="hint">Plays every animation five times slower on this device.</p>
   `,
   styles: `
+    /* A row in the settings App card: label on the left, the switch on the right. */
     :host {
-      display: block;
-      margin-block: 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-height: 60px;
+      padding: 10px 16px;
+    }
+    .copy {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .title {
+      color: var(--color-ink);
+      font-size: 0.95rem;
+      font-weight: 500;
     }
     button {
       display: inline-flex;
+      flex: 0 0 auto;
       align-items: center;
-      gap: 12px;
       min-height: 44px;
-      padding: 4px 0;
+      padding: 0;
       border: 0;
       background: transparent;
       color: var(--color-ink);
@@ -59,9 +83,10 @@ import { setSlowMotion, slowMotion } from '../../core/motion';
       background: var(--color-surface);
     }
     .hint {
-      margin: 4px 0 0;
+      margin: 2px 0 0;
       color: var(--color-muted);
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
+      line-height: 1.45;
     }
     @media (prefers-reduced-motion: reduce) {
       .track,

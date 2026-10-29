@@ -507,7 +507,7 @@ Offlineändringar sparas på enheten och kan synkas när anslutningen återkomme
 
 ### 13.1 Inställningarnas struktur
 
-Inställningssidan är uppdelad i Account, Backups och App, med korta ankarlänkar mellan sektionerna. Den ska bara innehålla sådant som faktiskt är inställningar eller kontohantering. Receptskapande och kategorihantering har flyttats till relevanta innehållsflöden.
+Inställningssidan är uppdelad i Account, Backups och App och är byggd som en inbyggd inställningsskärm: rubriken Settings med en bakåtpil, sedan en liten etikett per grupp, ett vitt kort med rader och en kort förklaring under kortet. Varje rad har titel och en rad förklaring till vänster och en enda kompakt kontroll till höger (knapp eller reglage), så att allt går att överblicka på en mobilskärm utan ankarlänkar. Kontokortet överst visar en rund monogram med kontots initial (eller R för kokboken på enheten), e-postadressen och synkstatus med en liten statusprick, och har Sync now till höger. Reset password och Sign out är egna rader i samma kort; Sign out i varningsfärg. Utloggad visas This device och inloggningsformuläret i kortet. Den ska bara innehålla sådant som faktiskt är inställningar eller kontohantering. Receptskapande och kategorihantering har flyttats till relevanta innehållsflöden.
 
 ### 13.2 Konto och inloggning
 
@@ -529,7 +529,7 @@ Radering av denna enhetsdata har en extra, uttrycklig bekräftelse eftersom den 
 
 ### 13.4 Synk och utloggning
 
-Account visar e-postadress, relevant synkstatus och Sync now. Synkstatus har flyttats bort från hemsidan för att receptbiblioteket ska vara lugnare.
+Kontokortet visar e-postadress, relevant synkstatus och Sync now. Synkstatus har flyttats bort från hemsidan för att receptbiblioteket ska vara lugnare.
 
 Recept, kategorier, bilder och inköpsposter hör till användarens konto. När servern har kolumnen `updated_at` hämtar synken bara rader som ändrats sedan enhetens senaste hämtning, i sidor om 500 med en minuts överlapp, och sparar var den slutade efter varje sida. Saknas kolumnen hämtas allt som tidigare. Uppladdningen skickar högst 100 köade rader per tabell i ett anrop. En lokal ändring väntar en och en halv sekund innan synken startar, så att flera snabba ändringar skickas tillsammans. När man återvänder till appen synkas den bara om senaste lyckade synk är äldre än 30 sekunder; när enheten kommer online, vid inloggning och med Sync now synkas den direkt. Listor och sidor läser bara om sina recept när synken faktiskt ändrade något. En rad som enheten redan har, till exempel sin egen uppladdning som kommer tillbaka, skrivs inte igen. Lokala ändringar kan köas när man är offline. Utloggning försöker synka först och ska inte kasta väntande ändringar bara för att nätverket är borta.
 
@@ -537,7 +537,7 @@ Utloggning behåller kontots offlinekopia på enheten. Den exponeras inte som ut
 
 ### 13.5 Säkerhetskopior
 
-Download backup exporterar recept, bilder, kategorier och inköpslista till en fil. Återställning tar emot Recipebook-backuper och lägger till innehåll utan att avsiktligt tömma det som redan finns. Äldre receptbackuper stöds också.
+Raden Download a backup (knappen Download) exporterar recept, bilder, kategorier och inköpslista till en fil. Raden Restore from a backup (Choose file) tar emot Recipebook-backuper och lägger till innehåll utan att avsiktligt tömma det som redan finns. Äldre receptbackuper stöds också.
 
 Importerad backup valideras före lagring. Säkerhetskopiering ska inte råka exportera ett annat kontos data om användaren byter konto under operationen. Pågående timers är enhetslokalt matlagningsläge; själva timerförinställningarna är däremot del av receptinformationen.
 
