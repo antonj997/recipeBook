@@ -91,8 +91,10 @@ $list-lead: 100ms;
   opacity: 1;
   transition: opacity var(--motion-reveal) var(--motion-ease-standard);
 }
+// At rest the reading part has no translate at all: even `0 0` would make it the containing block
+// for fixed descendants, and Safari 16's popover polyfill keeps menus (servings) in place there.
 .recipe-part-reading {
-  translate: 0 0;
+  translate: none;
   transition:
     opacity var(--motion-reading-reveal) var(--motion-ease-standard),
     translate var(--motion-reading-reveal) var(--motion-ease-out);

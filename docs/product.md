@@ -631,7 +631,7 @@ Vid laddning tippar R-märket över till bokorienteringen med exakt samma rörel
 
 ### 15.0 Äldre iPads
 
-Appen ska fungera på iPads som inte kan uppdateras förbi iPadOS 16 (Safari 16.6). Bygget riktar sig därför även till Safari 16.4 och senare, så att koden och stilarna anpassas dit. Det som Safari 16 saknar fylls i: menyerna (Popover API) får en polyfill som bara laddas där den behövs, och avbrytbara nätverksanrop klarar sig utan `AbortSignal.any`. På de här enheterna stängs oskärpa bakom glas och den förvrängande kanten på hyllan av och ersätts av täckande ytor, eftersom de gör scrollning och animationer hackiga på äldre grafikchip. Sidövergångarna mellan kort och recept kräver nyare Safari och byts där mot vanliga sidbyten.
+Appen ska fungera på iPads som inte kan uppdateras förbi iPadOS 16 (Safari 16.6). Bygget riktar sig därför även till Safari 16.4 och senare, så att koden och stilarna anpassas dit. Det som Safari 16 saknar fylls i: menyerna (Popover API) får en polyfill som bara laddas där den behövs, och avbrytbara nätverksanrop klarar sig utan `AbortSignal.any`. Eftersom polyfillens menyer ligger kvar i sidan i stället för i webbläsarens översta lager får ingen förälder till en meny ha en kvarliggande förflyttning eller transform, annars hamnar menyn fel (som portionsmenyn i ingredienskolumnen gjorde). På de här enheterna stängs oskärpa bakom glas och den förvrängande kanten på hyllan av och ersätts av täckande ytor, eftersom de gör scrollning och animationer hackiga på äldre grafikchip. Sidövergångarna mellan kort och recept kräver nyare Safari och byts där mot vanliga sidbyten.
 
 ### 15.1 Kortet blir receptsidan
 
