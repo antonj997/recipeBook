@@ -806,7 +806,7 @@ Offlinekopior är inte end-to-end-krypterade. Logga ut är inte samma sak som at
 
 ### 17.4 Borttagning och återställning
 
-Vanlig receptborttagning har bekräftelse och en Undo-toast i ungefär sex sekunder. Återställningen ska kunna bevara receptets bilder, grupper och kategorier i det konto där det togs bort.
+Vanlig receptborttagning har bekräftelse och en Undo-toast i ungefär sex sekunder. Bekräftelsen visar receptet som en liten sida i receptets egen färg, med titeln. Trycker man Delete skrynklas sidan ihop till en pappersboll som studsar till och kastas ut ur rutan, ungefär en sekund, innan Undo-toasten visas. Det ska kännas lekfullt men kort, i samma stil som resten av appen. Återställningen ska kunna bevara receptets bilder, grupper och kategorier i det konto där det togs bort.
 
 Synken använder raderingsmarkeringar så att en gammal offlineenhet inte direkt återskapar ett redan borttaget recept. Att radera ett recept är däremot inte ett löfte om att varje historiskt bildobjekt omedelbart rensas från molnlagringen. Automatisk städning av överblivna privata bildobjekt är en dokumenterad begränsning.
 

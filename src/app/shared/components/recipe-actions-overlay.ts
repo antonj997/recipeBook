@@ -16,8 +16,8 @@ import { RecipeService } from '../../core/services/recipe.service';
 import { FeedbackService } from '../../core/services/feedback.service';
 import { CookingSessionService } from '../../core/services/cooking-session.service';
 import { CheckboxMarkComponent } from './checkbox-mark';
-import { FoodDoodleComponent } from './food-doodle';
 import { motionMs } from '../../core/motion';
+import { recipeBackground } from '../../core/models/recipe-color';
 
 @Component({
   selector: 'app-recipe-actions',
@@ -25,7 +25,7 @@ import { motionMs } from '../../core/motion';
     '(window:resize)': 'actions.menu.set(null)',
     '(window:scroll)': 'actions.menu.set(null)',
   },
-  imports: [CheckboxMarkComponent, FoodDoodleComponent, IconComponent],
+  imports: [CheckboxMarkComponent, IconComponent],
   template: `
     <span id="recipe-actions-hint" class="sr-only"
       >Hold a recipe or right-click for actions. With a keyboard, press Shift F10.</span
@@ -112,8 +112,17 @@ import { motionMs } from '../../core/motion';
       (cancel)="cancelDelete($event)"
       (close)="closedDelete()"
     >
-      @if (actions.deletion()) {
-        <app-food-doodle kind="discard" [playDiscard]="deleteSucceeded()" />
+      @if (actions.deletion(); as request) {
+        <!-- The recipe as a small torn-out page; on delete it crumples and is tossed. -->
+        <div
+          class="doomed-page"
+          aria-hidden="true"
+          [class.is-crumpling]="deleteSucceeded()"
+          [style.--page-color]="pageColor(request.recipe)"
+        >
+          <span class="doomed-title">{{ request.recipe.title }}</span>
+          <span class="doomed-lines"><span></span><span></span><span></span></span>
+        </div>
       }
       <h2 id="recipe-delete-title">
         {{ deleteSucceeded() ? 'Recipe deleted' : 'Delete recipe?' }}
@@ -124,13 +133,13 @@ import { motionMs } from '../../core/motion';
             ? 'Returning to your recipes…'
             : '“' +
               (actions.deletion()?.recipe?.title ?? '') +
-              '” will be removed from your cookbook.'
+              '” will be removed from your cookbook. You can undo right after.'
         }}
       </p>
       @if (deleteError()) {
         <p role="alert">{{ deleteError() }}</p>
       }
-      <div class="dialog-actions">
+      <div class="dialog-actions" [class.is-done]="deleteSucceeded()">
         <button
           type="button"
           autofocus
@@ -228,19 +237,133 @@ import { motionMs } from '../../core/motion';
       font-weight: 400;
     }
     .delete-dialog {
-      background: var(--color-blue);
+      text-align: center;
     }
-    .delete-dialog app-food-doodle {
-      margin: 0 auto 16px;
-      width: min(230px, 100%);
-      transform: translate(-5.625%, -8%);
+    .delete-dialog h2 {
+      margin: 20px 0 8px;
     }
-    .delete-dialog .dialog-actions button {
-      background: transparent;
+    .delete-dialog p {
+      margin: 0;
+    }
+    .delete-dialog .dialog-actions {
+      transition: opacity var(--motion-fast) var(--motion-ease-standard);
+    }
+    .delete-dialog .dialog-actions.is-done {
+      opacity: 0;
+      pointer-events: none;
     }
     .delete-dialog .delete-button {
-      color: var(--color-danger);
+      background: var(--color-danger);
       border-color: var(--color-danger);
+      color: var(--color-surface);
+    }
+    .doomed-page {
+      --page-ink: color-mix(in srgb, var(--page-color) 45%, var(--color-ink));
+      position: relative;
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      width: 132px;
+      height: 156px;
+      margin: 4px auto 0;
+      padding: 18px 16px;
+      border: 1px solid var(--page-ink);
+      border-radius: 10px 10px 3px 3px;
+      background: var(--page-color);
+      rotate: -4deg;
+      text-align: left;
+      box-shadow: 0 10px 20px #14141314;
+    }
+    .doomed-title {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      font:
+        400 1.05rem/1.2 Georgia,
+        'Times New Roman',
+        serif;
+      overflow-wrap: anywhere;
+    }
+    .doomed-lines {
+      display: grid;
+      gap: 7px;
+    }
+    .doomed-lines span {
+      height: 3px;
+      border-radius: 2px;
+      background: color-mix(in srgb, var(--page-ink) 35%, transparent);
+    }
+    .doomed-lines span:nth-child(2) {
+      width: 80%;
+    }
+    .doomed-lines span:nth-child(3) {
+      width: 55%;
+    }
+    /* Crumple: lift, squeeze into a ball with creases, hop once and drop out of the sheet. */
+    .doomed-page::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        linear-gradient(35deg, transparent 46%, #14141326 48%, transparent 52%),
+        linear-gradient(-50deg, transparent 40%, #1414131f 43%, transparent 47%),
+        linear-gradient(80deg, transparent 58%, #1414131a 60%, transparent 63%);
+      opacity: 0;
+    }
+    .doomed-page.is-crumpling {
+      animation: page-crumple calc(1000ms * var(--motion-scale)) linear both;
+    }
+    .doomed-page.is-crumpling > span {
+      animation: page-text-out calc(300ms * var(--motion-scale)) var(--motion-ease-standard) both;
+    }
+    .doomed-page.is-crumpling::after {
+      animation: page-creases calc(1000ms * var(--motion-scale)) linear both;
+    }
+    @keyframes page-crumple {
+      0% {
+        transform: none;
+        animation-timing-function: var(--motion-ease-out);
+      }
+      14% {
+        transform: translateY(-6px) scale(1.04) rotate(-3deg);
+        animation-timing-function: cubic-bezier(0.5, 0, 0.3, 1);
+      }
+      46% {
+        transform: scale(0.42, 0.36) rotate(70deg);
+        opacity: 1;
+        border-radius: 44% 56% 40% 60% / 58% 42% 56% 44%;
+        animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+      }
+      62% {
+        transform: translateY(-22px) scale(0.36) rotate(150deg);
+        border-radius: 48% 52% 42% 58% / 55% 45% 58% 42%;
+        opacity: 1;
+        animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.4);
+      }
+      100% {
+        transform: translate(90px, 150px) scale(0.3) rotate(320deg);
+        border-radius: 48% 52% 42% 58% / 55% 45% 58% 42%;
+        opacity: 0;
+      }
+    }
+    @keyframes page-creases {
+      30%,
+      100% {
+        opacity: 1;
+      }
+    }
+    @keyframes page-text-out {
+      to {
+        opacity: 0;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .doomed-page.is-crumpling {
+        animation: none;
+        opacity: 0;
+      }
     }
   `,
 })
@@ -449,6 +572,9 @@ export class RecipeActionsOverlayComponent {
         this.savingCategories.set(false);
     }
   }
+  pageColor(recipe: Recipe): string {
+    return recipeBackground(recipe);
+  }
   closedDelete(): void {
     if (!this.deleteSucceeded()) {
       this.actions.deletion.set(null);
@@ -472,7 +598,7 @@ export class RecipeActionsOverlayComponent {
       this.sessions.clear(request.recipe.id);
       this.deleteSucceeded.set(true);
       if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
-        await new Promise<void>((resolve) => setTimeout(resolve, motionMs(2200)));
+        await new Promise<void>((resolve) => setTimeout(resolve, motionMs(1000)));
       if (version !== this.recipes.accountVersion() || this.destroyed) return;
       this.actions.deletion.set(null);
       await request.afterDelete?.();

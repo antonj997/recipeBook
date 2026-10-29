@@ -4,8 +4,6 @@ import { Component, input } from '@angular/core';
   host: {
     'aria-hidden': 'true',
     '[class.loading]': 'animate()',
-    '[class.discard]': "kind() === 'discard'",
-    '[class.play-discard]': 'playDiscard()',
   },
   template: `<svg
     viewBox="0 0 160 140"
@@ -15,30 +13,7 @@ import { Component, input } from '@angular/core';
     stroke-linecap="round"
     stroke-linejoin="round"
   >
-    @if (kind() === 'discard') {
-      <g class="food">
-        <path
-          fill="var(--color-surface)"
-          d="M-11-2C-14-7-8-12-4-10 0-15 7-11 8-7 14-6 14 1 10 4 11 10 4 13 0 10-6 14-12 9-10 5-14 4-14 0-11-2Z"
-        />
-        <path d="M-7-4c6-5 9 3 4 5s-1 7 3 6M4-7c-3 3 5 4 4 8" />
-      </g>
-      <path
-        class="toss-trail"
-        d="M16 46C51 32 80 40 91 68"
-        stroke-dasharray="3 8"
-        stroke-width="2"
-      />
-      <g class="bin">
-        <path fill="var(--color-blue)" d="m61 71 5 54q23 5 46-1l5-53" />
-        <path d="M78 82l2 29m19-29-2 29" />
-        <path d="m117 71 5-3" />
-        <g class="bin-lid">
-          <path fill="var(--color-blue)" d="M56 68c1-10 64-11 66 0-2 10-64 10-66 0Z" />
-          <path d="M80 64v-6q8-4 17 0v6" />
-        </g>
-      </g>
-    } @else if (kind() === 'empty-bowl') {
+    @if (kind() === 'empty-bowl') {
       <path fill="var(--color-accent)" d="M21 66q7 41 58 43 51-1 61-43Z" />
       <path fill="var(--color-surface)" d="M21 66c-1-27 117-28 119 0-1 27-117 28-119 0Z" />
       <path d="M63 111l-5 8q20 4 43 0l-6-8" />
@@ -143,121 +118,15 @@ import { Component, input } from '@angular/core';
       :host(.loading) .steam {
         animation: steam 1.8s ease-in-out infinite;
       }
-      :host(.discard) .food {
-        opacity: 0;
-        offset-path: path('M16 46 C51 32 80 40 91 68 L91 92');
-        offset-rotate: 0deg;
-        offset-anchor: center;
-        transform-box: fill-box;
-        transform-origin: center;
-      }
-      :host(.discard) .toss-trail {
-        opacity: 0;
-      }
-      :host(.discard.play-discard) .food {
-        animation: toss calc(2200ms * var(--motion-scale)) linear both;
-      }
-      :host(.discard.play-discard) .toss-trail {
-        animation: trail calc(2200ms * var(--motion-scale)) ease-out both;
-      }
-      :host(.discard) .bin {
-        transform-origin: 89px 125px;
-      }
-      :host(.discard.play-discard) .bin {
-        animation: bin-hop calc(2200ms * var(--motion-scale)) linear both;
-      }
-      :host(.discard) .bin-lid {
-        /* Keep the back-right attachment fixed throughout the swing. */
-        transform-box: view-box;
-        transform-origin: 122px 68px;
-      }
-      :host(.discard.play-discard) .bin-lid {
-        animation: lid-close calc(2200ms * var(--motion-scale)) linear both;
-      }
       @keyframes steam {
         50% {
           transform: translateY(-7px);
           opacity: 0.35;
         }
       }
-      /* One shared timeline: paper lands, lid shuts, then the bin reacts. */
-      @keyframes toss {
-        0%,
-        8% {
-          offset-distance: 0%;
-          transform: rotate(-15deg);
-          opacity: 1;
-          animation-timing-function: cubic-bezier(0.4, 0.2, 0.7, 0.6);
-        }
-        36% {
-          opacity: 1;
-        }
-        42%,
-        100% {
-          offset-distance: 100%;
-          transform: rotate(140deg) scale(0.65);
-          opacity: 0;
-        }
-      }
-      @keyframes lid-close {
-        0%,
-        42% {
-          transform: rotate(68deg) scale(0.85, 1.3);
-          animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
-        }
-        50% {
-          transform: rotate(0deg) scale(1);
-        }
-        53% {
-          transform: rotate(5deg) scale(1);
-        }
-        57%,
-        100% {
-          transform: rotate(0deg);
-        }
-      }
-      @keyframes bin-hop {
-        0%,
-        50% {
-          transform: translateY(0) scale(1);
-        }
-        53% {
-          transform: translateY(1px) scale(1.035, 0.97);
-          animation-timing-function: cubic-bezier(0.15, 0.7, 0.3, 1);
-        }
-        62% {
-          transform: translateY(-9px) rotate(-2deg);
-          animation-timing-function: cubic-bezier(0.5, 0, 0.85, 0.4);
-        }
-        71% {
-          transform: translateY(0) scale(1.025, 0.975);
-        }
-        78%,
-        100% {
-          transform: none;
-        }
-      }
-      @keyframes trail {
-        0%,
-        42%,
-        100% {
-          opacity: 0;
-        }
-        18%,
-        32% {
-          opacity: 0.4;
-        }
-      }
       @media (prefers-reduced-motion: reduce) {
-        :host(.loading) .steam,
-        :host(.discard.play-discard) .food,
-        :host(.discard.play-discard) .toss-trail,
-        :host(.discard.play-discard) .bin,
-        :host(.discard.play-discard) .bin-lid {
+        :host(.loading) .steam {
           animation: none;
-        }
-        :host(.discard) .toss-trail {
-          display: none;
         }
       }
     `,
@@ -277,8 +146,6 @@ export class FoodDoodleComponent {
     | 'casserole'
     | 'soup'
     | 'sandwich'
-    | 'discard'
   >('bowl');
   animate = input(false);
-  playDiscard = input(false);
 }
