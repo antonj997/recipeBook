@@ -218,8 +218,9 @@
     color: var(--color-ink);
   }
 }
-/* Center the shelf at phone/tablet widths, including landscape. */
-@media (width < 88rem) {
+/* Center the shelf only where one card fills the view (phones, portrait tablets); landscape
+   and wider screens fill the row from the leading edge. */
+@media (max-width: 600px), (width < 88rem) and (orientation: portrait) {
   .recipe-rail {
     --card-snap: center;
     padding-inline: calc((100% - var(--card-width)) / 2);
