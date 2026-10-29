@@ -21,6 +21,7 @@ import {
 import { MinuteRulerComponent } from './minute-ruler';
 import { IconComponent } from './icon';
 import { CheckboxMarkComponent } from './checkbox-mark';
+import { TranslatePipe } from '../../core/i18n/i18n';
 
 /**
  * A step timer at rest is one quiet row: play, the time and an edit button. Editing happens in
@@ -28,7 +29,7 @@ import { CheckboxMarkComponent } from './checkbox-mark';
  */
 @Component({
   selector: 'app-step-timer',
-  imports: [MinuteRulerComponent, IconComponent, CheckboxMarkComponent],
+  imports: [MinuteRulerComponent, IconComponent, CheckboxMarkComponent, TranslatePipe],
   host: { '[hidden]': 'completed()', '[class.is-timing]': 'state().started' },
   styleUrl: './step-timer.scss',
   template: `
@@ -62,7 +63,7 @@ import { CheckboxMarkComponent } from './checkbox-mark';
           class="timer-edit"
           [disabled]="locked()"
           [attr.aria-label]="'Edit time for step ' + step()"
-          title="Edit time"
+          [title]="'Edit time' | t"
           (click)="openSheet()"
         >
           <app-icon name="pencil" />
@@ -109,7 +110,7 @@ import { CheckboxMarkComponent } from './checkbox-mark';
         <button
           type="button"
           class="timer-minute"
-          aria-label="Subtract one minute"
+          [attr.aria-label]="'Subtract one minute' | t"
           [disabled]="sheetSeconds() <= 0"
           (click)="nudge(-1)"
         >
@@ -139,7 +140,7 @@ import { CheckboxMarkComponent } from './checkbox-mark';
         <button
           type="button"
           class="timer-minute"
-          aria-label="Add one minute"
+          [attr.aria-label]="'Add one minute' | t"
           [disabled]="sheetSeconds() >= maximum"
           (click)="nudge(1)"
         >

@@ -1,6 +1,7 @@
 import { computed, DestroyRef, inject, Injector, Service, signal } from '@angular/core';
 import { motionMs } from '../motion';
 import type { ShoppingListService } from './shopping-list.service';
+import { t } from '../i18n/i18n';
 
 const maxDots = 6;
 
@@ -26,7 +27,7 @@ export class BasketService {
     });
   }
   readonly label = computed(() =>
-    this.count() ? `Shopping list, ${this.count()} to buy` : 'Shopping list',
+    this.count() ? t('Shopping list, {n} to buy', { n: this.count() }) : t('Shopping list'),
   );
   /** Increments each time added items land in the basket; the header bumps the icon. */
   readonly arrivals = signal(0);

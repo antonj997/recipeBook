@@ -14,11 +14,12 @@ import { RecipeService } from '../../core/services/recipe.service';
 import { LeaveConfirmationService } from '../../core/services/leave-confirmation.service';
 import { CheckboxMarkComponent } from '../../shared/components/checkbox-mark';
 import { IconComponent } from '../../shared/components/icon';
+import { msg, PluralPipe, t, TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-category-manager',
   host: { '[attr.aria-busy]': 'loading()' },
-  imports: [CheckboxMarkComponent, IconComponent],
+  imports: [CheckboxMarkComponent, IconComponent, TranslatePipe, PluralPipe],
   templateUrl: './category-manager.html',
   styleUrl: './category-manager.scss',
 })
@@ -136,7 +137,7 @@ export class CategoryManagerComponent {
       } else if (!preserveSelection) this.resetSelection();
     } catch {
       if (this.current(account) && load === this.loadVersion)
-        this.error.set('Could not load categories. Reload to try again.');
+        this.error.set(msg('Could not load categories. Reload to try again.'));
     } finally {
       if (this.current(account) && load === this.loadVersion) this.loading.set(false);
     }
@@ -158,7 +159,7 @@ export class CategoryManagerComponent {
     if (this.busy()) return false;
     return (
       !this.dirty() ||
-      this.confirmation.confirm('Your category changes have not been saved. Discard them?')
+      this.confirmation.confirm(t('Your category changes have not been saved. Discard them?'))
     );
   }
 
@@ -193,7 +194,7 @@ export class CategoryManagerComponent {
     const account = this.service.accountVersion();
     if (
       this.renameChanged() &&
-      !(await this.confirmation.confirm('Your category name has not been saved. Discard it?'))
+      !(await this.confirmation.confirm(t('Your category name has not been saved. Discard it?')))
     )
       return;
     if (!this.current(account)) return;
@@ -232,7 +233,7 @@ export class CategoryManagerComponent {
   async create(): Promise<void> {
     if (!this.ready()) return;
     if (!this.newName().trim()) {
-      this.error.set('Enter a category name.');
+      this.error.set(msg('Enter a category name.'));
       this.nameInput()?.nativeElement.focus();
       return;
     }
@@ -249,11 +250,13 @@ export class CategoryManagerComponent {
       this.creating.set(false);
       this.newName.set('');
       this.query.set('');
-      this.message.set('Choose recipes for ' + category.name + '.');
+      this.message.set(t('Choose recipes for {name}.', { name: category.name }));
     } catch (error) {
       if (this.current(account))
         this.error.set(
-          error instanceof Error ? error.message : 'Could not create this category. Try again.',
+          error instanceof Error
+            ? error.message
+            : msg('Could not create this category. Try again.'),
         );
     } finally {
       if (this.current(account)) this.busy.set(false);
@@ -272,11 +275,13 @@ export class CategoryManagerComponent {
       await this.load();
       if (!this.current(account)) return;
       this.renaming.set(false);
-      this.message.set('Category renamed.');
+      this.message.set(msg('Category renamed.'));
     } catch (error) {
       if (this.current(account))
         this.error.set(
-          error instanceof Error ? error.message : 'Could not rename this category. Try again.',
+          error instanceof Error
+            ? error.message
+            : msg('Could not rename this category. Try again.'),
         );
     } finally {
       if (this.current(account)) this.busy.set(false);
@@ -309,11 +314,13 @@ export class CategoryManagerComponent {
       this.resetSelection();
       this.removing.set(null);
       await this.load();
-      if (this.current(account)) this.message.set('Category removed. All recipes were kept.');
+      if (this.current(account)) this.message.set(msg('Category removed. All recipes were kept.'));
     } catch (error) {
       if (this.current(account))
         this.error.set(
-          error instanceof Error ? error.message : 'Could not remove this category. Try again.',
+          error instanceof Error
+            ? error.message
+            : msg('Could not remove this category. Try again.'),
         );
     } finally {
       if (this.current(account)) this.busy.set(false);
@@ -335,10 +342,12 @@ export class CategoryManagerComponent {
       if (!this.current(account)) return;
       this.savedSelection.set(selected);
       await this.load();
-      if (this.current(account)) this.message.set('Category selection saved.');
+      if (this.current(account)) this.message.set(msg('Category selection saved.'));
     } catch {
       if (this.current(account))
-        this.error.set('Could not save the category. Your selection is still here; try again.');
+        this.error.set(
+          msg('Could not save the category. Your selection is still here; try again.'),
+        );
     } finally {
       if (this.current(account)) this.busy.set(false);
     }

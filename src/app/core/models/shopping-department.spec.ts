@@ -370,6 +370,6 @@ describe('a Swedish supermarket shopping circuit', () => {
     expect(
       result.flatMap((section) => section.groups).every((group) => groups.includes(group)),
     ).toBe(true);
-    expect(result.find((section) => section.id === 'treats')?.label).toBe('Godis & snacks');
+    expect(result.find((section) => section.id === 'treats')?.label).toBe('Sweets & snacks');
   });
 });

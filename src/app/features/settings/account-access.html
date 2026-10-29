@@ -1,20 +1,20 @@
 @if (auth.passwordRecovery()) {
-  <h3>Choose a new password</h3>
-  <p>For {{ auth.user()?.email }}.</p>
+  <h3>{{ 'Choose a new password' | t }}</h3>
+  <p>{{ 'For {email}.' | t: { email: auth.user()?.email ?? '' } }}</p>
 } @else if (mode() === 'signup') {
-  <h3>Create an account</h3>
-  <p>Your recipes and photos belong to your private cookbook.</p>
+  <h3>{{ 'Create an account' | t }}</h3>
+  <p>{{ 'Your recipes and photos belong to your private cookbook.' | t }}</p>
 } @else if (mode() === 'forgot') {
-  <h3>Reset your password</h3>
-  <p>We’ll email you a link to choose a new password.</p>
+  <h3>{{ 'Reset your password' | t }}</h3>
+  <p>{{ 'We’ll email you a link to choose a new password.' | t }}</p>
 } @else {
-  <p>Sign in to save your cookbook across devices and import recipe links.</p>
+  <p>{{ 'Sign in to save your cookbook across devices and import recipe links.' | t }}</p>
 }
 
 <form class="account-form" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="busy()">
   <fieldset [disabled]="busy() || blocked()">
     @if (!auth.passwordRecovery()) {
-      <label for="account-email">Email</label>
+      <label for="account-email">{{ 'Email' | t }}</label>
       <input
         id="account-email"
         type="email"
@@ -28,7 +28,9 @@
     }
     @if (auth.passwordRecovery() || mode() !== 'forgot') {
       <div class="password-label">
-        <label for="account-password">{{ newPassword() ? 'New password' : 'Password' }}</label>
+        <label for="account-password">{{
+          (newPassword() ? 'New password' : 'Password') | t
+        }}</label>
         <button
           class="text-action"
           type="button"
@@ -38,7 +40,7 @@
             newPassword() ? 'account-password account-confirm' : 'account-password'
           "
         >
-          {{ showPassword() ? 'Hide password' : 'Show password' }}
+          {{ (showPassword() ? 'Hide password' : 'Show password') | t }}
         </button>
       </div>
       <!-- Recreate inputs on visibility changes so mobile browsers repaint both values immediately. -->
@@ -53,8 +55,8 @@
           [attr.aria-describedby]="newPassword() ? 'password-hint' : null"
         />
         @if (newPassword()) {
-          <p class="hint" id="password-hint">At least 8 characters.</p>
-          <label for="account-confirm">Confirm password</label>
+          <p class="hint" id="password-hint">{{ 'At least 8 characters.' | t }}</p>
+          <label for="account-confirm">{{ 'Confirm password' | t }}</label>
           <input
             id="account-confirm"
             [type]="inputType"
@@ -66,14 +68,14 @@
       }
     }
     @if (error() || auth.callbackError()) {
-      <p class="account-error" role="alert">{{ error() || auth.callbackError() }}</p>
+      <p class="account-error" role="alert">{{ error() || auth.callbackError() | t }}</p>
     }
     @if (message()) {
       <p class="account-message" role="status">{{ message() }}</p>
     }
     <button class="primary" type="submit">
       {{
-        busy()
+        (busy()
           ? 'Please wait…'
           : auth.passwordRecovery()
             ? 'Save password'
@@ -82,22 +84,25 @@
               : mode() === 'forgot'
                 ? 'Send reset email'
                 : 'Sign in'
+        ) | t
       }}
     </button>
     @if (auth.passwordRecovery()) {
-      <button class="text-action" type="button" (click)="auth.cancelPasswordReset()">Cancel</button>
+      <button class="text-action" type="button" (click)="auth.cancelPasswordReset()">
+        {{ 'Cancel' | t }}
+      </button>
     } @else {
       <div class="account-links">
         @if (mode() === 'signin') {
           <button class="text-action" type="button" (click)="changeMode('signup')">
-            Create account
+            {{ 'Create account' | t }}
           </button>
           <button class="text-action" type="button" (click)="changeMode('forgot')">
-            Forgot password?
+            {{ 'Forgot password?' | t }}
           </button>
         } @else {
           <button class="text-action" type="button" (click)="changeMode('signin')">
-            Back to sign in
+            {{ 'Back to sign in' | t }}
           </button>
         }
       </div>

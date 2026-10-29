@@ -34,6 +34,7 @@ import { IconComponent } from '../../../shared/components/icon';
 import { RecipeTitleComponent } from '../../../shared/components/recipe-title';
 import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
+import { PluralPipe, t, TranslatePipe } from '../../../core/i18n/i18n';
 
 type AddMenuOwner = 'toolbar' | 'shelf' | 'list';
 
@@ -53,6 +54,8 @@ type AddMenuOwner = 'toolbar' | 'shelf' | 'list';
     FoodDoodleComponent,
     LoadingStateComponent,
     FoodPlaceholderComponent,
+    TranslatePipe,
+    PluralPipe,
   ],
   templateUrl: './recipe-list.html',
   styleUrl: './recipe-list.scss',
@@ -90,9 +93,9 @@ export class RecipeListComponent implements OnDestroy {
   query = signal(this.initial.query);
   collections = signal<RecipeCollection[]>(this.pageData?.collections ?? []);
   categoryOptions = computed(() => [
-    { value: '', label: 'All recipes' },
+    { value: '', label: t('All recipes') },
     ...this.collections().map((collection) => ({ value: collection.id, label: collection.name })),
-    { value: 'manage-categories', label: 'Manage categories…', action: true },
+    { value: 'manage-categories', label: t('Manage categories…'), action: true },
   ]);
   private readonly recipeCategories = computed(() => {
     const names = new Map(this.collections().map((category) => [category.id, category.name]));
@@ -108,7 +111,8 @@ export class RecipeListComponent implements OnDestroy {
   restoreRecipeId = signal(this.initial.recipeId);
   categoryTitle = computed(
     () =>
-      this.collections().find((c) => c.id === this.selectedCollectionId())?.name ?? 'All recipes',
+      this.collections().find((c) => c.id === this.selectedCollectionId())?.name ??
+      t('All recipes'),
   );
   private readonly searchIndex = computed(() =>
     this.recipes().map((recipe) => ({
@@ -286,7 +290,7 @@ export class RecipeListComponent implements OnDestroy {
       this.recipes.set(recipes);
       void this.images.prepare(recipes, 'thumb');
     } catch {
-      if (version === this.loadVersion) this.error.set('Could not load your recipes.');
+      if (version === this.loadVersion) this.error.set(t('Could not load your recipes.'));
     } finally {
       if (version === this.loadVersion) this.loading.set(false);
     }

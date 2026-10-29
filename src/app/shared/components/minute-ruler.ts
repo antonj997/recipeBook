@@ -13,6 +13,7 @@ import {
   untracked,
 } from '@angular/core';
 import { formatCountdown, maxClockSeconds } from '../../core/models/step-timer';
+import { TranslatePipe } from '../../core/i18n/i18n';
 
 const pitch = 18;
 const maximum = maxClockSeconds / 60;
@@ -28,6 +29,7 @@ const flywheelWindow = 300;
 /** A cyclic duration picker and a fixed, full-duration countdown strip. */
 @Component({
   selector: 'app-minute-ruler',
+  imports: [TranslatePipe],
   styleUrl: './minute-ruler.scss',
   template: `
     <div class="ruler-stage" [class.is-timeline]="timeline()">
@@ -61,7 +63,10 @@ const flywheelWindow = 300;
         (contextmenu)="$event.preventDefault()"
         (wheel)="wheel($event)"
         (blur)="wheelRemainder = 0"
-        title="Drag to adjust; tap to stop. Use arrow keys for one minute, Page Up/Down for ten. Scroll when focused."
+        [title]="
+          'Drag to adjust; tap to stop. Use arrow keys for one minute, Page Up/Down for ten. Scroll when focused.'
+            | t
+        "
       >
         <div class="shared-ticks" aria-hidden="true">
           @for (tick of visualTicks(); track tick.id) {

@@ -78,7 +78,7 @@
       [value]="text()"
       [disabled]="importing()"
       (input)="updateText($event)"
-      placeholder="Pancakes&#10;3 dl flour&#10;6 dl milk&#10;Whisk and fry thin pancakes."
+      [placeholder]="'Pancakes\n3 dl flour\n6 dl milk\nWhisk and fry thin pancakes.' | t"
     ></textarea>
     <button
       type="button"

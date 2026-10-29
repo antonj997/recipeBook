@@ -1,28 +1,33 @@
 <section class="shopping-page page page--narrow" aria-labelledby="shopping-heading">
   <div class="shopping-toolbar">
-    <a routerLink="/" class="back-link" aria-label="Back to home" title="Back to home">
+    <a
+      routerLink="/"
+      class="back-link"
+      [attr.aria-label]="'Back to home' | t"
+      [title]="'Back to home' | t"
+    >
       <app-icon name="chevron" />
     </a>
-    <h1 id="shopping-heading">Shopping list</h1>
+    <h1 id="shopping-heading">{{ 'Shopping list' | t }}</h1>
     <button
       type="button"
       class="add-recipe"
-      aria-label="Add from recipe"
+      [attr.aria-label]="'Add from recipe' | t"
       [disabled]="busy() || shopping.loading()"
       (click)="openPicker()"
     >
-      <app-icon name="write" /><span>From recipe</span>
+      <app-icon name="write" /><span>{{ 'From recipe' | t }}</span>
     </button>
   </div>
   <div class="add-tools">
     <form class="add-item" (submit)="$event.preventDefault(); addItems()">
-      <label for="shopping-add" class="sr-only">Add an item</label>
+      <label for="shopping-add" class="sr-only">{{ 'Add an item' | t }}</label>
       <input
         #addInput
         id="shopping-add"
         type="text"
         autocomplete="off"
-        placeholder="Add an item, like 2 lemons"
+        [placeholder]="'Add an item, like 2 lemons' | t"
         [value]="draft()"
         [disabled]="shopping.loading()"
         (input)="onDraft($event)"
@@ -31,8 +36,8 @@
       <button
         type="submit"
         class="primary"
-        aria-label="Add item"
-        title="Add item"
+        [attr.aria-label]="'Add item' | t"
+        [title]="'Add item' | t"
         [attr.aria-busy]="adding()"
         [disabled]="adding() || shopping.loading() || !draft().trim()"
       >
@@ -40,7 +45,7 @@
       </button>
     </form>
     @if (sourceLegend().length) {
-      <ul class="recipe-legend" aria-label="Recipes in this list">
+      <ul class="recipe-legend" [attr.aria-label]="'Recipes in this list' | t">
         @for (source of sourceLegend(); track source.recipeId) {
           <li>
             @if (source.exists) {
@@ -60,7 +65,7 @@
                   aria-hidden="true"
                 ></span>
                 <span>{{ source.title }}</span>
-                <span class="sr-only">Recipe no longer available.</span>
+                <span class="sr-only">{{ 'Recipe no longer available.' | t }}</span>
               </span>
             }
           </li>
@@ -69,35 +74,37 @@
     }
   </div>
   @if (!shopping.cloud.online()) {
-    <p class="sync-status" role="status">You’re offline. Your list is saved on this device.</p>
+    <p class="sync-status" role="status">
+      {{ 'You’re offline. Your list is saved on this device.' | t }}
+    </p>
   } @else if (shopping.cloud.error()) {
-    <p class="sync-status" role="status">{{ shopping.cloud.error() }}</p>
+    <p class="sync-status" role="status">{{ shopping.cloud.error() | t }}</p>
   }
   @if (error()) {
     <div class="list-error">
-      <p role="alert">{{ error() }}</p>
+      <p role="alert">{{ error() | t }}</p>
       @if (shopping.error()) {
         <button type="button" [disabled]="shopping.loading()" (click)="shopping.refresh()">
-          Try again
+          {{ 'Try again' | t }}
         </button>
       }
     </div>
   }
   @if (shopping.loading() && !shopping.items().length) {
-    <p class="loading-copy" role="status">Loading your list…</p>
+    <p class="loading-copy" role="status">{{ 'Loading your list…' | t }}</p>
     <div class="loading-lines" aria-hidden="true"><span></span><span></span><span></span></div>
   } @else if (!shopping.items().length) {
     <div class="empty-list">
       <app-icon name="basket" />
-      <h2>What do you need?</h2>
-      <p>Add an item above, paste a few lines, or choose ingredients from a recipe.</p>
+      <h2>{{ 'What do you need?' | t }}</h2>
+      <p>{{ 'Add an item above, paste a few lines, or choose ingredients from a recipe.' | t }}</p>
     </div>
   } @else {
     @if (!toBuy().length) {
-      <p class="all-checked">Everything on your list is checked.</p>
+      <p class="all-checked">{{ 'Everything on your list is checked.' | t }}</p>
     }
     <p id="shopping-edit-hint" class="sr-only">
-      Hold item text to edit. With a keyboard, press F2.
+      {{ 'Hold item text to edit. With a keyboard, press F2.' | t }}
     </p>
     @for (department of departments(); track department.id) {
       @if (department.groups.length) {
@@ -109,7 +116,7 @@
         >
           @if (department.label) {
             <h2 class="department-heading" [id]="'shopping-to-buy-' + department.id">
-              {{ department.label }}
+              {{ department.label | t }}
             </h2>
           }
           <ul class="shopping-items">
@@ -128,7 +135,9 @@
                     (submit)="$event.preventDefault(); saveEdit()"
                     (keydown.escape)="cancelEdit()"
                   >
-                    <label [for]="'shopping-edit-' + group.items[0].id">Edit item</label>
+                    <label [for]="'shopping-edit-' + group.items[0].id">{{
+                      'Edit item' | t
+                    }}</label>
                     <input
                       #editInput
                       class="edit-item-input"
@@ -141,14 +150,14 @@
                     />
                     <div class="edit-actions">
                       <button type="button" [disabled]="busy()" (click)="cancelEdit()">
-                        Cancel
+                        {{ 'Cancel' | t }}
                       </button>
                       <button
                         type="submit"
                         class="primary"
                         [disabled]="busy() || !editor()?.text?.trim()"
                       >
-                        Save
+                        {{ 'Save' | t }}
                       </button>
                     </div>
                   </form>
@@ -169,7 +178,7 @@
                       />
                       <app-checkbox-mark /><span
                         class="item-name"
-                        title="Hold to edit"
+                        [title]="'Hold to edit' | t"
                         (pointerdown)="holdItem(group, $event)"
                         (contextmenu)="editItemContext(group, $event)"
                         >{{ group.text
@@ -187,7 +196,7 @@
                       <button
                         type="button"
                         class="text-action delete-item"
-                        [attr.aria-label]="'Delete ' + group.text"
+                        [attr.aria-label]="'Delete {item}' | t: { item: group.text }"
                         [disabled]="busy()"
                         (click)="removeGroup(group, $event)"
                       >
@@ -198,7 +207,7 @@
                   @if (sources.length) {
                     <span class="sr-only" [id]="'shopping-sources-' + group.items[0].id">
                       @for (source of sources; track source.recipeId) {
-                        <span>From {{ source.title }}. </span>
+                        <span>{{ 'From {recipe}.' | t: { recipe: source.title } }} </span>
                       }
                     </span>
                   }
@@ -217,7 +226,7 @@
           [disabled]="busy()"
           (click)="clearChecked()"
         >
-          Clear checked
+          {{ 'Clear checked' | t }}
         </button>
       }
       <button
@@ -226,7 +235,7 @@
         [disabled]="busy()"
         (click)="requestClear()"
       >
-        Clear list
+        {{ 'Clear list' | t }}
       </button>
     </div>
   }
@@ -240,16 +249,20 @@
   (pointerdown)="clearBackdropStart($event)"
   (click)="clearBackdropClick($event)"
 >
-  <h2 id="shopping-clear-heading">Clear shopping list?</h2>
-  <p id="shopping-clear-copy">You still have items to buy. Clear these items from your list?</p>
+  <h2 id="shopping-clear-heading">{{ 'Clear shopping list?' | t }}</h2>
+  <p id="shopping-clear-copy">
+    {{ 'You still have items to buy. Clear these items from your list?' | t }}
+  </p>
   <div class="dialog-actions">
-    <button type="button" autofocus [disabled]="busy()" (click)="cancelClear()">Keep list</button>
+    <button type="button" autofocus [disabled]="busy()" (click)="cancelClear()">
+      {{ 'Keep list' | t }}
+    </button>
     <button type="button" class="delete-button" [disabled]="busy()" (click)="confirmClear()">
-      {{ busy() ? 'Clearing…' : 'Clear list' }}
+      {{ (busy() ? 'Clearing…' : 'Clear list') | t }}
     </button>
   </div>
   @if (localError()) {
-    <p class="dialog-error" role="alert">{{ localError() }}</p>
+    <p class="dialog-error" role="alert">{{ localError() | t }}</p>
   }
 </dialog>
 @if (pickerOpen()) {

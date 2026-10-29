@@ -1,14 +1,16 @@
 import { Component, signal } from '@angular/core';
 import { setSlowMotion, slowMotion } from '../../core/motion';
+import { TranslatePipe } from '../../core/i18n/i18n';
 
 /** Device-only test switch: every animation runs five times slower so it can be judged. */
 @Component({
   selector: 'app-slow-motion-switch',
+  imports: [TranslatePipe],
   template: `
     <div class="copy">
-      <span class="title" id="slow-motion-title">Slow motion</span>
+      <span class="title" id="slow-motion-title">{{ 'Slow motion' | t }}</span>
       <p class="hint" id="slow-motion-note">
-        Test: plays every animation five times slower on this device.
+        {{ 'Test: plays every animation five times slower on this device.' | t }}
       </p>
     </div>
     <button

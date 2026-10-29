@@ -8,10 +8,11 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { parseRecipeText } from '../../../core/models/recipe-text';
 import { ImportCookingComponent } from '../../../shared/components/import-cooking';
 import { motionMs } from '../../../core/motion';
+import { TranslatePipe } from '../../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-import',
-  imports: [IconComponent, RouterLink, ImportCookingComponent],
+  imports: [IconComponent, RouterLink, ImportCookingComponent, TranslatePipe],
   templateUrl: './recipe-import.html',
   styleUrl: './recipe-import.scss',
 })

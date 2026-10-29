@@ -12,8 +12,8 @@
       <button
         type="button"
         class="close-picker"
-        aria-label="Close ingredient picker"
-        title="Close ingredient picker"
+        [attr.aria-label]="'Close ingredient picker' | t"
+        [title]="'Close ingredient picker' | t"
         (click)="close()"
       >
         <app-icon name="close" />
@@ -39,7 +39,7 @@
           <div class="selection-tools">
             <app-select-menu
               menuId="shopping-servings-menu"
-              label="Servings"
+              [label]="'Servings' | t"
               [value]="selectedServings().toString()"
               [options]="servingOptions()"
               [disabled]="busy()"
@@ -88,7 +88,7 @@
             #searchInput
             type="search"
             autofocus
-            placeholder="Search recipes"
+            [placeholder]="'Search recipes' | t"
             [value]="query()"
             (input)="onSearch($event)"
           />

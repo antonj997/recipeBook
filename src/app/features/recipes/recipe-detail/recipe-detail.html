@@ -13,7 +13,11 @@
     [appRecipeTransition]="recipe()?.id ?? ''"
     transitionPart="navigation"
   >
-    <a routerLink="/" class="back-link" aria-label="Back to recipes" title="Back to recipes"
+    <a
+      routerLink="/"
+      class="back-link"
+      [attr.aria-label]="'Back to recipes' | t"
+      [title]="'Back to recipes' | t"
       ><app-icon name="chevron"
     /></a>
     @if (!isDraft && recipe() && !loading() && !error()) {
@@ -21,8 +25,8 @@
         #optionsButton
         type="button"
         class="recipe-options"
-        aria-label="Recipe options"
-        title="Recipe options"
+        [attr.aria-label]="'Recipe options' | t"
+        [title]="'Recipe options' | t"
         aria-haspopup="menu"
         aria-controls="recipe-actions-menu"
         popovertarget="recipe-actions-menu"
@@ -35,15 +39,15 @@
     }
   </div>
   @if (loading()) {
-    <div class="recipe-message page"><app-loading-state label="Loading recipe…" /></div>
+    <div class="recipe-message page"><app-loading-state [label]="'Loading recipe…' | t" /></div>
   } @else if (error() || !recipe()) {
     <section class="empty-recipe-content page" aria-labelledby="recipe-unavailable-title">
       <app-food-doodle kind="empty-bowl" />
-      <h1 id="recipe-unavailable-title">This bowl is empty</h1>
+      <h1 id="recipe-unavailable-title">{{ 'This bowl is empty' | t }}</h1>
       <p [attr.role]="error() ? 'alert' : null">
-        {{ error() || 'The requested recipe could not be found.' }}
+        {{ error() || 'The requested recipe could not be found.' | t }}
       </p>
-      <a routerLink="/" class="button primary">Back to recipes</a>
+      <a routerLink="/" class="button primary">{{ 'Back to recipes' | t }}</a>
     </section>
   } @else {
     @if (recipe(); as selectedRecipe) {
@@ -66,7 +70,7 @@
           }
           <header class="recipe-summary">
             <h1 #titleHeading [appRecipeTransition]="selectedRecipe.id" transitionPart="title">
-              <app-recipe-title [title]="selectedRecipe.title || 'New recipe'" />
+              <app-recipe-title [title]="selectedRecipe.title || ('New recipe' | t)" />
             </h1>
             <app-recipe-summary-details
               [recipe]="selectedRecipe"
@@ -86,7 +90,7 @@
             aria-haspopup="dialog"
             (click)="openFocus()"
           >
-            <app-icon name="focus" />Focus mode
+            <app-icon name="focus" />{{ 'Focus mode' | t }}
           </button>
         </div>
       </div>
@@ -98,7 +102,7 @@
                 class="section-tabs"
                 [class.instructions-selected]="activeSection() === 'instructions'"
                 role="tablist"
-                aria-label="Recipe section"
+                [attr.aria-label]="'Recipe section' | t"
                 (keydown)="tabKey($event)"
               >
                 <span #tabIndicator class="tab-indicator" aria-hidden="true"></span>
@@ -111,7 +115,7 @@
                   aria-controls="ingredients-panel"
                   (click)="switchSection('ingredients')"
                 >
-                  Ingredients
+                  {{ 'Ingredients' | t }}
                 </button>
                 <button
                   type="button"
@@ -122,7 +126,7 @@
                   aria-controls="instructions-panel"
                   (click)="switchSection('instructions')"
                 >
-                  Instructions
+                  {{ 'Instructions' | t }}
                 </button>
               </div>
             </div>
@@ -142,24 +146,26 @@
                 bothPanels() ? 'ingredients-heading' : 'recipe-ingredients-tab'
               "
             >
-              <h2 id="ingredients-heading" class="wide-section-heading">Ingredients</h2>
+              <h2 id="ingredients-heading" class="wide-section-heading">{{ 'Ingredients' | t }}</h2>
               <div class="ingredients-tools">
                 @if (focusMode()) {
-                  <div class="focus-servings" role="group" aria-label="Servings">
+                  <div class="focus-servings" role="group" [attr.aria-label]="'Servings' | t">
                     <button
                       type="button"
-                      aria-label="Decrease servings"
-                      title="Decrease servings"
+                      [attr.aria-label]="'Decrease servings' | t"
+                      [title]="'Decrease servings' | t"
                       [disabled]="selectedServings() === servingOptions()[0]"
                       (click)="adjustServings(-1)"
                     >
                       <app-icon name="minus" />
                     </button>
-                    <span aria-live="polite">{{ selectedServings() }} servings</span>
+                    <span aria-live="polite">{{
+                      selectedServings() | plural: '{n} serving' : '{n} servings'
+                    }}</span>
                     <button
                       type="button"
-                      aria-label="Increase servings"
-                      title="Increase servings"
+                      [attr.aria-label]="'Increase servings' | t"
+                      [title]="'Increase servings' | t"
                       [disabled]="selectedServings() === servingOptions().at(-1)"
                       (click)="adjustServings(1)"
                     >
@@ -170,7 +176,7 @@
                   <app-select-menu
                     menuId="recipe-servings-menu"
                     [dragSelect]="true"
-                    label="Servings"
+                    [label]="'Servings' | t"
                     [value]="selectedServings().toString()"
                     [options]="servingMenuOptions()"
                     (valueChange)="changeServings($event)"
@@ -187,15 +193,15 @@
                     >
                       <app-icon name="basket" />
                       @if (toBuy) {
-                        Add
+                        {{ shoppingWords()[0] }}
                         @for (count of [toBuy]; track count) {
                           <span class="shopping-count" animate.enter="shopping-count-in">{{
                             count
                           }}</span>
                         }
-                        to shopping list
+                        {{ shoppingWords()[1] }}
                       } @else {
-                        Add to shopping list
+                        {{ 'Add to shopping list' | t }}
                       }
                     </button>
                   }
@@ -237,7 +243,9 @@
                 bothPanels() ? 'instructions-heading' : 'recipe-instructions-tab'
               "
             >
-              <h2 id="instructions-heading" class="wide-section-heading">Instructions</h2>
+              <h2 id="instructions-heading" class="wide-section-heading">
+                {{ 'Instructions' | t }}
+              </h2>
               @if (selectedRecipe.instructions.length) {
                 <div class="instruction-tools">
                   @if (!isDraft) {
@@ -254,15 +262,21 @@
                           ></span>
                         }
                       </span>
-                      {{ completedSteps().size }} of
-                      {{ selectedRecipe.instructions.length }} completed
+                      {{
+                        '{done} of {total} completed'
+                          | t
+                            : {
+                                done: completedSteps().size,
+                                total: selectedRecipe.instructions.length,
+                              }
+                      }}
                     </p>
                   }
                   <button
                     type="button"
                     class="reset-instructions"
-                    aria-label="Reset progress"
-                    title="Reset progress"
+                    [attr.aria-label]="'Reset progress' | t"
+                    [title]="'Reset progress' | t"
                     [disabled]="!canResetInstructions()"
                     (click)="resetInstructions()"
                   >
@@ -271,7 +285,7 @@
                 </div>
               }
               @if (hasTimers() && isDraft) {
-                <p class="timer-help">Save the recipe to start timers.</p>
+                <p class="timer-help">{{ 'Save the recipe to start timers.' | t }}</p>
               }
               <ol>
                 @for (step of selectedRecipe.instructions; track $index) {
@@ -297,7 +311,7 @@
                         type="checkbox"
                         [checked]="completedSteps().has($index)"
                         (change)="toggleStep($index)"
-                        [attr.aria-label]="'Step ' + ($index + 1) + ': ' + step"
+                        [attr.aria-label]="'Step {n}: {text}' | t: { n: $index + 1, text: step }"
                       />
                       <app-checkbox-mark [number]="$index + 1" />
                       <span class="step-copy"
@@ -316,10 +330,12 @@
                             null
                           "
                           [alt]="
-                            'Step ' +
-                            ($index + 1) +
-                            ': ' +
-                            (selectedRecipe.stepDetails?.[$index]?.title || step)
+                            'Step {n}: {text}'
+                              | t
+                                : {
+                                    n: $index + 1,
+                                    text: selectedRecipe.stepDetails?.[$index]?.title || step,
+                                  }
                           "
                           loading="lazy"
                           referrerpolicy="no-referrer"
@@ -332,7 +348,9 @@
                           [disabled]="loadingStepPhotos().has($index)"
                           (click)="loadStepPhoto($index)"
                         >
-                          {{ loadingStepPhotos().has($index) ? 'Loading photo…' : 'Load photo' }}
+                          {{
+                            (loadingStepPhotos().has($index) ? 'Loading photo…' : 'Load photo') | t
+                          }}
                         </button>
                       }
                     }
@@ -386,7 +404,7 @@
               [href]="selectedRecipe.sourceUrl"
               target="_blank"
               rel="noopener noreferrer"
-              >Original recipe <app-icon name="external"
+              >{{ 'Original recipe' | t }} <app-icon name="external"
             /></a>
           }
         </div>
@@ -395,9 +413,9 @@
   }
 </article>
 @if (isDraft && recipe()) {
-  <div class="draft-actions" aria-label="Review recipe">
+  <div class="draft-actions" [attr.aria-label]="'Review recipe' | t">
     @if (saveDraftError()) {
-      <p role="alert">{{ saveDraftError() }}</p>
+      <p role="alert">{{ saveDraftError() | t }}</p>
     }
     <div>
       <button
@@ -407,10 +425,12 @@
         [attr.aria-busy]="savingDraft()"
         (click)="saveDraft()"
       >
-        {{ savingDraft() ? 'Saving…' : 'looks good!' }}
+        {{ (savingDraft() ? 'Saving…' : 'looks good!') | t }}
       </button>
-      <a class="button" routerLink="/">cancel</a>
-      <button type="button" [disabled]="savingDraft()" (click)="editDraft()">edit</button>
+      <a class="button" routerLink="/">{{ 'cancel' | t }}</a>
+      <button type="button" [disabled]="savingDraft()" (click)="editDraft()">
+        {{ 'edit' | t }}
+      </button>
     </div>
   </div>
 }

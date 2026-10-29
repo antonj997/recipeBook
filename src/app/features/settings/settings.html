@@ -1,26 +1,30 @@
 <section class="settings-page page page--narrow">
   <header class="settings-header">
-    <a routerLink="/" class="back-link" aria-label="Back to recipes" title="Back to recipes"
+    <a
+      routerLink="/"
+      class="back-link"
+      [attr.aria-label]="'Back to recipes' | t"
+      [title]="'Back to recipes' | t"
       ><app-icon name="chevron"
     /></a>
-    <h1>Settings</h1>
+    <h1>{{ 'Settings' | t }}</h1>
   </header>
   @if (returnToImport) {
     <div class="import-return">
       <p>
         {{
-          auth.user()
+          (auth.user()
             ? 'Continue with your recipe link.'
-            : 'Sign in below, then
-      return to your recipe link.'
+            : 'Sign in below, then return to your recipe link.'
+          ) | t
         }}
       </p>
-      <a routerLink="/recipes/import">Back to import<app-icon name="chevron" /></a>
+      <a routerLink="/recipes/import">{{ 'Back to import' | t }}<app-icon name="chevron" /></a>
     </div>
   }
 
   <section class="settings-group" id="account" aria-labelledby="account-heading">
-    <h2 id="account-heading" class="group-label">Account</h2>
+    <h2 id="account-heading" class="group-label">{{ 'Account' | t }}</h2>
     <div class="settings-card account-card">
       @if (auth.configured() && auth.passwordRecovery()) {
         <div class="card-body">
@@ -44,10 +48,10 @@
         @if (cloud.error() || auth.callbackNotice()) {
           <div class="card-body">
             @if (cloud.error()) {
-              <p class="error" role="alert">{{ cloud.error() }}</p>
+              <p class="error" role="alert">{{ cloud.error() | t }}</p>
             }
             @if (auth.callbackNotice()) {
-              <p role="status">{{ auth.callbackNotice() }}</p>
+              <p role="status">{{ auth.callbackNotice() | t }}</p>
             }
           </div>
         }
@@ -58,7 +62,7 @@
             (click)="cloud.sync()"
             [disabled]="cloud.syncing() || accountBusy()"
           >
-            {{ cloud.syncing() ? 'Syncing…' : 'Sync now' }}
+            {{ (cloud.syncing() ? 'Syncing…' : 'Sync now') | t }}
           </button>
         </div>
         <div class="settings-row">
@@ -68,7 +72,7 @@
             (click)="requestPasswordReset()"
             [disabled]="accountBusy() || importing() || exporting()"
           >
-            Reset password
+            {{ 'Reset password' | t }}
           </button>
         </div>
         <div class="settings-row">
@@ -78,19 +82,20 @@
             (click)="signOut()"
             [disabled]="accountBusy() || importing() || exporting()"
           >
-            Sign out
+            {{ 'Sign out' | t }}
           </button>
         </div>
       } @else {
         <div class="settings-row account-head">
           <span class="account-avatar is-device" aria-hidden="true">R</span>
           <div class="row-copy">
-            <p class="row-title">This device</p>
+            <p class="row-title">{{ 'This device' | t }}</p>
             <p class="row-note">
               {{
-                auth.configured()
+                (auth.configured()
                   ? 'Recipes saved while signed out stay here. When you sign in, add them to your account or delete them.'
                   : 'Your cookbook is saved on this device. Account sign-in is unavailable.'
+                ) | t
               }}
             </p>
           </div>
@@ -104,8 +109,10 @@
     </div>
     @if (auth.user()) {
       <p class="group-note">
-        Signing out keeps your offline copy on this device. On a shared device, sync or download a
-        backup before clearing Recipebook’s site data.
+        {{
+          'Signing out keeps your offline copy on this device. On a shared device, sync or download a backup before clearing Recipebook’s site data.'
+            | t
+        }}
       </p>
     }
     @if (feedbackSection() === 'account') {
@@ -119,11 +126,11 @@
   </section>
 
   <section class="settings-group" id="import-cookbook" aria-labelledby="backups-heading">
-    <h2 id="backups-heading" class="group-label">Backups</h2>
+    <h2 id="backups-heading" class="group-label">{{ 'Backups' | t }}</h2>
     <div class="settings-card">
       <div class="settings-row">
         <div class="row-copy">
-          <p class="row-title">Download a backup</p>
+          <p class="row-title">{{ 'Download a backup' | t }}</p>
           <p class="row-note">{{ lastBackup() }}</p>
         </div>
         <button
@@ -132,13 +139,15 @@
           [disabled]="exporting() || importing() || accountBusy()"
           (click)="exportBackup()"
         >
-          <app-icon name="download" />{{ exporting() ? 'Preparing…' : 'Download' }}
+          <app-icon name="download" />{{ (exporting() ? 'Preparing…' : 'Download') | t }}
         </button>
       </div>
       <div class="settings-row">
         <div class="row-copy">
-          <p class="row-title">Restore from a backup</p>
-          <p class="row-note">Adds its recipes and shopping items. Nothing is replaced.</p>
+          <p class="row-title">{{ 'Restore from a backup' | t }}</p>
+          <p class="row-note">
+            {{ 'Adds its recipes and shopping items. Nothing is replaced.' | t }}
+          </p>
         </div>
         <input
           #backupFile
@@ -154,15 +163,16 @@
           [disabled]="importing() || exporting() || accountBusy()"
           (click)="backupFile.click()"
         >
-          <app-icon name="upload" />{{ importing() ? 'Importing…' : 'Choose file' }}
+          <app-icon name="upload" />{{ (importing() ? 'Importing…' : 'Choose file') | t }}
         </button>
       </div>
     </div>
     <p class="group-note">
       {{
-        auth.user()
+        (auth.user()
           ? 'Backups hold the recipes, categories and shopping list in your account, photos included.'
           : 'Backups hold the recipes, categories and shopping list on this device, photos included.'
+        ) | t
       }}
       {{ storageStatus() }}
     </p>
@@ -177,53 +187,77 @@
   </section>
 
   <section class="settings-group" id="app-settings" aria-labelledby="app-heading">
-    <h2 id="app-heading" class="group-label">App</h2>
+    <h2 id="app-heading" class="group-label">{{ 'App' | t }}</h2>
     <div class="settings-card">
+      <div class="settings-row">
+        <div class="row-copy">
+          <p class="row-title" id="language-label">{{ 'Language' | t }}</p>
+          <p class="row-note">
+            {{
+              (languagePreference() === 'auto' ? 'Follows this device' : 'Chosen for this device')
+                | t
+            }}
+          </p>
+        </div>
+        <app-select-menu
+          class="language-menu"
+          menuId="language-menu"
+          [label]="'Language' | t"
+          [value]="languagePreference()"
+          [options]="languageOptions()"
+          (valueChange)="setLanguage($event)"
+        />
+      </div>
       @if (app.available()) {
         <div class="settings-row">
           <div class="row-copy">
-            <p class="row-title">Update ready</p>
-            <p class="row-note">A new version of Recipebook is ready.</p>
+            <p class="row-title">{{ 'Update ready' | t }}</p>
+            <p class="row-note">{{ 'A new version of Recipebook is ready.' | t }}</p>
           </div>
-          <button type="button" class="row-action" (click)="app.reload()">Reload</button>
+          <button type="button" class="row-action" (click)="app.reload()">
+            {{ 'Reload' | t }}
+          </button>
         </div>
       }
       <app-timer-alert-preferences />
       <div class="settings-row">
         <div class="row-copy">
-          <p class="row-title">{{ app.installed() ? 'Installed' : 'Install Recipebook' }}</p>
+          <p class="row-title">{{ (app.installed() ? 'Installed' : 'Install Recipebook') | t }}</p>
           <p class="row-note">
             {{
-              app.installed()
+              (app.installed()
                 ? 'Recipebook is installed on this device.'
                 : 'From your browser, or choose Add to Home Screen.'
+              ) | t
             }}
             @if (app.offlineReady()) {
-              Saved recipes work offline.
+              {{ 'Saved recipes work offline.' | t }}
             }
           </p>
         </div>
         @if (!app.installed() && app.installable()) {
-          <button type="button" class="row-action" (click)="app.install()">Install</button>
+          <button type="button" class="row-action" (click)="app.install()">
+            {{ 'Install' | t }}
+          </button>
         }
       </div>
       <app-slow-motion-switch />
     </div>
     <p class="group-note catalog-credit">
-      Product categories from
+      {{ 'Product categories from' | t }}
       <a href="https://world.openfoodfacts.org/" target="_blank" rel="noopener noreferrer"
         >Open Food Facts</a
       >
-      and
+      {{ 'and' | t }}
       <a
         href="https://soknaringsinnehall.livsmedelsverket.se/"
         target="_blank"
         rel="noopener noreferrer"
         >Livsmedelsverket</a
       >.
-      <a href="data/shopping-products-notice.txt" target="_blank" rel="noopener"
-        >Data &amp; licence</a
-      >
+      <a href="data/shopping-products-notice.txt" target="_blank" rel="noopener">{{
+        'Data & licence' | t
+      }}</a>
     </p>
   </section>
 </section>

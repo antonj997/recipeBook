@@ -33,6 +33,7 @@ import { RecipeImagesService } from '../../../core/services/recipe-images.servic
 
 import { FeedbackService } from '../../../core/services/feedback.service';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
+import { TranslatePipe } from '../../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-form',
@@ -49,6 +50,7 @@ import { LoadingStateComponent } from '../../../shared/components/loading-state'
     RecipeCollectionsComponent,
     RouterLink,
     LoadingStateComponent,
+    TranslatePipe,
   ],
   templateUrl: './recipe-form.html',
   styleUrl: './recipe-form.scss',

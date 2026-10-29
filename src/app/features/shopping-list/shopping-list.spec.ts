@@ -375,9 +375,9 @@ describe('shopping list', () => {
       host.nativeElement.querySelectorAll('.department-heading') as NodeListOf<HTMLElement>,
     );
     expect(headings.map((heading) => heading.textContent?.trim())).toEqual([
-      'Frukt & grönt',
-      'Mejeri, ost & ägg',
-      'Skafferi',
+      'Fruit & veg',
+      'Dairy, cheese & eggs',
+      'Pantry',
     ]);
     const dairy = host.nativeElement.querySelector('[data-department="dairy"]') as HTMLElement;
     expect(dairy.querySelectorAll('.shopping-row')).toHaveLength(2);
@@ -390,7 +390,7 @@ describe('shopping list', () => {
     groups.update((current) => [{ ...current[0], text: '1 l mjölk' }]);
     host.detectChanges();
     expect(host.nativeElement.querySelector('.department-heading')?.textContent?.trim()).toBe(
-      'Mejeri, ost & ägg',
+      'Dairy, cheese & eggs',
     );
     expect(host.nativeElement.querySelector('[data-department="produce"]')).toBeNull();
   });
@@ -424,8 +424,8 @@ describe('shopping list', () => {
       host.nativeElement.querySelectorAll('.department-heading') as NodeListOf<HTMLElement>,
     );
     expect(headings.map((heading) => heading.textContent?.trim())).toEqual([
-      'Frukt & grönt',
-      'Mejeri, ost & ägg',
+      'Fruit & veg',
+      'Dairy, cheese & eggs',
     ]);
   });
 

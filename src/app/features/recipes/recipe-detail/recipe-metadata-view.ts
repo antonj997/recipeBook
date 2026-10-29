@@ -8,17 +8,18 @@ import {
   combinedDescription,
   perPortionNutrition,
 } from '../../../core/models/recipe-metadata';
+import { TranslatePipe } from '../../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-summary-details',
-  imports: [IconComponent, RecipeTransitionPartDirective],
+  imports: [IconComponent, RecipeTransitionPartDirective, TranslatePipe],
   template: `
     @if (categories().length || recipe().totalTime != null) {
       <div class="recipe-metadata">
         @if (recipe().totalTime != null) {
           <p
             class="recipe-time"
-            aria-label="Total time"
+            [attr.aria-label]="'Total time' | t"
             [appRecipeTransition]="recipe().id"
             transitionPart="time"
           >

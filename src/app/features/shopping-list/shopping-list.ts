@@ -27,6 +27,7 @@ import { animateLayout } from '../../shared/motion/flip';
 import { motionMs } from '../../core/motion';
 import { IconComponent } from '../../shared/components/icon';
 import { RecipeShoppingPickerComponent } from '../../shared/components/recipe-shopping-picker';
+import { msg, plural, t, TranslatePipe } from '../../core/i18n/i18n';
 
 interface ItemEditor {
   key: string;
@@ -44,7 +45,13 @@ interface SourceLabel extends SourceRecipeInfo {
 
 @Component({
   selector: 'app-shopping-list',
-  imports: [RouterLink, CheckboxMarkComponent, IconComponent, RecipeShoppingPickerComponent],
+  imports: [
+    RouterLink,
+    CheckboxMarkComponent,
+    IconComponent,
+    RecipeShoppingPickerComponent,
+    TranslatePipe,
+  ],
   templateUrl: './shopping-list.html',
   styleUrl: './shopping-list.scss',
 })
@@ -174,7 +181,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
     if (this.busy() || this.adding()) return false;
     return (
       (!this.draft().trim() && !this.editor()) ||
-      this.confirmation.confirm('Your shopping list changes have not been saved. Discard them?')
+      this.confirmation.confirm(t('Your shopping list changes have not been saved. Discard them?'))
     );
   }
 
@@ -224,10 +231,10 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
       const count = await this.shopping.addManual(text);
       if (!this.current(account)) return;
       if (text === draft && this.draft() === draft) this.draft.set('');
-      if (count > 1) this.feedback.show(count + ' items added');
+      if (count > 1) this.feedback.show(plural(count, '{n} item added', '{n} items added'));
       this.addInput()?.nativeElement.focus({ preventScroll: true });
     } catch (error) {
-      if (this.current(account)) this.showError(error, 'Could not add this item. Try again.');
+      if (this.current(account)) this.showError(error, msg('Could not add this item. Try again.'));
     } finally {
       if (this.current(account)) this.adding.set(false);
     }
@@ -257,7 +264,8 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
       if (!this.current(account)) return;
       if (checking) this.settleTimer = setTimeout(() => void this.settle(), motionMs(900));
     } catch (error) {
-      if (this.current(account)) this.showError(error, 'Could not update this item. Try again.');
+      if (this.current(account))
+        this.showError(error, msg('Could not update this item. Try again.'));
     } finally {
       if (this.current(account)) this.busy.set(false);
     }
@@ -384,7 +392,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
       this.focusRow(editor.ids[0]);
     } catch (error) {
       if (this.current(account))
-        this.showError(error, 'Could not save this item. Your edit is still here; try again.');
+        this.showError(error, msg('Could not save this item. Your edit is still here; try again.'));
     } finally {
       if (this.current(account)) this.busy.set(false);
     }
@@ -394,7 +402,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
     const next = this.nextItem(origin);
     await this.removeItems(
       group.items.map((item) => item.id),
-      'Item deleted',
+      msg('Item deleted'),
     );
     if (origin) this.focusAfterRemoval(origin, next);
   }
@@ -408,14 +416,15 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
       if (!this.current(account)) return;
       this.editor.set(null);
       this.clearing.set(null);
-      this.feedback.show(message, {
-        label: 'Undo',
+      this.feedback.show(t(message), {
+        label: t('Undo'),
         run: undo,
-        successMessage: 'Items restored',
-        errorMessage: 'Could not restore these items. Try again.',
+        successMessage: t('Items restored'),
+        errorMessage: t('Could not restore these items. Try again.'),
       });
     } catch (error) {
-      if (this.current(account)) this.showError(error, 'Could not delete these items. Try again.');
+      if (this.current(account))
+        this.showError(error, msg('Could not delete these items. Try again.'));
     } finally {
       if (this.current(account)) this.busy.set(false);
     }
@@ -429,15 +438,16 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
     try {
       const undo = await this.shopping.clear(true);
       if (!this.current(account)) return;
-      this.feedback.show('Checked items cleared', {
-        label: 'Undo',
+      this.feedback.show(t('Checked items cleared'), {
+        label: t('Undo'),
         run: undo,
-        successMessage: 'Items restored',
-        errorMessage: 'Could not restore these items. Try again.',
+        successMessage: t('Items restored'),
+        errorMessage: t('Could not restore these items. Try again.'),
       });
       this.restoreClearFocus(account, origin);
     } catch (error) {
-      if (this.current(account)) this.showError(error, 'Could not clear checked items. Try again.');
+      if (this.current(account))
+        this.showError(error, msg('Could not clear checked items. Try again.'));
     } finally {
       if (this.current(account)) this.busy.set(false);
     }
@@ -448,7 +458,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
     const account = this.shopping.accountVersion();
     const origin = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (!this.toBuy().length) {
-      await this.removeItems(ids, 'Shopping list cleared');
+      await this.removeItems(ids, msg('Shopping list cleared'));
       this.restoreClearFocus(account, origin);
       return;
     }
@@ -458,7 +468,7 @@ export class ShoppingListComponent implements ConfirmBeforeLeaving {
   }
   async confirmClear(): Promise<void> {
     const ids = this.clearing();
-    if (ids) await this.removeItems(ids, 'Shopping list cleared');
+    if (ids) await this.removeItems(ids, msg('Shopping list cleared'));
   }
   cancelClear(event?: Event): void {
     event?.preventDefault();

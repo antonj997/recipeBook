@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { CloudCookbookService } from './core/services/cloud-cookbook.service';
 import {
+  TitleStrategy,
   provideRouter,
   withHashLocation,
   withInMemoryScrolling,
@@ -17,6 +18,7 @@ import {
 } from '@angular/router';
 import { PageTransitionService } from './core/services/page-transition.service';
 import { routes } from './app.routes';
+import { TranslatedTitleStrategy } from './core/i18n/translated-title';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -27,6 +29,7 @@ export const appConfig: ApplicationConfig = {
       updateViaCache: 'none',
     }),
     provideAppInitializer(() => inject(CloudCookbookService).initialize()),
+    { provide: TitleStrategy, useExisting: TranslatedTitleStrategy },
     provideRouter(
       routes,
       ...(runtimeConfig.pages ? [withHashLocation()] : []),

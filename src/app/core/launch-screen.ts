@@ -1,5 +1,6 @@
 import { tipRecipebookMark, type BrandMarkMotion } from './brand-mark-motion';
 import { motionMs } from './motion';
+import { t } from './i18n/i18n';
 
 /** The first-paint cover lives outside Angular so it also covers bootstrap and lazy routes. */
 export class LaunchScreen {
@@ -11,6 +12,18 @@ export class LaunchScreen {
     this.cover = document.getElementById('app-launch');
     this.app = document.querySelector('app-root');
     this.logoMotion = tipRecipebookMark(this.cover?.querySelector('.app-launch__logo') ?? null);
+    this.translate();
+  }
+
+  /** The cover is plain HTML in English; switch its words before the delayed help can show. */
+  private translate(): void {
+    const set = (selector: string, text: string) => {
+      const node = this.cover?.querySelector(selector);
+      if (node) node.textContent = text;
+    };
+    set('.app-launch__label', t('Loading Recipebook…'));
+    set('[data-launch-message]', t('Taking longer than expected.'));
+    set('.app-launch__help a', t('Reload app'));
   }
 
   async revealWhen(startup: Promise<unknown>): Promise<void> {
@@ -52,7 +65,7 @@ export class LaunchScreen {
       this.logoMotion.cancel();
       this.cover?.setAttribute('data-failed', '');
       const message = this.cover?.querySelector('[data-launch-message]');
-      if (message) message.textContent = 'Recipebook could not start.';
+      if (message) message.textContent = t('Recipebook could not start.');
       console.error('Recipebook could not start.');
     }
   }

@@ -5,6 +5,7 @@ import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark'
 import { AutoGrowTextareaDirective } from '../../../shared/directives/auto-grow-textarea';
 import { IconComponent } from '../../../shared/components/icon';
 import { animateLayout } from '../../../shared/motion/flip';
+import { TranslatePipe } from '../../../core/i18n/i18n';
 
 interface Group {
   id: number;
@@ -20,7 +21,13 @@ interface Position {
 // Both editors reuse the original text controls. Each instance owns its drag state.
 @Component({
   selector: 'app-recipe-groups',
-  imports: [ReactiveFormsModule, IconComponent, CheckboxMarkComponent, AutoGrowTextareaDirective],
+  imports: [
+    ReactiveFormsModule,
+    IconComponent,
+    CheckboxMarkComponent,
+    AutoGrowTextareaDirective,
+    TranslatePipe,
+  ],
   templateUrl: './recipe-groups.html',
   styleUrl: './recipe-groups.scss',
 })

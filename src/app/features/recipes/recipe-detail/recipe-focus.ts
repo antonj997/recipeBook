@@ -12,11 +12,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { IconComponent } from '../../../shared/components/icon';
+import { TranslatePipe } from '../../../core/i18n/i18n';
 
 /** A landscape reading surface. CSS rotation also works in iPhone PWAs without orientation lock. */
 @Component({
   selector: 'app-recipe-focus',
-  imports: [IconComponent, FeedbackToastComponent],
+  imports: [IconComponent, FeedbackToastComponent, TranslatePipe],
   template: `
     <dialog
       #dialog
@@ -27,7 +28,12 @@ import { IconComponent } from '../../../shared/components/icon';
     >
       <div class="focus-landscape">
         <header>
-          <button type="button" aria-label="Exit focus mode" (click)="close()" autofocus>
+          <button
+            type="button"
+            [attr.aria-label]="'Exit focus mode' | t"
+            (click)="close()"
+            autofocus
+          >
             <app-icon name="close" />
           </button>
         </header>

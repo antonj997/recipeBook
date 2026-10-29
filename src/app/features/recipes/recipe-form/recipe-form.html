@@ -11,7 +11,7 @@
   </p>
 
   @if (loading()) {
-    <app-loading-state label="Loading recipe…" />
+    <app-loading-state [label]="'Loading recipe…' | t" />
   } @else if (loadError()) {
     <p class="error" role="alert">{{ loadError() }}</p>
   } @else {
@@ -29,7 +29,7 @@
           [attr.aria-describedby]="
             form.controls.title.touched && form.controls.title.invalid ? 'title-error' : null
           "
-          placeholder="e.g. Pasta Carbonara"
+          [placeholder]="'e.g. Pasta Carbonara' | t"
         />
 
         @if (form.controls.title.touched && form.controls.title.invalid) {
@@ -44,7 +44,7 @@
             <img
               class="photo-preview"
               [src]="imageDataUrl()"
-              alt="Recipe photo preview"
+              [alt]="'Recipe photo preview' | t"
               referrerpolicy="no-referrer"
             />
           }
@@ -95,7 +95,7 @@
           menuId="default-servings-menu"
           [dragSelect]="true"
           controlId="servings"
-          label="Default servings"
+          [label]="'Default servings' | t"
           describedBy="servings-hint"
           valueType="number"
           [options]="servingChoices()"

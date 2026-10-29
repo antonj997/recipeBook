@@ -1,9 +1,9 @@
-<a class="skip-link" href="#main-content" (click)="$event.preventDefault(); mainContent.focus()"
-  >Skip to content</a
->
+<a class="skip-link" href="#main-content" (click)="$event.preventDefault(); mainContent.focus()">{{
+  'Skip to content' | t
+}}</a>
 <div class="book-recipe-color" aria-hidden="true"></div>
 <header #appHeader class="app-header">
-  <a class="brand" routerLink="/" aria-label="Recipebook home">
+  <a class="brand" routerLink="/" [attr.aria-label]="'Recipebook home' | t">
     <img
       #brandMark
       class="brand-mark"
@@ -22,7 +22,7 @@
     </p>
   }
   @if (!hideSettings()) {
-    <nav class="header-actions" aria-label="App">
+    <nav class="header-actions" [attr.aria-label]="'App' | t">
       <a
         #basketLink
         class="settings-link shopping-link"
@@ -42,8 +42,8 @@
         class="settings-link"
         [routerLink]="settingsTarget()"
         [class.active]="onSettings()"
-        [attr.aria-label]="onSettings() ? 'Back from settings' : 'Settings'"
-        [title]="onSettings() ? 'Back from settings' : 'Settings'"
+        [attr.aria-label]="(onSettings() ? 'Back from settings' : 'Settings') | t"
+        [title]="(onSettings() ? 'Back from settings' : 'Settings') | t"
         ><app-icon name="settings" />
       </a>
     </nav>
@@ -60,7 +60,8 @@
 </main>
 @if (updates.available() && !onSettings() && !hideSettings() && !feedback.message()) {
   <aside class="app-update" role="status">
-    <span>Update available</span><button type="button" (click)="updates.reload()">Reload</button>
+    <span>{{ 'Update available' | t }}</span
+    ><button type="button" (click)="updates.reload()">{{ 'Reload' | t }}</button>
   </aside>
 }
 <app-feedback-toast [editing]="hideSettings()" />

@@ -18,6 +18,7 @@ import { CookingSessionService } from '../../core/services/cooking-session.servi
 import { CheckboxMarkComponent } from './checkbox-mark';
 import { motionMs } from '../../core/motion';
 import { recipeBackground } from '../../core/models/recipe-color';
+import { TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-actions',
@@ -25,7 +26,7 @@ import { recipeBackground } from '../../core/models/recipe-color';
     '(window:resize)': 'actions.menu.set(null)',
     '(window:scroll)': 'actions.menu.set(null)',
   },
-  imports: [CheckboxMarkComponent, IconComponent],
+  imports: [CheckboxMarkComponent, IconComponent, TranslatePipe],
   template: `
     <span id="recipe-actions-hint" class="sr-only"
       >Hold a recipe or right-click for actions. With a keyboard, press Shift F10.</span
@@ -38,7 +39,7 @@ import { recipeBackground } from '../../core/models/recipe-color';
       [style.left.px]="menuLeft()"
       [style.top.px]="menuTop()"
       role="menu"
-      aria-label="Recipe actions"
+      [attr.aria-label]="'Recipe actions' | t"
       (beforetoggle)="menuToggle($event)"
       (keydown)="menuKey($event)"
     >

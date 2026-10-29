@@ -1,12 +1,13 @@
 import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { t, TranslatePipe } from '../../core/i18n/i18n';
 
 type AccessMode = 'signin' | 'signup' | 'forgot';
 
 @Component({
   selector: 'app-account-access',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, TranslatePipe],
   templateUrl: './account-access.html',
   styleUrl: './account-access.scss',
 })
@@ -69,15 +70,15 @@ export class AccountAccessComponent {
     this.auth.callbackError.set('');
     this.form.markAllAsTouched();
     if (!recovery && this.form.controls.email.invalid) {
-      this.error.set('Enter a valid email address.');
+      this.error.set(t('Enter a valid email address.'));
       return;
     }
     if ((recovery || mode !== 'forgot') && !password) {
-      this.error.set('Enter your password.');
+      this.error.set(t('Enter your password.'));
       return;
     }
     if (this.newPassword() && password !== confirm) {
-      this.error.set('The passwords do not match.');
+      this.error.set(t('The passwords do not match.'));
       return;
     }
     this.busy.set(true);
@@ -89,14 +90,18 @@ export class AccountAccessComponent {
         if (this.active && !signedIn) {
           this.mode.set('signin');
           this.message.set(
-            'Check your email to confirm your account, then sign in with your password. If you already have an account, sign in or reset your password.',
+            t(
+              'Check your email to confirm your account, then sign in with your password. If you already have an account, sign in or reset your password.',
+            ),
           );
         }
       } else if (mode === 'forgot') {
         await this.auth.sendPasswordReset(email.trim());
         if (this.active)
           this.message.set(
-            'If this address has an account, a password reset link will arrive by email. Check your spam folder too.',
+            t(
+              'If this address has an account, a password reset link will arrive by email. Check your spam folder too.',
+            ),
           );
       } else {
         await this.auth.signIn(email.trim(), password);
@@ -104,7 +109,7 @@ export class AccountAccessComponent {
     } catch (error) {
       if (this.active)
         this.error.set(
-          error instanceof Error ? error.message : 'Could not complete this account request.',
+          t(error instanceof Error ? error.message : 'Could not complete this account request.'),
         );
     } finally {
       // Never retain a password in app storage, feedback, or a hidden form.

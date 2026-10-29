@@ -26,10 +26,17 @@ import { CheckboxMarkComponent } from './checkbox-mark';
 import { FoodPlaceholderComponent } from './food-placeholder';
 import { IconComponent } from './icon';
 import { SelectMenuComponent } from './select-menu';
+import { TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-shopping-picker',
-  imports: [CheckboxMarkComponent, FoodPlaceholderComponent, IconComponent, SelectMenuComponent],
+  imports: [
+    CheckboxMarkComponent,
+    FoodPlaceholderComponent,
+    IconComponent,
+    SelectMenuComponent,
+    TranslatePipe,
+  ],
   templateUrl: './recipe-shopping-picker.html',
   styleUrl: './recipe-shopping-picker.scss',
 })

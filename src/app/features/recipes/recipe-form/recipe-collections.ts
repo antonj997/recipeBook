@@ -5,10 +5,11 @@ import type { RecipeCollection } from '../../../core/models/recipe-collection.mo
 import { RecipeService } from '../../../core/services/recipe.service';
 import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark';
 import { IconComponent } from '../../../shared/components/icon';
+import { TranslatePipe } from '../../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-collections',
-  imports: [IconComponent, CheckboxMarkComponent, RouterLink],
+  imports: [IconComponent, CheckboxMarkComponent, RouterLink, TranslatePipe],
   template: `
     <details>
       <summary class="disclosure">
@@ -32,7 +33,7 @@ import { IconComponent } from '../../../shared/components/icon';
         <label
           >New category<input
             #name
-            placeholder="Category name"
+            [placeholder]="'Category name' | t"
             [disabled]="creating()"
             (keydown.enter)="$event.preventDefault(); create(name)" /></label
         ><button type="button" [disabled]="creating()" (click)="create(name)">

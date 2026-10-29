@@ -71,7 +71,7 @@
                 [formControl]="control"
                 (paste)="pasteRows($event, control, group.id)"
                 rows="2"
-                placeholder="Describe this step"
+                [placeholder]="'Describe this step' | t"
                 [attr.aria-invalid]="control.touched && control.invalid"
               ></textarea>
               @if (hasTimer(control)) {
@@ -114,7 +114,7 @@
                   class="timer-add"
                   [id]="rowId(control) + '-timer-add'"
                   [attr.aria-label]="'Add timer to step ' + number(control)"
-                  title="Add timer"
+                  [title]="'Add timer' | t"
                   (click)="addTimer(control)"
                 >
                   <app-icon name="clock" />
@@ -142,7 +142,7 @@
                 (keydown)="ingredientEnter($event, control, group.id)"
                 (paste)="pasteRows($event, control, group.id)"
                 [attr.aria-label]="'Ingredient ' + number(control)"
-                placeholder="Add an ingredient"
+                [placeholder]="'Add an ingredient' | t"
                 [attr.aria-invalid]="control.touched && control.invalid"
               ></textarea>
             }

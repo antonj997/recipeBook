@@ -21,8 +21,8 @@
       <button
         type="button"
         class="toast-dismiss"
-        aria-label="Dismiss notification"
-        title="Dismiss notification"
+        [attr.aria-label]="'Dismiss notification' | t"
+        [title]="'Dismiss notification' | t"
         (click)="feedback.close()"
       >
         <app-icon name="close" />

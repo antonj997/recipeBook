@@ -15,15 +15,27 @@ import {
   storageSummary,
 } from '../../core/services/storage-durability.service';
 import { SlowMotionSwitchComponent } from '../../shared/components/slow-motion-switch';
+import { SelectMenuComponent } from '../../shared/components/select-menu';
+import {
+  dateLocale,
+  languagePreference,
+  msg,
+  plural,
+  setLanguagePreference,
+  t,
+  TranslatePipe,
+} from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-settings',
   imports: [
+    SelectMenuComponent,
     SlowMotionSwitchComponent,
     IconComponent,
     RouterLink,
     AccountAccessComponent,
     TimerAlertPreferencesComponent,
+    TranslatePipe,
   ],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
@@ -49,26 +61,34 @@ export class SettingsComponent {
   readonly lastBackup = computed(() => {
     const at = this.durability.lastBackupAt();
     return at
-      ? 'Last backup from this device: ' +
-          new Date(at).toLocaleDateString(undefined, {
+      ? t('Last backup from this device: {date}.', {
+          date: new Date(at).toLocaleDateString(dateLocale(), {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
-          }) +
-          '.'
-      : 'No backup downloaded on this device yet.';
+          }),
+        })
+      : t('No backup downloaded on this device yet.');
   });
   // Short enough for one line beside the monogram on a phone.
   readonly syncStatus = computed(() => {
-    if (!this.cloud.online()) return 'Offline · saved on this device';
-    if (this.cloud.syncing()) return 'Syncing…';
-    if (this.cloud.error()) return 'Sync needs attention';
+    if (!this.cloud.online()) return t('Offline · saved on this device');
+    if (this.cloud.syncing()) return t('Syncing…');
+    if (this.cloud.error()) return t('Sync needs attention');
     if (this.cloud.pending())
-      return (
-        this.cloud.pending() + (this.cloud.pending() === 1 ? ' change' : ' changes') + ' waiting'
-      );
-    return this.cloud.lastSynced() ? 'Synced' : 'Checking…';
+      return plural(this.cloud.pending(), '{n} change waiting', '{n} changes waiting');
+    return t(this.cloud.lastSynced() ? 'Synced' : 'Checking…');
   });
+  readonly languagePreference = languagePreference;
+  // Language names stay in their own language so anyone can find theirs.
+  readonly languageOptions = computed(() => [
+    { value: 'auto', label: t('Automatic') },
+    { value: 'en', label: 'English' }, // i18n-ignore: a language's own name
+    { value: 'sv', label: 'Svenska' }, // i18n-ignore: a language's own name
+  ]);
+  setLanguage(value: string): void {
+    if (value === 'auto' || value === 'en' || value === 'sv') setLanguagePreference(value);
+  }
   /** The account card's monogram: the first letter of the email address. */
   initial(email?: string | null): string {
     return (email?.trim()[0] ?? '?').toLocaleUpperCase();
@@ -99,10 +119,10 @@ export class SettingsComponent {
     try {
       await this.auth.sendPasswordReset(email);
       if (this.current(version))
-        this.message.set('Check your email for a link to reset your password.');
+        this.message.set(t('Check your email for a link to reset your password.'));
     } catch (error) {
       if (this.current(version))
-        this.error.set(error instanceof Error ? error.message : 'Could not send a reset email.');
+        this.error.set(t(error instanceof Error ? error.message : 'Could not send a reset email.'));
     } finally {
       this.accountBusy.set(false);
     }
@@ -121,9 +141,12 @@ export class SettingsComponent {
       if (
         pending &&
         !(await this.confirmation.confirm(
-          pending +
-            ' changes are saved only on this device. They will upload when you sign back into this account. Keep this browser’s site data until then, or download a backup before leaving.',
-          { title: 'Sign out anyway?', confirm: 'Sign out', cancel: 'Stay signed in' },
+          plural(
+            pending,
+            '{n} change is saved only on this device. It will upload when you sign back into this account. Keep this browser’s site data until then, or download a backup before leaving.',
+            '{n} changes are saved only on this device. They will upload when you sign back into this account. Keep this browser’s site data until then, or download a backup before leaving.',
+          ),
+          { title: t('Sign out anyway?'), confirm: t('Sign out'), cancel: t('Stay signed in') },
         ))
       )
         return;
@@ -133,11 +156,13 @@ export class SettingsComponent {
       await this.auth.signOut();
       if (this.active)
         this.message.set(
-          'Signed out. Your account’s recipes, shopping list and pending changes stay on this device. Sign back into the same account to see them.',
+          t(
+            'Signed out. Your account’s recipes, shopping list and pending changes stay on this device. Sign back into the same account to see them.',
+          ),
         );
     } catch (error) {
       if (this.current(version))
-        this.error.set(error instanceof Error ? error.message : 'Could not sign out.');
+        this.error.set(t(error instanceof Error ? error.message : 'Could not sign out.'));
     } finally {
       this.accountBusy.set(false);
     }
@@ -196,12 +221,19 @@ export class SettingsComponent {
       this.durability.markBackup(backup.exportedAt);
 
       this.message.set(
-        `Prepared a backup containing ${backup.recipes.length} recipes and ${backup.shoppingItems?.length ?? 0} shopping items.`,
+        t('Prepared a backup with {recipes} and {items}.', {
+          recipes: plural(backup.recipes.length, '{n} recipe', '{n} recipes'),
+          items: plural(
+            backup.shoppingItems?.length ?? 0,
+            '{n} shopping item',
+            '{n} shopping items',
+          ),
+        }),
       );
     } catch (error) {
       console.error('Export failed:', error);
 
-      if (this.current(version)) this.error.set('Could not export your cookbook.');
+      if (this.current(version)) this.error.set(t('Could not export your cookbook.'));
     } finally {
       this.exporting.set(false);
     }
@@ -226,7 +258,7 @@ export class SettingsComponent {
     try {
       // Reject unusually large files.
       if (file.size > 50 * 1024 * 1024) {
-        throw new Error('Backup file is too large.');
+        throw new Error(msg('Backup file is too large.'));
       }
 
       // Read the selected JSON file.
@@ -239,9 +271,18 @@ export class SettingsComponent {
       const backup = this.recipeService.validateBackup(data);
 
       const confirmed = await this.confirmation.confirm(
-        `Import ${backup.recipes.length} recipes and ${backup.shoppingItems?.length ?? 0} shopping items? ` +
-          'Existing recipes and shopping items are kept. Items already imported are skipped.',
-        { title: 'Restore this backup?', confirm: 'Import', cancel: 'Cancel' },
+        t(
+          'Import {recipes} and {items}? Existing recipes and shopping items are kept. Items already imported are skipped.',
+          {
+            recipes: plural(backup.recipes.length, '{n} recipe', '{n} recipes'),
+            items: plural(
+              backup.shoppingItems?.length ?? 0,
+              '{n} shopping item',
+              '{n} shopping items',
+            ),
+          },
+        ),
+        { title: t('Restore this backup?'), confirm: t('Import'), cancel: t('Cancel') },
       );
 
       if (!confirmed || !this.current(version)) {
@@ -253,14 +294,17 @@ export class SettingsComponent {
       if (!this.current(version)) return;
 
       this.message.set(
-        `Imported ${result.added} recipes and ${result.shoppingAdded ?? 0} shopping items. ` +
-          `Skipped ${result.skipped} existing recipes.`,
+        t('Imported {recipes} and {items}. Skipped {skipped}.', {
+          recipes: plural(result.added, '{n} recipe', '{n} recipes'),
+          items: plural(result.shoppingAdded ?? 0, '{n} shopping item', '{n} shopping items'),
+          skipped: plural(result.skipped, '{n} existing recipe', '{n} existing recipes'),
+        }),
       );
     } catch (error) {
       console.error('Import failed:', error);
 
       if (this.current(version))
-        this.error.set(error instanceof Error ? error.message : 'Could not import the backup.');
+        this.error.set(t(error instanceof Error ? error.message : 'Could not import the backup.'));
     } finally {
       this.importing.set(false);
 

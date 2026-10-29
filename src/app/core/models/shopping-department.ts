@@ -2,26 +2,27 @@ import type { ShoppingGroup } from './shopping-item';
 import { matchShoppingRule } from './shopping-department-rules';
 import { ShoppingProductIndex } from './shopping-product-index';
 import catalog from '../data/shopping-products.json';
+import { msg } from '../i18n/i18n';
 
 // A general Swedish supermarket circuit; individual stores have different layouts.
 export const shoppingDepartments = [
-  { id: 'produce', label: 'Frukt & grönt' },
-  { id: 'bakery', label: 'Bröd & kakor' },
-  { id: 'meat', label: 'Kött, chark & fågel' },
-  { id: 'fish', label: 'Fisk & skaldjur' },
-  { id: 'vegetarian', label: 'Vegetariskt' },
-  { id: 'ready-meals', label: 'Färdigmat & såser' },
-  { id: 'dairy', label: 'Mejeri, ost & ägg' },
-  { id: 'pantry', label: 'Skafferi' },
-  { id: 'drinks', label: 'Dryck' },
-  { id: 'baby', label: 'Barn' },
-  { id: 'beauty', label: 'Hygien' },
-  { id: 'household', label: 'Städ, tvätt & papper' },
-  { id: 'kitchen', label: 'Kök' },
-  { id: 'pets', label: 'Djur' },
-  { id: 'treats', label: 'Godis & snacks' },
-  { id: 'frozen', label: 'Fryst' },
-  { id: 'other', label: 'Övrigt' },
+  { id: 'produce', label: msg('Fruit & veg') },
+  { id: 'bakery', label: msg('Bread & bakery') },
+  { id: 'meat', label: msg('Meat, deli & poultry') },
+  { id: 'fish', label: msg('Fish & seafood') },
+  { id: 'vegetarian', label: msg('Vegetarian') },
+  { id: 'ready-meals', label: msg('Ready meals & sauces') },
+  { id: 'dairy', label: msg('Dairy, cheese & eggs') },
+  { id: 'pantry', label: msg('Pantry') },
+  { id: 'drinks', label: msg('Drinks') },
+  { id: 'baby', label: msg('Baby') },
+  { id: 'beauty', label: msg('Health & beauty') },
+  { id: 'household', label: msg('Cleaning, laundry & paper') },
+  { id: 'kitchen', label: msg('Kitchen') },
+  { id: 'pets', label: msg('Pets') },
+  { id: 'treats', label: msg('Sweets & snacks') },
+  { id: 'frozen', label: msg('Frozen') },
+  { id: 'other', label: msg('Other') },
 ] as const;
 
 export type ShoppingDepartmentId = (typeof shoppingDepartments)[number]['id'];

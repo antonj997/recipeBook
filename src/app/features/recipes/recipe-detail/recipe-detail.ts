@@ -71,6 +71,7 @@ import { RecipeService } from '../../../core/services/recipe.service';
 import { FeedbackService } from '../../../core/services/feedback.service';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
 import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
+import { msg, plural, PluralPipe, t, TranslatePipe } from '../../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-detail',
@@ -95,6 +96,8 @@ import { FoodDoodleComponent } from '../../../shared/components/food-doodle';
     RouterLink,
     LoadingStateComponent,
     FoodDoodleComponent,
+    TranslatePipe,
+    PluralPipe,
   ],
   templateUrl: './recipe-detail.html',
   styleUrls: ['./recipe-tabs.scss', './recipe-detail.scss', './recipe-focus-content.scss'],
@@ -125,7 +128,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     if (this.accountChanged()) return true;
     if (!this.isDraft || this.leaving) return true;
     if (this.savingDraft()) return false;
-    const leave = await this.confirmation.confirm('This recipe has not been saved. Discard it?');
+    const leave = await this.confirmation.confirm(t('This recipe has not been saved. Discard it?'));
     if (leave) this.drafts.clear();
     return leave;
   }
@@ -159,19 +162,19 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
         // A signed-out cookbook in a browser tab can be cleared by the browser; say so once.
         this.durability.markNudged();
         this.feedback.show(
-          'Recipe saved on this device. Install Recipebook or sign in so the browser keeps it.',
+          t('Recipe saved on this device. Install Recipebook or sign in so the browser keeps it.'),
           {
-            label: 'Show how',
-            pendingLabel: 'Opening…',
+            label: t('Show how'),
+            pendingLabel: t('Opening…'),
             run: async () => {
               await this.router.navigate(['/settings'], { fragment: 'import-cookbook' });
             },
           },
         );
-      } else this.feedback.show('Recipe saved');
+      } else this.feedback.show(t('Recipe saved'));
       await this.router.navigate(['/recipes', saved.id]);
     } catch {
-      this.saveDraftError.set('Could not save your recipe. Please try again.');
+      this.saveDraftError.set(msg('Could not save your recipe. Please try again.'));
     } finally {
       this.savingDraft.set(false);
     }
@@ -210,7 +213,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   private readonly headerTitle = computed(() => {
     const recipe = this.recipe();
     if (!recipe || this.accountChanged()) return null;
-    return { text: recipe.title || 'New recipe', shown: this.headingPassed() };
+    return { text: recipe.title || t('New recipe'), shown: this.headingPassed() };
   });
   focusReadingHeight = 0;
   focusScroll = { left: 0, top: 0 };
@@ -281,12 +284,14 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     try {
       await this.recipeService.updateRecipe(recipe.id, { stepDetails });
     } catch {
-      this.feedback.show('Could not save the timer. Try again.');
+      this.feedback.show(t('Could not save the timer. Try again.'));
       return;
     }
     if (this.recipe() !== recipe || this.accountChanged()) return;
     this.recipe.set({ ...recipe, stepDetails });
-    this.feedback.show('Step ' + (index + 1) + ' now uses ' + formatCountdown(seconds));
+    this.feedback.show(
+      t('Step {n} now uses {time}', { n: index + 1, time: formatCountdown(seconds) }),
+    );
   }
   private timerNeedsReset(target: StepTimerTarget): boolean {
     const state = this.timers.state(target);
@@ -598,7 +603,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       if (current()) this.loadedStepPhotos.update((items) => ({ ...items, [index]: photo }));
     } catch {
       if (current())
-        this.stepPhotoNotice.set('Could not load the photo. Sign in to load imported photos.');
+        this.stepPhotoNotice.set(t('Could not load the photo. Sign in to load imported photos.'));
     } finally {
       if (!current()) return;
       this.loadingStepPhotos.update((items) => {
@@ -644,8 +649,8 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
         );
       this.checkedIngredients.set(new Set());
       this.saveCookingSession();
-      this.feedback.show(count + (count === 1 ? ' item added' : ' items added'), {
-        label: 'View list',
+      this.feedback.show(plural(count, '{n} item added', '{n} items added'), {
+        label: t('View list'),
         run: async () => {
           if (account === this.shopping.accountVersion())
             await this.router.navigateByUrl('/shopping-list');
@@ -653,14 +658,15 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       });
     } catch (error) {
       if (account !== this.shopping.accountVersion()) return;
+      // i18n-ignore: compares the shopping list's English error key.
       if (error instanceof Error && error.message === 'These ingredients are already on your list.')
-        this.feedback.show('Already on your list', {
-          label: 'Add again',
+        this.feedback.show(t('Already on your list'), {
+          label: t('Add again'),
           run: () => this.addToShopping(button, true),
         });
       else
         this.feedback.show(
-          error instanceof Error ? error.message : 'Could not add these ingredients. Try again.',
+          t(error instanceof Error ? error.message : 'Could not add these ingredients. Try again.'),
         );
     } finally {
       this.addingToShopping.set(false);
@@ -674,8 +680,13 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   servingOptions = computed(() =>
     [...new Set([2, 4, 6, 8, 10, this.baseServings()])].sort((a, b) => a - b),
   );
+  /** The words before and after the count pill in “Add {n} to shopping list”. */
+  readonly shoppingWords = computed(() => t('Add {n} to shopping list').split('{n}'));
   servingMenuOptions = computed(() =>
-    this.servingOptions().map((count) => ({ value: String(count), label: count + ' servings' })),
+    this.servingOptions().map((count) => ({
+      value: String(count),
+      label: plural(count, '{n} serving', '{n} servings'),
+    })),
   );
   changeServings(selection: string): void {
     const value = Number(selection);
@@ -737,7 +748,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
           collections.filter((c) => draft.collectionIds?.includes(c.id)).map((c) => c.name),
         );
       } catch {
-        this.error.set('Could not load your collections. Reload to try again.');
+        this.error.set(msg('Could not load your collections. Reload to try again.'));
       }
       this.loading.set(false);
       return;
@@ -768,7 +779,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       this.recipe.set(result);
       // Step photos sit below the fold; they need no part in the page capture.
       if (result) void this.images.prepare([result, ...(result.stepDetails ?? [])], 'full');
-      this.error.set(result ? '' : 'This recipe is no longer available.');
+      this.error.set(result ? '' : msg('This recipe is no longer available.'));
       this.selectedServings.set(this.baseServings());
       const collections = ready ? ready.collections : await this.recipeService.getCollections();
       if (!current()) return;
@@ -778,7 +789,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     } catch (error) {
       if (!current()) return;
       console.error('Failed to load recipe:', error);
-      this.error.set('Could not load this recipe.');
+      this.error.set(msg('Could not load this recipe.'));
     } finally {
       if (!current()) return;
       this.loading.set(false);

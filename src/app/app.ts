@@ -39,6 +39,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IconComponent } from './shared/components/icon';
 import { FeedbackService } from './core/services/feedback.service';
+import { TranslatePipe } from './core/i18n/i18n';
 
 @Component({
   imports: [
@@ -51,6 +52,7 @@ import { FeedbackService } from './core/services/feedback.service';
     IconComponent,
     LeaveConfirmationComponent,
     GuestRecipesDialogComponent,
+    TranslatePipe,
   ],
   selector: 'app-root',
   host: {
