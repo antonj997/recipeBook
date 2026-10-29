@@ -30,7 +30,7 @@
         <div class="settings-row account-head">
           <span class="account-avatar" aria-hidden="true">{{ initial(user.email) }}</span>
           <div class="row-copy">
-            <p class="row-title account-email">{{ user.email }}</p>
+            <p class="row-title account-email" [title]="user.email">{{ user.email }}</p>
             <p
               class="row-note sync-status"
               [class.needs-attention]="!!cloud.error() || !cloud.online()"
@@ -40,14 +40,6 @@
               {{ syncStatus() }}
             </p>
           </div>
-          <button
-            type="button"
-            class="row-action"
-            (click)="cloud.sync()"
-            [disabled]="cloud.syncing() || accountBusy()"
-          >
-            {{ cloud.syncing() ? 'Syncing…' : 'Sync now' }}
-          </button>
         </div>
         @if (cloud.error() || auth.callbackNotice()) {
           <div class="card-body">
@@ -59,6 +51,16 @@
             }
           </div>
         }
+        <div class="settings-row">
+          <button
+            type="button"
+            class="row-button"
+            (click)="cloud.sync()"
+            [disabled]="cloud.syncing() || accountBusy()"
+          >
+            {{ cloud.syncing() ? 'Syncing…' : 'Sync now' }}
+          </button>
+        </div>
         <div class="settings-row">
           <button
             type="button"
@@ -130,7 +132,7 @@
           [disabled]="exporting() || importing() || accountBusy()"
           (click)="exportBackup()"
         >
-          {{ exporting() ? 'Preparing…' : 'Download' }}
+          <app-icon name="download" />{{ exporting() ? 'Preparing…' : 'Download' }}
         </button>
       </div>
       <div class="settings-row">
@@ -152,7 +154,7 @@
           [disabled]="importing() || exporting() || accountBusy()"
           (click)="backupFile.click()"
         >
-          {{ importing() ? 'Importing…' : 'Choose file' }}
+          <app-icon name="upload" />{{ importing() ? 'Importing…' : 'Choose file' }}
         </button>
       </div>
     </div>

@@ -59,6 +59,10 @@ När ett kort öppnas ska det kännas som att just det receptet växer till en s
 
 Menyer, portionsväljare, kryssrutor, ångra, återkoppling och redigeringsrader återanvänds. Skillnader mellan mobil och dator ska bero på skärmens utrymme och inmatningssätt, inte på att två olika designsystem har vuxit fram.
 
+### 3.7 Ikoner som säger vad de gör
+
+Ikonerna är ritade för hand i samma stil som matillustrationerna: en tunn linje med runda ändar och lite ojämna kurvor. En ensam ikon används bara där betydelsen är en vedertagen konvention (tillbaka, fler val ⋯, play och paus, återställ, stäng, plus och minus) eller där kontrollen upprepas på varje rad. Sådana knappar har alltid ett namn för skärmläsare och samma text som tooltip. Huvudhandlingen på en skärm, allt som tar bort något och reglage som behöver en tillståndstext behåller orden; där kan en ikon stå framför ordet.
+
 ## 4. Appens struktur och navigation
 
 De huvudsakliga sidorna är:
@@ -159,7 +163,7 @@ En tom receptsamling visar en vänlig illustration och tydliga vägar till att s
 
 Receptsidan öppnas med en Back-länk och en Options-meny. Menyn innehåller redigera och ta bort, med penna respektive papperskorg. Den behöver inte upprepa receptets titel. Ett nytt tryck på en redan öppen menyknapp stänger menyn.
 
-Överst finns receptbilden, följd av titel, total tid och kategorier och sist beskrivningen. Tid och kategorier står direkt under titeln, som på korten, så att titel och fakta läses som en grupp och beskrivningen blir brödtext. Tiden står före kategorierna, som i listvyn, så att de inte korsar varandra i sidövergången. Back och Options ligger som en smal rad tätt ovanför bilden, utan eget luftigt band mellan sidhuvudet och bilden. På mobil ligger bilden före texten. På större skärmar kan bild och sammanfattning visas sida vid sida. Bild, översikt och läsytans ytterkanter ska linjera.
+Överst finns receptbilden, följd av titel, total tid och kategorier och sist beskrivningen. Tid och kategorier står direkt under titeln, som på korten, så att titel och fakta läses som en grupp och beskrivningen blir brödtext. Tiden står före kategorierna, som i listvyn, så att de inte korsar varandra i sidövergången. Back och Options ligger som en smal rad tätt ovanför bilden, utan eget luftigt band mellan sidhuvudet och bilden. De är ikonknappar, en bakåtpil och “⋯”, med namn och tooltip (Back to recipes, Recipe options). På mobil ligger bilden före texten. På större skärmar kan bild och sammanfattning visas sida vid sida. Bild, översikt och läsytans ytterkanter ska linjera.
 
 Receptets valda färg fyller den övre delen av sidan. Kategorier, tid, bildkant och andra konturer använder samma formspråk som kortet. Konturer i den färgade delen är mörkare nyanser av receptfärgen i stället för neutralt grå. Bilden har en tunn färgtonad kant, rundade övre hörn och mycket svagt rundade nedre hörn.
 
@@ -205,7 +209,7 @@ Steg kan ligga i namngivna avsnitt och kan ha bilder. Bilder som redan finns spa
 
 När första steget är avbockat markeras nästa steg diskret: bara stegets nummerruta får en ram i receptets ton, en svag tonad fyllning och en fet siffra, medan texten och linjerna runt steget är oförändrade. Markeringen flyttar med en liten fjädring när man bockar vidare. Bredvid texten om hur många steg som är klara visar en rad små segment hela receptet, ett per steg: klara steg är fyllda och det aktuella halvfyllt. Nästa steg är det första omarkerade steget efter det senast markerade, eller det första omarkerade om alla efter är klara. Sidan scrollar dit bara om steget ligger dolt bakom sidhuvud och flikar eller nära nederkanten, direkt utan animation när Reduce Motion är på.
 
-Ovanför stegen finns en liten progressangivelse och Reset. Reset återställer receptets avbockade steg och dess timers tillsammans, inklusive larm och schemalagda påminnelser. Portionsantalet och andra recept påverkas inte.
+Ovanför stegen finns en liten progressangivelse och en återställningsikon (Reset progress). Reset återställer receptets avbockade steg och dess timers tillsammans, inklusive larm och schemalagda påminnelser. Portionsantalet och andra recept påverkas inte.
 
 Avbockning, vald sektion och portionsantal är lokal matlagningsstatus. Om ett steg ändrats ska gammal progress inte kopplas på ett nytt steg av misstag.
 
@@ -275,13 +279,13 @@ I redigeringsläget kan användaren lägga till en timer, ändra dess förinstä
 
 Timerkontrollen är kompakt och använder MM:SS. Användbar inställning är 00:00–60:00. Vi har valt bort timmar som egen siffergrupp för att hålla kontrollen enkel och konsekvent.
 
-De flesta behåller receptets förinställda tid. I vila är timern därför bara en lugn rad under steget, i linje med stegets text: Start, tiden och en penna för att ändra tiden. Reset visas först när tiden eller förloppet skiljer sig från förinställningen. Medan klockan går står det Stop, tiden, +1 min och Reset. +1 min lägger till en minut utan att stoppa klockan eller kasta bort förfluten tid. En aktiv övertidsklocka har ingen minutjustering.
+De flesta behåller receptets förinställda tid. I vila är timern därför bara en lugn rad under steget, i linje med stegets text: en play-ikon, tiden och en penna för att ändra tiden. Reset visas först när tiden eller förloppet skiljer sig från förinställningen. Medan klockan går visas en paus-ikon, tiden, +1 min och Reset. +1 min lägger till en minut utan att stoppa klockan eller kasta bort förfluten tid. En aktiv övertidsklocka har ingen minutjustering.
 
 Pennan öppnar ett litet fönster med ett stort tidsfält mellan minus och plus, minutlinjalen och Cancel / Set timer. Ändringarna gäller först när man trycker Set timer (eller Enter i fältet); Cancel, Escape eller ett tryck utanför stänger utan ändring. Kryssrutan Always use this time for step N sparar dessutom tiden som stegets timer i receptet, så att den gäller nästa gång också och synkas som en vanlig receptändring. Fokus hamnar på rubriken, så att tangentbordet inte öppnas av sig självt på mobilen.
 
 Tiden går också att skriva. På mobil används numeriskt tangentbord och värdet markeras vid fokus. De sista två siffrorna är sekunder: 0100 betyder en minut och 6000 betyder sextio minuter. Kolon hjälper läsningen under inmatning. Start är avstängd vid noll.
 
-Stop betyder paus, inte återställning. Samma knapp ersätter Start när klockan går. Reset återgår till receptets förinställning och tar bort timerprogress.
+Stop (paus-ikonen) betyder paus, inte återställning. Samma knapp växlar mellan play och paus. Reset återgår till receptets förinställning och tar bort timerprogress.
 
 ### 8.4 Minutlinjalen i redigeringsfönstret
 
@@ -507,7 +511,7 @@ Offlineändringar sparas på enheten och kan synkas när anslutningen återkomme
 
 ### 13.1 Inställningarnas struktur
 
-Inställningssidan är uppdelad i Account, Backups och App och är byggd som en inbyggd inställningsskärm: rubriken Settings med en bakåtpil, sedan en liten etikett per grupp, ett vitt kort med rader och en kort förklaring under kortet. Varje rad har titel och en rad förklaring till vänster och en enda kompakt kontroll till höger (knapp eller reglage), så att allt går att överblicka på en mobilskärm utan ankarlänkar. Kontokortet överst visar en rund monogram med kontots initial (eller R för kokboken på enheten), e-postadressen och synkstatus med en liten statusprick, och har Sync now till höger. Reset password och Sign out är egna rader i samma kort; Sign out i varningsfärg. Utloggad visas This device och inloggningsformuläret i kortet. Den ska bara innehålla sådant som faktiskt är inställningar eller kontohantering. Receptskapande och kategorihantering har flyttats till relevanta innehållsflöden.
+Inställningssidan är uppdelad i Account, Backups och App och är byggd som en inbyggd inställningsskärm: rubriken Settings med en bakåtpil, sedan en liten etikett per grupp, ett vitt kort med rader och en kort förklaring under kortet. Varje rad har titel och en rad förklaring till vänster och en enda kompakt kontroll till höger (knapp eller reglage), så att allt går att överblicka på en mobilskärm utan ankarlänkar. Kontokortet överst visar en rund monogram med kontots initial (eller R för kokboken på enheten), e-postadressen och synkstatus med en liten statusprick, och synkstatus på en kort rad (till exempel Synced). En lång e-postadress kortas med … i stället för att brytas mitt i ordet. Sync now, Reset password och Sign out är egna rader i samma kort, så att inget trängs bredvid e-postadressen på en mobil; Sign out i varningsfärg. Utloggad visas This device och inloggningsformuläret i kortet. Den ska bara innehålla sådant som faktiskt är inställningar eller kontohantering. Receptskapande och kategorihantering har flyttats till relevanta innehållsflöden.
 
 ### 13.2 Konto och inloggning
 
@@ -537,7 +541,7 @@ Utloggning behåller kontots offlinekopia på enheten. Den exponeras inte som ut
 
 ### 13.5 Säkerhetskopior
 
-Raden Download a backup (knappen Download) exporterar recept, bilder, kategorier och inköpslista till en fil. Raden Restore from a backup (Choose file) tar emot Recipebook-backuper och lägger till innehåll utan att avsiktligt tömma det som redan finns. Äldre receptbackuper stöds också.
+Raden Download a backup (knappen Download med en nedåtpil) exporterar recept, bilder, kategorier och inköpslista till en fil. Raden Restore from a backup (Choose file med en uppåtpil) tar emot Recipebook-backuper och lägger till innehåll utan att avsiktligt tömma det som redan finns. Äldre receptbackuper stöds också.
 
 Importerad backup valideras före lagring. Säkerhetskopiering ska inte råka exportera ett annat kontos data om användaren byter konto under operationen. Pågående timers är enhetslokalt matlagningsläge; själva timerförinställningarna är däremot del av receptinformationen.
 

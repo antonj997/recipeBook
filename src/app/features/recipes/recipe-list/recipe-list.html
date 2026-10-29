@@ -17,6 +17,7 @@
           <button
             type="button"
             aria-label="Clear search"
+            title="Clear search"
             (pointerdown)="$event.preventDefault()"
             (click)="search('')"
           >
@@ -48,7 +49,7 @@
           (beforetoggle)="onAddMenuToggle($event)"
         >
           <a routerLink="/recipes/new/edit" (click)="addOptions.hidePopover()"
-            ><app-icon name="book" />Write a recipe</a
+            ><app-icon name="write" />Write a recipe</a
           >
           <a routerLink="/recipes/import" (click)="addOptions.hidePopover()"
             ><app-icon name="link" />Import from a link</a

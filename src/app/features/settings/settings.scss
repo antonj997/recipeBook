@@ -63,10 +63,15 @@
 }
 .row-action {
   flex: 0 0 auto;
+  gap: 6px;
   min-height: 40px;
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 0.875rem;
+}
+.row-action app-icon {
+  width: 18px;
+  height: 18px;
 }
 // Full-width text rows for account actions.
 .row-button {
@@ -93,6 +98,15 @@
 .account-head {
   min-height: 72px;
   padding-block: 14px;
+}
+// One line each: a long address ends in an ellipsis (its full text is the title) rather than
+// breaking mid-word on a phone.
+.account-email,
+.sync-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
 }
 .account-avatar {
   display: grid;

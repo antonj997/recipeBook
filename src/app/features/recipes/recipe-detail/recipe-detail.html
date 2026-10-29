@@ -13,13 +13,16 @@
     [appRecipeTransition]="recipe()?.id ?? ''"
     transitionPart="navigation"
   >
-    <a routerLink="/" class="back-link"><app-icon name="chevron" />Back</a>
+    <a routerLink="/" class="back-link" aria-label="Back to recipes" title="Back to recipes"
+      ><app-icon name="chevron"
+    /></a>
     @if (!isDraft && recipe() && !loading() && !error()) {
       <button
         #optionsButton
         type="button"
         class="recipe-options"
         aria-label="Recipe options"
+        title="Recipe options"
         aria-haspopup="menu"
         aria-controls="recipe-actions-menu"
         popovertarget="recipe-actions-menu"
@@ -27,7 +30,7 @@
         (click)="$event.preventDefault(); openOptions(optionsButton)"
         (keydown.arrowdown)="$event.preventDefault(); openOptions(optionsButton)"
       >
-        Options <app-icon name="chevron" [class.is-open]="optionsOpen()" />
+        <app-icon name="more" />
       </button>
     }
   </div>
@@ -146,6 +149,7 @@
                     <button
                       type="button"
                       aria-label="Decrease servings"
+                      title="Decrease servings"
                       [disabled]="selectedServings() === servingOptions()[0]"
                       (click)="adjustServings(-1)"
                     >
@@ -155,6 +159,7 @@
                     <button
                       type="button"
                       aria-label="Increase servings"
+                      title="Increase servings"
                       [disabled]="selectedServings() === servingOptions().at(-1)"
                       (click)="adjustServings(1)"
                     >
@@ -256,11 +261,12 @@
                   <button
                     type="button"
                     class="reset-instructions"
-                    aria-label="Reset instructions"
+                    aria-label="Reset progress"
+                    title="Reset progress"
                     [disabled]="!canResetInstructions()"
                     (click)="resetInstructions()"
                   >
-                    Reset
+                    <app-icon name="reset" />
                   </button>
                 </div>
               }

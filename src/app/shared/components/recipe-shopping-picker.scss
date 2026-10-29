@@ -169,6 +169,9 @@ dialog[open] {
 }
 .recipe-choice > app-icon {
   flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  transform: rotate(180deg);
 }
 .error {
   color: var(--color-danger);

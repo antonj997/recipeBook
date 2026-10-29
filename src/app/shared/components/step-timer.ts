@@ -23,7 +23,7 @@ import { IconComponent } from './icon';
 import { CheckboxMarkComponent } from './checkbox-mark';
 
 /**
- * A step timer at rest is one quiet row: Start, the time and an edit button. Editing happens in
+ * A step timer at rest is one quiet row: play, the time and an edit button. Editing happens in
  * a small sheet with the minute wheel, where the time can also be kept for the recipe.
  */
 @Component({
@@ -38,9 +38,10 @@ import { CheckboxMarkComponent } from './checkbox-mark';
         class="timer-toggle"
         [disabled]="disabled() || (!active() && !state().done && state().remaining === 0)"
         [attr.aria-label]="(active() ? 'Stop' : 'Start') + ' timer for step ' + step()"
+        [title]="(active() ? 'Stop' : 'Start') + ' timer for step ' + step()"
         (click)="active() ? stop() : start()"
       >
-        {{ active() ? 'Stop' : 'Start' }}
+        <app-icon [name]="active() ? 'pause' : 'play'" />
       </button>
       <span class="timer-time" role="timer" aria-live="off" [class.is-overdue]="state().done">{{
         display()

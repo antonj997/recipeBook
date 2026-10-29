@@ -24,8 +24,13 @@
   transform: none;
 }
 .timer-row .timer-toggle {
-  margin-left: -10px;
-  font-weight: 700;
+  width: 44px;
+  margin-left: -12px;
+  padding: 12px;
+}
+.timer-toggle app-icon {
+  width: 20px;
+  height: 20px;
 }
 .timer-time {
   min-width: 5ch;

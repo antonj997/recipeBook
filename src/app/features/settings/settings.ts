@@ -58,12 +58,16 @@ export class SettingsComponent {
           '.'
       : 'No backup downloaded on this device yet.';
   });
+  // Short enough for one line beside the monogram on a phone.
   readonly syncStatus = computed(() => {
-    if (!this.cloud.online()) return 'Offline · changes saved on this device';
-    if (this.cloud.syncing()) return 'Syncing your cookbook…';
-    if (this.cloud.error()) return 'Saved on this device · sync needs attention';
-    if (this.cloud.pending()) return this.cloud.pending() + ' changes waiting to sync';
-    return this.cloud.lastSynced() ? 'Your cookbook is synced' : 'Checking your cloud cookbook…';
+    if (!this.cloud.online()) return 'Offline · saved on this device';
+    if (this.cloud.syncing()) return 'Syncing…';
+    if (this.cloud.error()) return 'Sync needs attention';
+    if (this.cloud.pending())
+      return (
+        this.cloud.pending() + (this.cloud.pending() === 1 ? ' change' : ' changes') + ' waiting'
+      );
+    return this.cloud.lastSynced() ? 'Synced' : 'Checking…';
   });
   /** The account card's monogram: the first letter of the email address. */
   initial(email?: string | null): string {

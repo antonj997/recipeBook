@@ -13,6 +13,7 @@
         type="button"
         class="close-picker"
         aria-label="Close ingredient picker"
+        title="Close ingredient picker"
         (click)="close()"
       >
         <app-icon name="close" />
@@ -115,7 +116,7 @@
                     }
                   </span>
                   <span class="recipe-choice-title">{{ choice.title }}</span
-                  ><app-icon name="arrow" />
+                  ><app-icon name="chevron" />
                 </button>
               </li>
             } @empty {

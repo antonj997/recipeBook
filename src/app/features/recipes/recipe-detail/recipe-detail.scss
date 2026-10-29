@@ -57,25 +57,24 @@
   // The body and footer own their white surface; the backing behind tabs is colored.
   background: var(--page-background, var(--color-canvas));
 }
-.recipe-navigation .back-link {
+// Back and Options are quiet 44px icon buttons whose drawings line up with the page edges.
+.recipe-navigation .back-link,
+.recipe-options {
+  flex: 0 0 44px;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
   margin-bottom: 8px;
+  padding: 0;
+}
+.recipe-navigation .back-link {
+  margin-left: -11px;
   color: var(--color-ink);
 }
 .recipe-options {
-  flex: 0 0 auto;
+  margin-right: -11px;
   border: 0;
-  padding: 0 4px;
-  gap: 8px;
   background: transparent;
-}
-.recipe-options app-icon {
-  width: 16px;
-  height: 16px;
-  transform: rotate(-90deg);
-  transition: transform var(--motion-fast) var(--motion-ease-out);
-}
-.recipe-options app-icon.is-open {
-  transform: rotate(90deg);
 }
 .recipe-overview {
   display: grid;
@@ -186,7 +185,6 @@ li::marker {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .recipe-options app-icon,
   .tab-indicator {
     transition: none;
   }
@@ -383,12 +381,16 @@ li::marker {
   margin-bottom: 20px;
 }
 .reset-instructions {
+  width: 44px;
+  margin-right: -12px;
   border: 0;
-  padding: 6px;
-  min-width: 44px;
+  padding: 0;
   background: transparent;
   color: var(--color-muted);
-  font-size: 0.8rem;
+}
+.reset-instructions app-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .timer-help {

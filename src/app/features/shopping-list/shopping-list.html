@@ -11,7 +11,7 @@
       [disabled]="busy() || shopping.loading()"
       (click)="openPicker()"
     >
-      <app-icon name="book" /><span>From recipe</span>
+      <app-icon name="write" /><span>From recipe</span>
     </button>
   </div>
   <div class="add-tools">
@@ -32,6 +32,7 @@
         type="submit"
         class="primary"
         aria-label="Add item"
+        title="Add item"
         [attr.aria-busy]="adding()"
         [disabled]="adding() || shopping.loading() || !draft().trim()"
       >

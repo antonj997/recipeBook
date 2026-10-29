@@ -107,7 +107,12 @@
               (input)="onSearch($event)"
             />
             @if (query()) {
-              <button type="button" aria-label="Clear recipe search" (click)="query.set('')">
+              <button
+                type="button"
+                aria-label="Clear recipe search"
+                title="Clear recipe search"
+                (click)="query.set('')"
+              >
                 <app-icon name="close" />
               </button>
             }

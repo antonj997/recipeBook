@@ -100,18 +100,20 @@ describe('settings page', () => {
     expect(app.querySelector('app-slow-motion-switch')).not.toBeNull();
   });
 
-  it('opens with an account card that names the account and its sync state', () => {
-    user.set({ email: 'cook@example.com' });
+  it('opens with an account card that fits a narrow screen', () => {
+    user.set({ email: 'anton.jonsson99@gmail.com' });
     const { root } = render();
     const card = root.querySelector('#account .account-card')!;
-    expect(text(card.querySelector('.account-avatar'))).toBe('C');
-    expect(text(card.querySelector('.row-title'))).toBe('cook@example.com');
-    expect(text(card.querySelector('[role=status]'))).toBe('Your cookbook is synced');
-    card.querySelector<HTMLButtonElement>('.row-action')!.click();
+    expect(text(card.querySelector('.account-avatar'))).toBe('A');
+    const email = card.querySelector<HTMLElement>('.account-email')!;
+    expect(text(email)).toBe('anton.jonsson99@gmail.com');
+    expect(email.title).toBe('anton.jonsson99@gmail.com');
+    expect(text(card.querySelector('[role=status]'))).toBe('Synced');
+    // The head row holds only who and what; actions are full-width rows below it.
+    expect(card.querySelector('.account-head button')).toBeNull();
+    const actions = [...card.querySelectorAll<HTMLButtonElement>('.row-button')];
+    expect(actions.map(text)).toEqual(['Sync now', 'Reset password', 'Sign out']);
+    actions[0].click();
     expect(sync).toHaveBeenCalled();
-    expect([...card.querySelectorAll('.row-button')].map(text)).toEqual([
-      'Reset password',
-      'Sign out',
-    ]);
   });
 });

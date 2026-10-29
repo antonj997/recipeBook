@@ -215,7 +215,10 @@ describe('editable step timer controls', () => {
   it('rests as one quiet row: Start, the time and an edit button', () => {
     const f = fixture();
     const row = f.root.querySelector<HTMLElement>('.timer-row')!;
-    expect(row.textContent?.replace(/\s+/g, ' ').trim()).toBe('Start 02:00');
+    expect(row.textContent?.replace(/\s+/g, ' ').trim()).toBe('02:00');
+    const play = row.querySelector<HTMLButtonElement>('.timer-toggle')!;
+    expect(play.title).toBe('Start timer for step 1');
+    expect(play.querySelector('app-icon')).not.toBeNull();
     expect(row.querySelector('[aria-label="Edit time for step 1"]')).not.toBeNull();
     expect(row.querySelector('app-minute-ruler')).toBeNull();
     expect(row.querySelector('[aria-label="Reset timer for step 1"]')).toBeNull();
@@ -272,7 +275,7 @@ describe('editable step timer controls', () => {
     f.root.querySelector<HTMLButtonElement>('[aria-label="Start timer for step 1"]')!.click();
     f.view.detectChanges();
     const toggle = f.root.querySelector<HTMLButtonElement>('[aria-label="Stop timer for step 1"]')!;
-    expect(toggle.textContent?.trim()).toBe('Stop');
+    expect(toggle.title).toBe('Stop timer for step 1');
     expect(f.root.querySelector('[aria-label="Edit time for step 1"]')).toBeNull();
     await vi.advanceTimersByTimeAsync(3000);
     f.view.detectChanges();
