@@ -1,61 +1,120 @@
 :host {
   display: block;
-  width: min(100%, 30rem);
-  margin: -4px 0 20px;
+  margin: -6px 0 18px;
   font-family: Arial, Helvetica, sans-serif;
-  transition:
-    margin-top var(--motion-settle) var(--motion-ease-out),
-    opacity var(--motion-fast) var(--motion-ease-out);
 }
 :host([hidden]) {
   display: none;
 }
-.timer-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0;
-}
-.step-timer {
-  display: grid;
-  min-width: 0;
-  align-items: center;
-  width: 100%;
-  position: relative;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-}
-.step-timer::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 1px solid var(--color-control-border);
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 1;
-  transition: opacity calc(200ms * var(--motion-scale)) var(--motion-ease-out);
-}
-.step-timer.is-timeline::before {
-  opacity: 0;
-}
-app-minute-ruler {
-  width: 100%;
-}
-.timer-face {
+// At rest: one quiet row. The wheel lives in the edit sheet.
+.timer-row {
   display: flex;
-  justify-content: center;
-  min-width: 0;
-}
-input.timer-input {
-  width: 5ch;
-  min-width: 0;
+  align-items: center;
+  gap: 4px;
   min-height: 44px;
-  padding: 4px 0;
+}
+.timer-row button {
+  min-height: 44px;
+  padding: 8px 10px;
   border: 0;
-  border-radius: 3px;
+  border-radius: 6px;
   background: transparent;
   color: var(--color-ink);
-  font-size: 1.25rem;
+  font-size: 0.8125rem;
+  transform: none;
+}
+.timer-row .timer-toggle {
+  margin-left: -10px;
+  font-weight: 700;
+}
+.timer-time {
+  min-width: 5ch;
+  padding-inline: 2px 4px;
+  color: var(--color-ink);
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+.timer-time.is-overdue {
+  color: var(--color-danger);
+}
+.timer-row .timer-edit {
+  width: 44px;
+  padding: 12px;
+  color: var(--color-muted);
+}
+.timer-edit app-icon {
+  width: 18px;
+  height: 18px;
+}
+.timer-row .timer-reset {
+  margin-left: auto;
+  color: var(--color-muted);
+}
+// While running, the minute ruler's fixed tick strip shows the whole duration at once.
+.timer-strip {
+  display: block;
+  width: min(100%, 30rem);
+  margin-top: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  button:hover:not(:disabled) {
+    text-shadow: 0.25px 0 currentColor;
+  }
+  .timer-row .timer-edit:hover:not(:disabled) {
+    color: var(--color-ink);
+  }
+}
+
+.timer-sheet {
+  width: min(400px, calc(100vw - 32px));
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+.timer-sheet[open] {
+  animation: timer-sheet-in var(--motion-reveal) var(--motion-ease-out);
+}
+.timer-sheet::backdrop {
+  background: #14141355;
+  backdrop-filter: blur(4px);
+}
+// Focus mode turns the page on its side in portrait; the sheet follows it.
+.timer-sheet.is-rotated {
+  rotate: 90deg;
+}
+.timer-sheet h2 {
+  margin: 0 0 12px;
+  outline: none;
+  font-size: 1.15rem;
+}
+.sheet-clock {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+}
+.timer-minute {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  touch-action: manipulation;
+}
+input.timer-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 2.25rem;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
   text-align: center;
@@ -64,76 +123,47 @@ input.timer-input {
 input.timer-input[aria-invalid='true'] {
   box-shadow: inset 0 -1px var(--color-danger);
 }
-input.timer-input.is-overdue {
-  color: var(--color-danger);
-}
-.timer-actions {
-  display: grid;
-  grid-template-columns: 44px minmax(44px, 1fr) auto minmax(44px, 1fr) 44px;
-  align-items: center;
-  gap: 2px;
-}
-.timer-action,
-.timer-minute {
-  min-width: 0;
-  min-height: 44px;
-  padding: 8px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--color-ink);
-  font-size: 0.8125rem;
-  transform: none;
-}
-.timer-toggle {
-  font-weight: 700;
-}
 .timer-hint {
-  margin: 6px 0 0;
+  margin: 0 0 16px;
   color: var(--color-muted);
   font-size: 0.8125rem;
   line-height: 1.4;
+  text-align: center;
 }
 .timer-hint[role='alert'] {
   color: var(--color-danger);
 }
-@media (hover: hover) and (pointer: fine) {
-  button:hover:not(:disabled) {
-    text-shadow: 0.25px 0 currentColor;
-  }
+.timer-sheet app-minute-ruler {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--color-control-border);
+  border-radius: 8px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .step-timer {
-    transition: none;
-  }
-}
-
-.timer-minute {
-  display: inline-flex;
+.save-default {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  width: 44px;
-  touch-action: manipulation;
+  gap: 12px;
+  min-height: 44px;
+  margin-top: 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
 }
-
-input.timer-input:disabled {
-  opacity: 1;
-  -webkit-text-fill-color: currentColor;
+.sheet-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
 }
-
-:host(.is-timing) {
-  margin-top: -8px;
+.sheet-actions button {
+  flex: 1;
 }
-.step-timer.is-timeline {
-  padding: 0;
-  border: 0;
-  background: transparent;
+@keyframes timer-sheet-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  :host,
-  .timer-controls,
-  .step-timer::before {
-    transition: none;
+  .timer-sheet[open] {
+    animation: none;
   }
 }

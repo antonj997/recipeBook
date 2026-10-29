@@ -275,15 +275,17 @@ I redigeringsläget kan användaren lägga till en timer, ändra dess förinstä
 
 Timerkontrollen är kompakt och använder MM:SS. Användbar inställning är 00:00–60:00. Vi har valt bort timmar som egen siffergrupp för att hålla kontrollen enkel och konsekvent.
 
-Över linjalen ligger minus, Start eller Stop, tidsvärdet, Reset och plus på en gemensam rad. Minus och plus ändrar en minut i taget. De fungerar även under en pågående nedräkning, utan att stoppa klockan eller kasta bort redan förfluten tid. En aktiv övertidsklocka har inte samma minutjustering.
+De flesta behåller receptets förinställda tid. I vila är timern därför bara en lugn rad under steget, i linje med stegets text: Start, tiden och en penna för att ändra tiden. Reset visas först när tiden eller förloppet skiljer sig från förinställningen. Medan klockan går står det Stop, tiden, +1 min och Reset. +1 min lägger till en minut utan att stoppa klockan eller kasta bort förfluten tid. En aktiv övertidsklocka har ingen minutjustering.
+
+Pennan öppnar ett litet fönster med ett stort tidsfält mellan minus och plus, minutlinjalen och Cancel / Set timer. Ändringarna gäller först när man trycker Set timer (eller Enter i fältet); Cancel, Escape eller ett tryck utanför stänger utan ändring. Kryssrutan Always use this time for step N sparar dessutom tiden som stegets timer i receptet, så att den gäller nästa gång också och synkas som en vanlig receptändring. Fokus hamnar på rubriken, så att tangentbordet inte öppnas av sig självt på mobilen.
 
 Tiden går också att skriva. På mobil används numeriskt tangentbord och värdet markeras vid fokus. De sista två siffrorna är sekunder: 0100 betyder en minut och 6000 betyder sextio minuter. Kolon hjälper läsningen under inmatning. Start är avstängd vid noll.
 
 Stop betyder paus, inte återställning. Samma knapp ersätter Start när klockan går. Reset återgår till receptets förinställning och tar bort timerprogress.
 
-### 8.4 Minutlinjalen före start
+### 8.4 Minutlinjalen i redigeringsfönstret
 
-Före start används en låg, rundad rektangel med tunna streck. Varje streck är en minut. Var femte minut har en liten siffra ovanför strecket. Skalan går från noll till sextio och kan sedan fortsätta runt igen.
+I redigeringsfönstret används en låg, rundad rektangel med tunna streck. Varje streck är en minut. Var femte minut har en liten siffra ovanför strecket. Skalan går från noll till sextio och kan sedan fortsätta runt igen.
 
 Linjalen styrs med svep (swipe momentum). Skalan följer svepets riktning under en fast markör i mitten, och markören väljer värdet. Ett snabbt svep fortsätter med avtagande fart. Flera snabba svep åt samma håll kan bygga upp mer fart inom en rimlig maxhastighet. Ett tryck stoppar rörelsen vid det synliga mittvärdet och väljer inte ett annat tick.
 
@@ -291,13 +293,11 @@ Det tidigare testläget Edge hold, där man höll fingret nära en kant för att
 
 ### 8.5 Aktiv och pausad timer
 
-När timern startar förvandlas redigeringslinjalen till ett stillastående progressfält med många små streck. Hela den valda tiden ryms samtidigt, oavsett om timern är kort eller lång. Strecken representerar en dynamisk andel av hela tiden, inte alltid en sekund.
+När timern startar visas ett stillastående progressfält med många små streck under raden. Hela den valda tiden ryms samtidigt, oavsett om timern är kort eller lång. Strecken representerar en dynamisk andel av hela tiden, inte alltid en sekund.
 
 Alla streck börjar orange. Allt eftersom tiden går blir de svarta från höger till vänster. Det finns inga små tidsnummer, ingen flyttande huvudmarkör och ingen omgivande ruta i detta läge. Resultatet är mindre och enklare att läsa under matlagning. Tidsvärdet MM:SS finns kvar i reglagens rad ovanför.
 
-Redigeringsskalans befintliga streck glider över till progressfältets platser. Extra streck fyller mellanrummen och etiketter samt ram tonas bort. Reset gör övergången åt andra hållet. Paus behåller det detaljerade progressläget.
-
-Den aktiva progresslinjalen är inte dragbar. Det undviker oavsiktliga tidsändringar. Minutknapparna är däremot fortsatt tillgängliga under nedräkning.
+Paus behåller progressfältet; Reset tar bort det. Progressfältet är inte dragbart, så tiden kan inte ändras av misstag under nedräkning.
 
 ### 8.6 När tiden går ut
 

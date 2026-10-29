@@ -336,6 +336,8 @@
                         [rotated]="focusMode() && focusPortrait()"
                         [completed]="isCollapsed($index)"
                         [disabled]="isDraft"
+                        [savable]="!isDraft"
+                        (saveDuration)="saveStepTimer($index, $event)"
                       />
                     }
                   </li>

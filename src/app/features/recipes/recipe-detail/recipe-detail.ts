@@ -9,6 +9,7 @@ import { animateHeight } from '../../../shared/motion/flip';
 import { motionMs } from '../../../core/motion';
 import { StepTimerComponent } from '../../../shared/components/step-timer';
 import {
+  formatCountdown,
   maxClockSeconds,
   recipeStepTimers,
   type StepTimerTarget,
@@ -271,6 +272,22 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
         (!this.isDraft &&
           this.stepTimers().some((target) => !!target && this.timerNeedsReset(target)))),
   );
+  /** Keep a time picked in a step's timer sheet as that step's time in the saved recipe. */
+  async saveStepTimer(index: number, seconds: number): Promise<void> {
+    const recipe = this.recipe();
+    if (!recipe || this.isDraft || this.accountChanged()) return;
+    const stepDetails = recipe.instructions.map((_, step) => ({ ...recipe.stepDetails?.[step] }));
+    stepDetails[index].timerSeconds = seconds;
+    try {
+      await this.recipeService.updateRecipe(recipe.id, { stepDetails });
+    } catch {
+      this.feedback.show('Could not save the timer. Try again.');
+      return;
+    }
+    if (this.recipe() !== recipe || this.accountChanged()) return;
+    this.recipe.set({ ...recipe, stepDetails });
+    this.feedback.show('Step ' + (index + 1) + ' now uses ' + formatCountdown(seconds));
+  }
   private timerNeedsReset(target: StepTimerTarget): boolean {
     const state = this.timers.state(target);
     return state.started || state.remaining !== Math.min(target.seconds, maxClockSeconds);

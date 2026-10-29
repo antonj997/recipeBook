@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   input,
+  output,
   signal,
   untracked,
   viewChild,
@@ -19,108 +20,131 @@ import {
 } from '../../core/models/step-timer';
 import { MinuteRulerComponent } from './minute-ruler';
 import { IconComponent } from './icon';
+import { CheckboxMarkComponent } from './checkbox-mark';
 
+/**
+ * A step timer at rest is one quiet row: Start, the time and an edit button. Editing happens in
+ * a small sheet with the minute wheel, where the time can also be kept for the recipe.
+ */
 @Component({
   selector: 'app-step-timer',
-  imports: [MinuteRulerComponent, IconComponent],
+  imports: [MinuteRulerComponent, IconComponent, CheckboxMarkComponent],
   host: { '[hidden]': 'completed()', '[class.is-timing]': 'state().started' },
   styleUrl: './step-timer.scss',
   template: `
-    <div
-      class="timer-controls"
-      role="group"
-      [attr.aria-label]="'Timer for step ' + (target().index + 1)"
-    >
-      <div class="timer-actions">
+    <div class="timer-row" role="group" [attr.aria-label]="'Timer for step ' + step()">
+      <button
+        type="button"
+        class="timer-toggle"
+        [disabled]="disabled() || (!active() && !state().done && state().remaining === 0)"
+        [attr.aria-label]="(active() ? 'Stop' : 'Start') + ' timer for step ' + step()"
+        (click)="active() ? stop() : start()"
+      >
+        {{ active() ? 'Stop' : 'Start' }}
+      </button>
+      <span class="timer-time" role="timer" aria-live="off" [class.is-overdue]="state().done">{{
+        display()
+      }}</span>
+      @if (active()) {
         <button
           type="button"
-          class="timer-minute"
-          [disabled]="minuteLocked() || state().remaining <= 0"
-          [attr.aria-label]="'Subtract one minute from step ' + (target().index + 1) + ' timer'"
-          title="Subtract one minute"
-          (click)="adjust(-1)"
+          class="timer-add"
+          [disabled]="minuteLocked() || state().remaining >= maximum"
+          [attr.aria-label]="'Add one minute to step ' + step() + ' timer'"
+          (click)="adjust(1)"
         >
-          <app-icon name="minus" />
+          +1 min
         </button>
+      } @else {
         <button
           type="button"
-          class="timer-action timer-toggle"
-          [disabled]="disabled() || (!active() && !state().done && state().remaining === 0)"
-          [attr.aria-label]="
-            (active() ? 'Stop' : 'Start') + ' timer for step ' + (target().index + 1)
-          "
-          (click)="active() ? stop() : start()"
+          class="timer-edit"
+          [disabled]="locked()"
+          [attr.aria-label]="'Edit time for step ' + step()"
+          title="Edit time"
+          (click)="openSheet()"
         >
-          {{ active() ? 'Stop' : 'Start' }}
+          <app-icon name="pencil" />
         </button>
-        <span class="timer-face" role="timer" aria-live="off">
-          <input
-            type="text"
-            inputmode="numeric"
-            class="timer-input"
-            [class.is-overdue]="state().done && !editing()"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="16"
-            [disabled]="locked()"
-            [value]="editing() ? draft() : display()"
-            [attr.aria-label]="
-              (state().done ? 'Time overdue' : 'Time remaining') +
-              ' for step ' +
-              (target().index + 1) +
-              '. Edit timer duration'
-            "
-            [attr.aria-invalid]="invalid()"
-            [attr.aria-describedby]="editing() ? 'timer-help-' + target().index : null"
-            (focus)="beginEdit($event)"
-            (pointerup)="selectValue($event)"
-            (mouseup)="$event.preventDefault()"
-            (beforeinput)="maskInput($event)"
-            (input)="edit($event)"
-            (blur)="commitEdit()"
-            (keydown.enter)="acceptEdit($event)"
-            (keydown.escape)="cancelEdit($event)"
-          />
-        </span>
+      }
+      @if (changed()) {
         <button
           type="button"
-          class="timer-action"
+          class="timer-reset"
           [disabled]="disabled()"
-          [attr.aria-label]="'Reset timer for step ' + (target().index + 1)"
+          [attr.aria-label]="'Reset timer for step ' + step()"
           (click)="reset()"
         >
           Reset
         </button>
+      }
+    </div>
+    @if (state().started) {
+      <app-minute-ruler
+        class="timer-strip"
+        [timeline]="true"
+        [seconds]="state().done ? target().seconds : state().remaining"
+        [totalSeconds]="state().duration"
+        [elapsedSeconds]="passed()"
+        [identity]="target().key"
+        [label]="'Time remaining for step ' + step()"
+      />
+    }
+    <dialog
+      #sheet
+      class="timer-sheet"
+      [class.is-rotated]="rotated()"
+      [attr.aria-labelledby]="'timer-sheet-' + target().index"
+      (cancel)="closeSheet($event)"
+      (close)="sheetOpen.set(false)"
+      (pointerdown)="backdropPressed = $event.target === $event.currentTarget"
+      (click)="backdropClick($event)"
+    >
+      <!-- Focus lands on the heading so a tap does not open the keyboard. -->
+      <h2 [id]="'timer-sheet-' + target().index" tabindex="-1" autofocus>
+        Step {{ step() }} timer
+      </h2>
+      <div class="sheet-clock">
         <button
           type="button"
           class="timer-minute"
-          [disabled]="minuteLocked() || state().remaining >= maximum"
-          [attr.aria-label]="'Add one minute to step ' + (target().index + 1) + ' timer'"
-          title="Add one minute"
-          (click)="adjust(1)"
+          aria-label="Subtract one minute"
+          [disabled]="sheetSeconds() <= 0"
+          (click)="nudge(-1)"
+        >
+          <app-icon name="minus" />
+        </button>
+        <input
+          type="text"
+          inputmode="numeric"
+          class="timer-input"
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="16"
+          [disabled]="locked()"
+          [value]="editing() ? draft() : sheetDisplay()"
+          [attr.aria-label]="'Timer duration for step ' + step() + '. Type minutes and seconds'"
+          [attr.aria-invalid]="invalid()"
+          [attr.aria-describedby]="editing() ? 'timer-help-' + target().index : null"
+          (focus)="beginEdit($event)"
+          (pointerup)="selectValue($event)"
+          (mouseup)="$event.preventDefault()"
+          (beforeinput)="maskInput($event)"
+          (input)="edit($event)"
+          (blur)="commitEdit()"
+          (keydown.enter)="acceptEdit($event)"
+          (keydown.escape)="cancelEdit($event)"
+        />
+        <button
+          type="button"
+          class="timer-minute"
+          aria-label="Add one minute"
+          [disabled]="sheetSeconds() >= maximum"
+          (click)="nudge(1)"
         >
           <app-icon name="plus" />
         </button>
       </div>
-      <div class="step-timer" [class.is-timeline]="state().started">
-        <app-minute-ruler
-          [rotated]="rotated()"
-          [seconds]="state().done ? target().seconds : state().remaining"
-          [disabled]="locked()"
-          [timeline]="state().started"
-          [totalSeconds]="state().duration"
-          [elapsedSeconds]="passed()"
-          [identity]="target().key"
-          [label]="
-            (state().started ? 'Time remaining' : 'Timer duration') +
-            ' for step ' +
-            (target().index + 1)
-          "
-          (durationChange)="setDuration($event)"
-        />
-      </div>
-    </div>
-    @if (editing()) {
       <p
         class="timer-hint"
         [id]="'timer-help-' + target().index"
@@ -129,10 +153,33 @@ import { IconComponent } from './icon';
         {{
           invalid()
             ? 'Enter a time from 00:00 to 60:00.'
-            : 'Type minutes and seconds. 3000 = 30 minutes. Enter to set.'
+            : editing()
+              ? 'Type minutes and seconds. 3000 = 30 minutes. Enter to set.'
+              : 'Drag the wheel or type a time.'
         }}
       </p>
-    }
+      @if (sheetOpen()) {
+        <app-minute-ruler
+          #wheel
+          [rotated]="rotated()"
+          [seconds]="sheetSeconds()"
+          [identity]="target().key"
+          [label]="'Timer duration for step ' + step()"
+          (durationChange)="pickDuration($event)"
+        />
+      }
+      @if (savable()) {
+        <label class="check-control save-default">
+          <input type="checkbox" [checked]="keep()" (change)="keep.set(!keep())" />
+          <app-checkbox-mark />
+          <span>Always use this time for step {{ step() }}</span>
+        </label>
+      }
+      <div class="sheet-actions">
+        <button type="button" class="sheet-cancel" (click)="closeSheet()">Cancel</button>
+        <button type="button" class="primary sheet-set" (click)="apply()">Set timer</button>
+      </div>
+    </dialog>
   `,
 })
 export class StepTimerComponent {
@@ -140,11 +187,16 @@ export class StepTimerComponent {
   readonly completed = input(false);
   readonly disabled = input(false);
   readonly rotated = input(false);
+  /** Whether the edited time can be kept as this step's time in the saved recipe. */
+  readonly savable = input(false);
+  readonly saveDuration = output<number>();
   protected readonly timers = inject(StepTimerService);
   private readonly alertOffer = inject(TimerAlertOfferService);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
-  private readonly ruler = viewChild(MinuteRulerComponent);
+  private readonly ruler = viewChild<MinuteRulerComponent>('wheel');
+  private readonly sheet = viewChild<ElementRef<HTMLDialogElement>>('sheet');
+  protected readonly step = computed(() => this.target().index + 1);
   protected readonly state = computed(() => this.timers.state(this.target()));
   protected readonly active = computed(
     () => this.state().running || (this.state().done && !this.state().paused),
@@ -152,6 +204,15 @@ export class StepTimerComponent {
   protected readonly display = computed(() => {
     const state = this.state();
     return formatCountdown(state.done ? state.elapsed : state.remaining);
+  });
+  protected readonly changed = computed(
+    () =>
+      this.state().started ||
+      this.state().remaining !== Math.min(this.target().seconds, maxClockSeconds),
+  );
+  protected readonly passed = computed(() => {
+    const state = this.state();
+    return state.started ? Math.max(0, state.duration - state.remaining) + state.elapsed : 0;
   });
   protected readonly maximum = maxClockSeconds;
   protected readonly locked = computed(() => this.disabled() || this.completed() || this.active());
@@ -162,10 +223,11 @@ export class StepTimerComponent {
       (this.state().done && !this.state().paused) ||
       (this.state().running && this.state().remaining === 0),
   );
-  protected readonly passed = computed(() => {
-    const state = this.state();
-    return state.started ? Math.max(0, state.duration - state.remaining) + state.elapsed : 0;
-  });
+  protected readonly sheetOpen = signal(false);
+  protected readonly sheetSeconds = signal(0);
+  protected readonly sheetDisplay = computed(() => formatCountdown(this.sheetSeconds()));
+  protected readonly keep = signal(false);
+  protected backdropPressed = false;
   protected readonly editing = signal(false);
   protected readonly draft = signal('');
   protected readonly invalid = signal(false);
@@ -178,7 +240,10 @@ export class StepTimerComponent {
       const key = this.target().key;
       const unavailable = this.locked();
       untracked(() => {
-        if (unavailable || (this.editing() && this.editTarget !== key)) this.cancelEdit();
+        if (unavailable || (this.editing() && this.editTarget !== key)) {
+          this.cancelEdit();
+          this.closeSheet();
+        }
         if (this.completed() && this.element.nativeElement.contains(this.document.activeElement))
           this.element.nativeElement
             .closest('.cooking-step')
@@ -188,13 +253,66 @@ export class StepTimerComponent {
     });
   }
 
+  protected openSheet(): void {
+    if (this.locked()) return;
+    const state = this.state();
+    this.sheetSeconds.set(state.done ? this.target().seconds : state.remaining);
+    this.keep.set(false);
+    this.invalid.set(false);
+    this.editing.set(false);
+    this.sheetOpen.set(true);
+    const sheet = this.sheet()?.nativeElement;
+    if (!sheet || sheet.open) return;
+    if (typeof sheet.showModal === 'function') sheet.showModal();
+    else sheet.setAttribute('open', '');
+  }
+
+  protected closeSheet(event?: Event): void {
+    event?.preventDefault();
+    this.ruler()?.stopMotion();
+    this.cancelEdit();
+    this.sheetOpen.set(false);
+    const sheet = this.sheet()?.nativeElement;
+    if (!sheet?.open) return;
+    if (typeof sheet.close === 'function') sheet.close();
+    else sheet.removeAttribute('open');
+  }
+
+  protected backdropClick(event: MouseEvent): void {
+    if (this.backdropPressed && event.target === event.currentTarget) this.closeSheet();
+    this.backdropPressed = false;
+  }
+
+  /** Set the sheet's time on the timer and, when asked, keep it for the recipe. */
+  protected apply(): void {
+    if (this.locked() || !this.commitEdit()) return;
+    const seconds = this.sheetSeconds();
+    this.timers.setDuration(this.target(), seconds);
+    if (this.keep() && this.savable() && seconds > 0) this.saveDuration.emit(seconds);
+    this.closeSheet();
+  }
+
+  protected nudge(minutes: -1 | 1): void {
+    this.ruler()?.stopMotion();
+    if (!this.commitEdit()) return;
+    this.sheetSeconds.update((seconds) =>
+      Math.max(0, Math.min(maxClockSeconds, seconds + minutes * 60)),
+    );
+  }
+
+  protected pickDuration(seconds: number): void {
+    this.cancelEdit();
+    this.sheetSeconds.set(seconds);
+  }
+
   protected beginEdit(event: Event): void {
     if (this.locked()) return;
     this.ruler()?.stopMotion();
     if (!this.editing()) {
       this.nativeEdit = undefined;
       this.editTarget = this.target().key;
-      const seconds = this.state().done ? this.target().seconds : this.state().remaining;
+      if (!this.sheetOpen()) this.openSheet();
+      const seconds = this.sheetSeconds();
       this.digitDraft = String(Math.floor(seconds / 60)) + String(seconds % 60).padStart(2, '0');
       this.initialDraft = maskDigits(this.digitDraft);
       this.draft.set(this.initialDraft);
@@ -313,14 +431,14 @@ export class StepTimerComponent {
     const seconds = parseDuration(this.draft());
     this.invalid.set(seconds === undefined);
     if (seconds === undefined) return false;
-    this.timers.setDuration(this.target(), seconds);
+    this.sheetSeconds.set(seconds);
     this.editing.set(false);
     return true;
   }
 
   protected acceptEdit(event: Event): void {
     event.preventDefault();
-    if (this.commitEdit()) (event.target as HTMLInputElement).blur();
+    if (this.commitEdit()) this.apply();
   }
 
   protected cancelEdit(event?: Event): void {
@@ -332,22 +450,20 @@ export class StepTimerComponent {
 
   protected start(): void {
     this.ruler()?.stopMotion();
-    if (this.disabled() || this.completed() || !this.commitEdit()) return;
+    if (this.disabled() || this.completed()) return;
+    this.closeSheet();
     this.timers.start(this.target());
     this.alertOffer.offer();
   }
 
   protected stop(): void {
-    this.ruler()?.stopMotion();
     if (this.disabled() || this.completed()) return;
-    this.cancelEdit();
     this.timers.pause(this.target());
   }
 
   // Recipe-wide reset also clears a pending text edit or an ongoing ruler fling.
   resetInteraction(): void {
-    this.ruler()?.stopMotion();
-    this.cancelEdit();
+    this.closeSheet();
   }
 
   protected reset(): void {
@@ -357,15 +473,8 @@ export class StepTimerComponent {
   }
 
   protected adjust(minutes: -1 | 1): void {
-    this.ruler()?.stopMotion();
-    if (this.minuteLocked() || !this.commitEdit()) return;
+    if (this.minuteLocked()) return;
     this.timers.adjust(this.target(), minutes);
-  }
-
-  protected setDuration(seconds: number): void {
-    if (this.locked()) return;
-    this.cancelEdit();
-    this.timers.setDuration(this.target(), seconds);
   }
 }
 

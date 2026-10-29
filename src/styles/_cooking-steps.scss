@@ -27,6 +27,10 @@ app-recipe-detail {
   .cooking-step.is-next .checkbox-number {
     font-weight: 700;
   }
+  // The timer row lines up with the step text, past the number square.
+  .cooking-step app-step-timer {
+    margin-left: calc(var(--checkbox-size, 32px) + 12px);
+  }
   .instruction-tools p {
     display: flex;
     align-items: center;

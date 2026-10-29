@@ -575,6 +575,32 @@ describe('recipe detail', () => {
     expect(step.scrollIntoView).toHaveBeenCalled();
   });
 
+  it('keeps an edited timer as the step time in the saved recipe', async () => {
+    const f = await timerFixture();
+    const updateRecipe = vi.fn().mockResolvedValue(undefined);
+    Object.assign(TestBed.inject(RecipeService), { updateRecipe });
+    const root = f.host.nativeElement as HTMLElement;
+    root.querySelector<HTMLButtonElement>('[aria-label="Edit time for step 2"]')!.click();
+    f.host.detectChanges();
+    const sheet = root.querySelector<HTMLDialogElement>('#recipe-step-2 dialog')!;
+    sheet.querySelector<HTMLButtonElement>('[aria-label="Add one minute"]')!.click();
+    sheet.querySelector<HTMLInputElement>('.save-default input')!.click();
+    sheet.querySelector<HTMLButtonElement>('.sheet-set')!.click();
+    await Promise.resolve();
+    await Promise.resolve();
+    f.host.detectChanges();
+    expect(updateRecipe).toHaveBeenCalledOnce();
+    const [id, changes] = updateRecipe.mock.calls[0];
+    expect(id).toBe(f.recipe.id);
+    expect(
+      changes.stepDetails.map((step: { timerSeconds?: number }) => step?.timerSeconds),
+    ).toEqual([undefined, 240, undefined, undefined, undefined]);
+    const timers = recipeStepTimers(f.host.componentInstance.recipe()!);
+    expect(timers[1]!.seconds).toBe(240);
+    expect(f.timers.state(timers[1]!).remaining).toBe(240);
+    expect(root.querySelector('#recipe-step-2 .timer-time')!.textContent).toContain('04:00');
+  });
+
   it('allows the instructions reset when only a timer has changed, then restores its preset', async () => {
     const f = await timerFixture();
     const reset = f.host.nativeElement.querySelector('.reset-instructions') as HTMLButtonElement;
@@ -709,8 +735,15 @@ describe('recipe detail', () => {
     });
   });
 
-  it('stops ruler momentum when the instructions reset is activated without a pointer press', async () => {
+  it('closes an open timer sheet and stops its wheel when the instructions reset is activated', async () => {
     const f = await timerFixture();
+    f.timers.setDuration(f.targets[1]!, 0);
+    const edit = f.host.nativeElement.querySelector(
+      '[aria-label="Edit time for step 1"]',
+    ) as HTMLButtonElement;
+    edit.click();
+    f.host.detectChanges();
+    const sheet = f.host.nativeElement.querySelector('#recipe-step-1 dialog') as HTMLDialogElement;
     vi.useFakeTimers();
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) =>
       setTimeout(() => callback(performance.now()), 16),
@@ -740,12 +773,14 @@ describe('recipe detail', () => {
     pointer('pointerup', 60);
     await vi.advanceTimersByTimeAsync(100);
     f.host.detectChanges();
-    expect(f.timers.state(f.targets[0]!).remaining).not.toBe(120);
+    expect(sheet.querySelector<HTMLInputElement>('input.timer-input')!.value).not.toBe('02:00');
+    expect(f.timers.state(f.targets[0]!).remaining).toBe(120);
     const reset = f.host.nativeElement.querySelector('.reset-instructions') as HTMLButtonElement;
     expect(reset.disabled).toBe(false);
     reset.focus();
     reset.click();
     f.host.detectChanges();
+    expect(sheet.open).toBe(false);
     await vi.advanceTimersByTimeAsync(1200);
     f.host.detectChanges();
     expect(f.timers.state(f.targets[0]!)).toMatchObject({ remaining: 120, started: false });

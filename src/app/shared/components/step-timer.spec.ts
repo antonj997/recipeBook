@@ -65,7 +65,8 @@ describe('editable step timer controls', () => {
   }
 
   function field(root: HTMLElement) {
-    const input = root.querySelector<HTMLInputElement>('input');
+    root.querySelector<HTMLButtonElement>('.timer-edit:not(:disabled)')?.click();
+    const input = root.querySelector<HTMLInputElement>('input.timer-input');
     expect(input, 'the countdown can be edited directly').not.toBeNull();
     return input!;
   }
@@ -211,48 +212,85 @@ describe('editable step timer controls', () => {
     ).toBe(true);
     expect(f.timers.state(target).running).toBe(false);
   });
-  it('adjusts whole minutes during a countdown and keeps the compact timeline on Stop', async () => {
+  it('rests as one quiet row: Start, the time and an edit button', () => {
     const f = fixture();
-    const start = f.root.querySelector<HTMLButtonElement>('[aria-label="Start timer for step 1"]')!;
-    expect(f.root.querySelector('[aria-label="Stop timer for step 1"]')).toBeNull();
-    start.click();
+    const row = f.root.querySelector<HTMLElement>('.timer-row')!;
+    expect(row.textContent?.replace(/\s+/g, ' ').trim()).toBe('Start 02:00');
+    expect(row.querySelector('[aria-label="Edit time for step 1"]')).not.toBeNull();
+    expect(row.querySelector('app-minute-ruler')).toBeNull();
+    expect(row.querySelector('[aria-label="Reset timer for step 1"]')).toBeNull();
+    expect(f.root.querySelector<HTMLDialogElement>('dialog')!.open).toBe(false);
+  });
+  it('edits in a sheet and changes the timer only on Set', () => {
+    const f = fixture();
+    const sheet = f.root.querySelector<HTMLDialogElement>('dialog')!;
+    const open = () => {
+      f.root.querySelector<HTMLButtonElement>('[aria-label="Edit time for step 1"]')!.click();
+      f.view.detectChanges();
+    };
+    open();
+    expect(sheet.open).toBe(true);
+    const wheel = sheet.querySelector<HTMLElement>('[role=slider]')!;
+    wheel.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
     f.view.detectChanges();
-    expect(f.root.querySelector('[aria-label="Start timer for step 1"]')).toBeNull();
-    expect(f.root.querySelector('[aria-label="Stop timer for step 1"]')).toBe(start);
-    expect(start.textContent?.trim()).toBe('Stop');
-    const input = field(f.root),
-      slider = f.root.querySelector<HTMLElement>('[role=progressbar]')!;
-    expect(input.disabled).toBe(true);
-    expect(slider.getAttribute('aria-valuenow')).toBe(String(f.timers.state(target).remaining));
-    for (const button of f.root.querySelectorAll<HTMLButtonElement>('.timer-minute'))
-      expect(button.disabled).toBe(false);
-    slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(sheet.querySelector<HTMLInputElement>('input.timer-input')!.value).toBe('03:00');
     expect(f.timers.state(target).remaining).toBe(120);
+    sheet.querySelector<HTMLButtonElement>('.sheet-cancel')!.click();
+    f.view.detectChanges();
+    expect(sheet.open).toBe(false);
+    expect(f.timers.state(target).remaining).toBe(120);
+    open();
+    sheet.querySelector<HTMLButtonElement>('[aria-label="Add one minute"]')!.click();
+    sheet.querySelector<HTMLButtonElement>('[aria-label="Add one minute"]')!.click();
+    sheet.querySelector<HTMLButtonElement>('.sheet-set')!.click();
+    f.view.detectChanges();
+    expect(sheet.open).toBe(false);
+    expect(f.timers.state(target).remaining).toBe(240);
+    expect(f.root.querySelector('.timer-row')!.textContent).toContain('04:00');
+    expect(f.root.querySelector('[aria-label="Reset timer for step 1"]')).not.toBeNull();
+  });
+  it('saves the time to the recipe only when asked', () => {
+    const f = fixture();
+    const saved: number[] = [];
+    f.view.componentRef.setInput('savable', true);
+    f.view.componentInstance.saveDuration.subscribe((seconds) => saved.push(seconds));
+    f.view.detectChanges();
+    const sheet = f.root.querySelector<HTMLDialogElement>('dialog')!;
+    for (const keep of [false, true]) {
+      f.root.querySelector<HTMLButtonElement>('[aria-label="Edit time for step 1"]')!.click();
+      f.view.detectChanges();
+      sheet.querySelector<HTMLButtonElement>('[aria-label="Add one minute"]')!.click();
+      const box = sheet.querySelector<HTMLInputElement>('.save-default input')!;
+      if (box.checked !== keep) box.click();
+      sheet.querySelector<HTMLButtonElement>('.sheet-set')!.click();
+      f.view.detectChanges();
+    }
+    expect(saved).toEqual([240]);
+  });
+  it('runs as a row with Stop, one more minute, Reset and a thin progress line', async () => {
+    const f = fixture();
+    f.root.querySelector<HTMLButtonElement>('[aria-label="Start timer for step 1"]')!.click();
+    f.view.detectChanges();
+    const toggle = f.root.querySelector<HTMLButtonElement>('[aria-label="Stop timer for step 1"]')!;
+    expect(toggle.textContent?.trim()).toBe('Stop');
+    expect(f.root.querySelector('[aria-label="Edit time for step 1"]')).toBeNull();
     await vi.advanceTimersByTimeAsync(3000);
-    f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]')!.click();
+    f.view.detectChanges();
+    const line = f.root.querySelector<HTMLElement>('[role=progressbar]')!;
+    expect(line.getAttribute('aria-valuenow')).toBe('117');
+    f.root
+      .querySelector<HTMLButtonElement>('[aria-label="Add one minute to step 1 timer"]')!
+      .click();
     f.view.detectChanges();
     expect(f.timers.state(target)).toMatchObject({ remaining: 177, duration: 180, running: true });
-    expect(input.value).toBe('02:57');
-    expect(f.root.querySelector('[role=progressbar]')).not.toBeNull();
-    f.root.querySelector<HTMLButtonElement>('[aria-label^="Subtract one minute"]')!.click();
+    expect(f.root.querySelector('.timer-time')!.textContent?.trim()).toBe('02:57');
+    toggle.click();
     f.view.detectChanges();
-    expect(f.timers.state(target)).toMatchObject({ remaining: 117, duration: 120, running: true });
-    expect(input.value).toBe('01:57');
-    expect(input.disabled).toBe(true);
-    f.root.querySelector<HTMLButtonElement>('[aria-label="Stop timer for step 1"]')!.click();
-    f.view.detectChanges();
-    expect(input.disabled).toBe(false);
-    expect(f.root.querySelector('[aria-label="Start timer for step 1"]')).toBe(start);
-    expect(f.root.querySelector('[aria-label="Stop timer for step 1"]')).toBeNull();
-    expect(start.textContent?.trim()).toBe('Start');
-    expect(slider.getAttribute('aria-valuenow')).toBe(String(f.timers.state(target).remaining));
+    expect(f.timers.state(target)).toMatchObject({ remaining: 177, running: false });
+    expect(f.root.querySelector('[aria-label="Edit time for step 1"]')).not.toBeNull();
     expect(f.root.querySelector('[role=progressbar]')).not.toBeNull();
-    expect(f.root.querySelector('.minute-ruler')?.getAttribute('aria-hidden')).toBe('true');
-    expect(f.timers.state(target)).toMatchObject({ remaining: 117, running: false });
-    f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]')!.click();
-    expect(f.timers.state(target).remaining).toBe(177);
   });
-  it('blocks minute buttons while expiry validation is pending at zero', () => {
+  it('blocks one more minute while expiry validation is pending at zero', () => {
     const adjust = vi.fn();
     TestBed.overrideProvider(StepTimerService, {
       useValue: {
@@ -269,35 +307,29 @@ describe('editable step timer controls', () => {
       },
     });
     const f = fixture();
-    for (const button of f.root.querySelectorAll<HTMLButtonElement>('.timer-minute')) {
-      expect(button.disabled).toBe(true);
-      button.click();
-    }
+    const add = f.root.querySelector<HTMLButtonElement>('.timer-add')!;
+    expect(add.disabled).toBe(true);
+    add.click();
     expect(adjust).not.toHaveBeenCalled();
   });
-  it('stops an overdue timer without resetting its time or compact timeline', async () => {
+  it('stops an overdue timer without resetting its time', async () => {
     const f = fixture();
+    const time = () => f.root.querySelector('.timer-time')!.textContent?.trim();
     f.timers.start(target);
     await vi.advanceTimersByTimeAsync(130000);
     f.view.detectChanges();
-    expect(field(f.root).value).toBe('00:10');
-    expect(f.root.querySelector('[role=progressbar]')!.getAttribute('aria-valuenow')).toBe('0');
+    expect(time()).toBe('00:10');
+    expect(f.root.querySelector('.timer-time.is-overdue')).not.toBeNull();
     f.root.querySelector<HTMLButtonElement>('[aria-label="Stop timer for step 1"]')!.click();
-    f.view.detectChanges();
-    expect(field(f.root).disabled).toBe(false);
-    expect(field(f.root).value).toBe('00:10');
-    expect(f.root.querySelector('[aria-label="Start timer for step 1"]')).not.toBeNull();
-    expect(f.root.querySelector('[role=progressbar]')).not.toBeNull();
     await vi.advanceTimersByTimeAsync(5000);
     f.view.detectChanges();
-    expect(field(f.root).value).toBe('00:10');
+    expect(time()).toBe('00:10');
     f.root.querySelector<HTMLButtonElement>('[aria-label="Reset timer for step 1"]')!.click();
     f.view.detectChanges();
-    expect(field(f.root).value).toBe('02:00');
+    expect(time()).toBe('02:00');
     expect(f.root.querySelector('[role=progressbar]')).toBeNull();
-    expect(f.root.querySelector('.ruler-marker')).not.toBeNull();
   });
-  it('discards an open draft if the timer starts elsewhere before blur', () => {
+  it('closes the sheet and drops its draft if the timer starts elsewhere', () => {
     const f = fixture(),
       input = field(f.root);
     type(input, '3000');
@@ -305,8 +337,7 @@ describe('editable step timer controls', () => {
     expect(input.value).toBe('30:00');
     f.timers.start(target);
     f.view.detectChanges();
-    expect(input.disabled).toBe(true);
-    expect(input.value).toBe('02:00');
+    expect(f.root.querySelector<HTMLDialogElement>('dialog')!.open).toBe(false);
     input.dispatchEvent(new FocusEvent('blur'));
     f.view.detectChanges();
     expect(f.timers.state(target)).toMatchObject({ remaining: 120, running: true });
@@ -326,28 +357,25 @@ describe('editable step timer controls', () => {
     f.view.detectChanges();
     expect(f.root.hidden).toBe(true);
   });
-  it('keeps plus at sixty minutes and minus at zero', () => {
+  it('keeps the sheet between zero and sixty minutes', () => {
     const f = fixture();
     f.timers.setDuration(target, 3600);
     f.view.detectChanges();
-    expect(field(f.root).value).toBe('60:00');
-    expect(
-      f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]')!.disabled,
-    ).toBe(true);
+    const sheet = f.root.querySelector<HTMLDialogElement>('dialog')!;
+    f.root.querySelector<HTMLButtonElement>('[aria-label="Edit time for step 1"]')!.click();
+    f.view.detectChanges();
+    const plus = sheet.querySelector<HTMLButtonElement>('[aria-label="Add one minute"]')!;
+    const minus = sheet.querySelector<HTMLButtonElement>('[aria-label="Subtract one minute"]')!;
+    expect(plus.disabled).toBe(true);
+    expect(minus.disabled).toBe(false);
     f.timers.start(target);
     f.view.detectChanges();
-    expect(
-      f.root.querySelector<HTMLButtonElement>('[aria-label^="Add one minute"]')!.disabled,
-    ).toBe(true);
-    expect(
-      f.root.querySelector<HTMLButtonElement>('[aria-label^="Subtract one minute"]')!.disabled,
-    ).toBe(false);
-    f.root.querySelector<HTMLButtonElement>('[aria-label^="Subtract one minute"]')!.click();
-    expect(f.timers.state(target)).toMatchObject({ remaining: 3540, running: true });
+    expect(f.root.querySelector<HTMLButtonElement>('.timer-add')!.disabled).toBe(true);
+    f.timers.reset(target);
     f.timers.setDuration(target, 0);
     f.view.detectChanges();
-    expect(
-      f.root.querySelector<HTMLButtonElement>('[aria-label^="Subtract one minute"]')!.disabled,
-    ).toBe(true);
+    f.root.querySelector<HTMLButtonElement>('[aria-label="Edit time for step 1"]')!.click();
+    f.view.detectChanges();
+    expect(minus.disabled).toBe(true);
   });
 });
