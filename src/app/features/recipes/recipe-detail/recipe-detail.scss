@@ -7,7 +7,9 @@
   padding-left: var(--page-gutter-left);
   padding-right: var(--page-gutter-right);
 }
+// Back and Options are a slim strip just above the photo, not a band of their own.
 .recipe-navigation.page {
+  padding-top: clamp(8px, 2vw, 24px);
   padding-bottom: 0;
   display: flex;
   align-items: start;
@@ -56,6 +58,7 @@
   background: var(--page-background, var(--color-canvas));
 }
 .recipe-navigation .back-link {
+  margin-bottom: 8px;
   color: var(--color-ink);
 }
 .recipe-options {
@@ -144,6 +147,7 @@ li::marker {
 }
 
 .recipe-summary h1 {
+  margin-bottom: 14px;
   font-family: Georgia, 'Times New Roman', serif;
   font-weight: 400;
   letter-spacing: -0.035em;

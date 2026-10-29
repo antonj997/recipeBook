@@ -21,4 +21,20 @@ describe('recipe summary details', () => {
     expect(parts[0]).toContain('recipe-time');
     expect(parts[1]).toContain('recipe-categories');
   });
+
+  it('puts the time and categories right under the title, before the description', () => {
+    const host = TestBed.createComponent(RecipeSummaryDetailsComponent);
+    host.componentRef.setInput('recipe', {
+      id: 'soup',
+      title: 'Soup',
+      description: 'A warming soup.',
+      ingredients: [],
+      instructions: [],
+      totalTime: 35,
+    });
+    host.componentRef.setInput('categories', ['Vardagsmat']);
+    host.detectChanges();
+    const parts = [...(host.nativeElement as HTMLElement).children].map((child) => child.classList[0]);
+    expect(parts).toEqual(['recipe-metadata', 'recipe-description']);
+  });
 });

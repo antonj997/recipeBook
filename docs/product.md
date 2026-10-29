@@ -159,7 +159,7 @@ En tom receptsamling visar en vänlig illustration och tydliga vägar till att s
 
 Receptsidan öppnas med en Back-länk och en Options-meny. Menyn innehåller redigera och ta bort, med penna respektive papperskorg. Den behöver inte upprepa receptets titel. Ett nytt tryck på en redan öppen menyknapp stänger menyn.
 
-Överst finns receptbilden, följd av titel, beskrivning, total tid och kategorier. Tiden står före kategorierna, som i listvyn, så att de inte korsar varandra i sidövergången. På mobil ligger bilden före texten. På större skärmar kan bild och sammanfattning visas sida vid sida. Bild, översikt och läsytans ytterkanter ska linjera.
+Överst finns receptbilden, följd av titel, total tid och kategorier och sist beskrivningen. Tid och kategorier står direkt under titeln, som på korten, så att titel och fakta läses som en grupp och beskrivningen blir brödtext. Tiden står före kategorierna, som i listvyn, så att de inte korsar varandra i sidövergången. Back och Options ligger som en smal rad tätt ovanför bilden, utan eget luftigt band mellan sidhuvudet och bilden. På mobil ligger bilden före texten. På större skärmar kan bild och sammanfattning visas sida vid sida. Bild, översikt och läsytans ytterkanter ska linjera.
 
 Receptets valda färg fyller den övre delen av sidan. Kategorier, tid, bildkant och andra konturer använder samma formspråk som kortet. Konturer i den färgade delen är mörkare nyanser av receptfärgen i stället för neutralt grå. Bilden har en tunn färgtonad kant, rundade övre hörn och mycket svagt rundade nedre hörn.
 

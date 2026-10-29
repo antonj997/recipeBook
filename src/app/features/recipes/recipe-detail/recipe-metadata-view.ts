@@ -13,15 +13,6 @@ import {
   selector: 'app-recipe-summary-details',
   imports: [IconComponent, RecipeTransitionPartDirective],
   template: `
-    @if (description()) {
-      <p
-        class="recipe-description"
-        [appRecipeTransition]="recipe().id"
-        transitionPart="description"
-      >
-        {{ description() }}
-      </p>
-    }
     @if (categories().length || recipe().totalTime != null) {
       <div class="recipe-metadata">
         @if (recipe().totalTime != null) {
@@ -47,22 +38,31 @@ import {
         }
       </div>
     }
+    @if (description()) {
+      <p
+        class="recipe-description"
+        [appRecipeTransition]="recipe().id"
+        transitionPart="description"
+      >
+        {{ description() }}
+      </p>
+    }
   `,
   styles: `
     :host {
       display: block;
     }
-    .recipe-description {
-      max-width: 65ch;
-      white-space: pre-line;
-      margin-block: 16px;
-    }
+    /* Time and categories sit right under the title; the description follows as body copy. */
     .recipe-metadata {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
       gap: 10px 12px;
-      margin-top: 16px;
+    }
+    .recipe-description {
+      max-width: 65ch;
+      white-space: pre-line;
+      margin: 16px 0 0;
     }
     .recipe-categories {
       display: flex;
