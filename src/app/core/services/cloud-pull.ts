@@ -6,6 +6,7 @@ import { putImages, type PreparedImage } from '../models/recipe-image';
 import { readShoppingItem } from '../models/shopping-item';
 import type { AccountDatabase, CookbookTable, CookbookValue } from './account-database';
 import { downloadPhotos, type RecipePhotos } from './cloud-photos';
+import { msg } from '../i18n/i18n';
 
 export interface CloudRow {
   id: string;
@@ -148,7 +149,7 @@ async function applyPage(
         ));
       } else if (table === 'shoppingItems') {
         value = readShoppingItem(row.payload);
-        if (value.id !== row.id) throw new Error('Invalid cloud shopping item ID.');
+        if (value.id !== row.id) throw new Error(msg('Invalid cloud shopping item ID.'));
       } else value = readCloudCollection(row.payload);
     }
     changes.push({ row, key: keys[index]!, value, images });
@@ -169,7 +170,7 @@ async function applyPage(
     ],
     async () => {
       for (const { row, key, value, images } of changes) {
-        if (!current()) throw new Error('Account changed. Try again.');
+        if (!current()) throw new Error(msg('Account changed. Try again.'));
         // Edited while the page downloaded: the local change stays and uploads later.
         if (await cache.outbox.get(key)) continue;
         // A row this device already holds, such as its own upload read back, changes nothing.
@@ -213,7 +214,7 @@ export function missingShoppingTable(error: { code?: string }): boolean {
 }
 
 export function readCloudRecipe(value: unknown): Recipe {
-  if (!value || typeof value !== 'object') throw new Error('Invalid cloud recipe.');
+  if (!value || typeof value !== 'object') throw new Error(msg('Invalid cloud recipe.'));
   const raw = value as Record<string, unknown>;
   if (
     typeof raw['id'] !== 'string' ||
@@ -223,7 +224,7 @@ export function readCloudRecipe(value: unknown): Recipe {
     !Array.isArray(raw['instructions']) ||
     !raw['instructions'].every((v) => typeof v === 'string')
   )
-    throw new Error('Invalid cloud recipe.');
+    throw new Error(msg('Invalid cloud recipe.'));
   const recipe: Recipe = {
     ...readRecipeMetadata(value, true),
     id: raw['id'],
@@ -233,11 +234,11 @@ export function readCloudRecipe(value: unknown): Recipe {
   };
   if (typeof raw['servings'] === 'number') recipe.servings = raw['servings'];
   if (raw['imageDataUrl'] != null) {
-    if (!isRecipeImage(raw['imageDataUrl'])) throw new Error('Invalid recipe photo.');
+    if (!isRecipeImage(raw['imageDataUrl'])) throw new Error(msg('Invalid recipe photo.'));
     recipe.imageDataUrl = raw['imageDataUrl'];
   }
   if (raw['sourceUrl'] != null) {
-    if (!isHttpsUrl(raw['sourceUrl'])) throw new Error('Invalid recipe link.');
+    if (!isHttpsUrl(raw['sourceUrl'])) throw new Error(msg('Invalid recipe link.'));
     recipe.sourceUrl = raw['sourceUrl'];
   }
   for (const field of ['notes', 'createdAt', 'updatedAt'] as const)
@@ -249,13 +250,13 @@ export function readCloudRecipe(value: unknown): Recipe {
 }
 
 export function readCloudCollection(value: unknown): RecipeCollection {
-  if (!value || typeof value !== 'object') throw new Error('Invalid cloud collection.');
+  if (!value || typeof value !== 'object') throw new Error(msg('Invalid cloud collection.'));
   const raw = value as Record<string, unknown>;
   if (
     typeof raw['id'] !== 'string' ||
     typeof raw['name'] !== 'string' ||
     typeof raw['sortOrder'] !== 'number'
   )
-    throw new Error('Invalid cloud collection.');
+    throw new Error(msg('Invalid cloud collection.'));
   return { id: raw['id'], name: raw['name'], sortOrder: raw['sortOrder'] };
 }

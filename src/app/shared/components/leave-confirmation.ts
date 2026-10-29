@@ -1,19 +1,21 @@
 import { Component, effect, ElementRef, inject, viewChild } from '@angular/core';
 import { LeaveConfirmationService } from '../../core/services/leave-confirmation.service';
+import { TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-leave-confirmation',
+  imports: [TranslatePipe],
   template: `<dialog
     #dialog
     aria-labelledby="leave-heading"
     aria-describedby="leave-copy"
     (cancel)="cancel($event)"
   >
-    <h2 id="leave-heading">{{ confirmation.labels().title }}</h2>
+    <h2 id="leave-heading">{{ confirmation.labels().title | t }}</h2>
     <p id="leave-copy">{{ confirmation.message() }}</p>
     <div class="actions">
       <button type="button" autofocus (click)="confirmation.answer(false)">
-        {{ confirmation.labels().cancel }}
+        {{ confirmation.labels().cancel | t }}
       </button>
       <button
         type="button"
@@ -21,7 +23,7 @@ import { LeaveConfirmationService } from '../../core/services/leave-confirmation
         [class.primary]="!confirmation.labels().destructive"
         (click)="confirmation.answer(true)"
       >
-        {{ confirmation.labels().confirm }}
+        {{ confirmation.labels().confirm | t }}
       </button>
     </div>
   </dialog>`,

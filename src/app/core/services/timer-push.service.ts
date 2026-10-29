@@ -4,6 +4,7 @@ import { SwPush } from '@angular/service-worker';
 import { take } from 'rxjs';
 import type { StepTimerTarget } from '../models/step-timer';
 import { SupabaseService } from './supabase.service';
+import { msg } from '../i18n/i18n';
 
 interface AlertTimer {
   key: string;
@@ -41,7 +42,7 @@ export class TimerPushService {
   private readonly push = inject(SwPush, { optional: true });
   private readonly isEnabled = signal(false);
   private readonly currentStatus = signal<AlertStatus>('off');
-  private readonly currentMessage = signal('Background timer alerts are off.');
+  private readonly currentMessage = signal(msg('Background timer alerts are off.'));
   private readonly working = signal(false);
   private readonly publicKey = signal('');
   private readonly online = signal(navigator.onLine);
@@ -86,7 +87,7 @@ export class TimerPushService {
         if (subscription) this.schedule(account);
         else {
           this.isEnabled.set(false);
-          this.setStatus('error', 'Alerts need to be enabled again on this device.');
+          this.setStatus('error', msg('Alerts need to be enabled again on this device.'));
         }
       }
     });
@@ -102,7 +103,7 @@ export class TimerPushService {
         if (this.account?.state.enabled || this.account?.state.disablePending)
           this.setStatus(
             'pending',
-            'Offline. Timer alert changes are saved here; reconnect to send them.',
+            msg('Offline. Timer alert changes are saved here; reconnect to send them.'),
           );
       } else this.retry();
       if (this.account) this.updatePresence(this.account);
@@ -138,7 +139,7 @@ export class TimerPushService {
           account.registered = false;
           if (account.state.enabled && !subscription) {
             this.isEnabled.set(false);
-            this.setStatus('error', 'Enable alerts again to reconnect this device.');
+            this.setStatus('error', msg('Enable alerts again to reconnect this device.'));
           } else this.retry();
         });
     };
@@ -160,7 +161,9 @@ export class TimerPushService {
     window.addEventListener('online', connection);
     window.addEventListener('offline', connection);
     window.addEventListener('storage', storage);
-    const pagehide = () => { if (this.account) this.updatePresence(this.account, true, true); };
+    const pagehide = () => {
+      if (this.account) this.updatePresence(this.account, true, true);
+    };
     document.addEventListener('visibilitychange', visibility);
     window.addEventListener('pagehide', pagehide);
     destroy.onDestroy(() => {
@@ -219,8 +222,8 @@ export class TimerPushService {
       this.setStatus(
         'pending',
         navigator.onLine
-          ? 'Updating timer alerts. Keep Recipebook open until this finishes.'
-          : 'Offline. Timer alert changes are saved here; reconnect to send them.',
+          ? msg('Updating timer alerts. Keep Recipebook open until this finishes.')
+          : msg('Offline. Timer alert changes are saved here; reconnect to send them.'),
       );
       this.schedule(account);
     }
@@ -232,7 +235,7 @@ export class TimerPushService {
     const key = this.publicKey();
     if (!account || !this.canEnable() || !key || !this.push) return;
     this.working.set(true);
-    this.setStatus('loading', 'Enabling timer alerts…');
+    this.setStatus('loading', msg('Enabling timer alerts…'));
     try {
       // iOS requires the permission prompt directly in the user's tap, before any await.
       const permission =
@@ -267,8 +270,8 @@ export class TimerPushService {
         this.setStatus(
           account.state.pending.length ? 'pending' : 'enabled',
           account.state.pending.length
-            ? 'Updating timer alerts. Keep Recipebook open until this finishes.'
-            : 'Timer alerts are on for this account and device.',
+            ? msg('Updating timer alerts. Keep Recipebook open until this finishes.')
+            : msg('Timer alerts are on for this account and device.'),
         );
       });
       if (this.current(account)) this.schedule(account);
@@ -278,7 +281,7 @@ export class TimerPushService {
           'error',
           Notification.permission === 'denied'
             ? permissionHelp()
-            : 'Could not enable alerts. Check your connection and try again.',
+            : msg('Could not enable alerts. Check your connection and try again.'),
         );
     } finally {
       if (this.current(account)) this.working.set(false);
@@ -300,7 +303,7 @@ export class TimerPushService {
     this.persist(account);
     this.isEnabled.set(false);
     this.working.set(true);
-    this.setStatus('pending', 'Turning off background alerts…');
+    this.setStatus('pending', msg('Turning off background alerts…'));
     try {
       if (!navigator.onLine) throw new Error('offline');
       await this.serial(account, async () => {
@@ -310,13 +313,15 @@ export class TimerPushService {
         this.pendingDisable.set(false);
         account.registered = false;
         this.persist(account);
-        this.setStatus('off', 'Background timer alerts are off.');
+        this.setStatus('off', msg('Background timer alerts are off.'));
       });
     } catch {
       if (this.current(account))
         this.setStatus(
           'pending',
-          'Connect and retry to finish turning alerts off. Previously scheduled alerts may still arrive.',
+          msg(
+            'Connect and retry to finish turning alerts off. Previously scheduled alerts may still arrive.',
+          ),
         );
     } finally {
       if (this.current(account)) this.working.set(false);
@@ -360,7 +365,7 @@ export class TimerPushService {
     if (!user || !client) {
       this.setStatus(
         'unavailable',
-        'Sign in to enable background timer alerts. Local timers still work.',
+        msg('Sign in to enable background timer alerts. Local timers still work.'),
       );
       return;
     }
@@ -379,7 +384,9 @@ export class TimerPushService {
     if (account.state.disablePending) {
       this.setStatus(
         'pending',
-        'Connect and retry to finish turning alerts off. Previously scheduled alerts may still arrive.',
+        msg(
+          'Connect and retry to finish turning alerts off. Previously scheduled alerts may still arrive.',
+        ),
       );
       if (navigator.onLine) this.schedule(account, 0);
       return;
@@ -393,7 +400,10 @@ export class TimerPushService {
     if (account.state.enabled && this.nativeSubscription && Notification.permission === 'granted')
       this.isEnabled.set(true);
     if (!navigator.onLine) {
-      this.setStatus('pending', 'Offline. Connect to set up or update background timer alerts.');
+      this.setStatus(
+        'pending',
+        msg('Offline. Connect to set up or update background timer alerts.'),
+      );
       return;
     }
     void this.loadConfig(account);
@@ -408,16 +418,20 @@ export class TimerPushService {
       !window.matchMedia?.('(display-mode: standalone)').matches &&
       !(navigator as Navigator & { standalone?: boolean }).standalone
     )
-      return 'On iPhone or iPad, use Add to Home Screen, then open Recipebook from its icon to enable background alerts.';
+      return msg(
+        'On iPhone or iPad, use Add to Home Screen, then open Recipebook from its icon to enable background alerts.',
+      );
     if (typeof Notification === 'undefined' || !this.push?.isEnabled)
-      return 'Background alerts are not available here. On iPhone, use Add to Home Screen, then open Recipebook from its icon.';
+      return msg(
+        'Background alerts are not available here. On iPhone, use Add to Home Screen, then open Recipebook from its icon.',
+      );
     if (Notification.permission === 'denied') return permissionHelp();
     return '';
   }
 
   private async loadConfig(account: AccountDevice): Promise<void> {
     if (!this.current(account) || this.unavailable()) return;
-    this.setStatus('loading', 'Checking background timer alerts…');
+    this.setStatus('loading', msg('Checking background timer alerts…'));
     try {
       const config = await this.serial(account, () => this.invoke(account, { action: 'config' }));
       if (!this.current(account)) return;
@@ -427,26 +441,31 @@ export class TimerPushService {
         typeof config['publicKey'] !== 'string' ||
         !config['publicKey']
       ) {
-        this.setStatus('unavailable', 'Background timer alerts are not set up on the server yet.');
+        this.setStatus(
+          'unavailable',
+          msg('Background timer alerts are not set up on the server yet.'),
+        );
         return;
       }
       this.publicKey.set(config['publicKey']);
       if (account.state.enabled && !this.nativeSubscription) {
         this.isEnabled.set(false);
-        this.setStatus('error', 'Enable alerts again to reconnect this device.');
+        this.setStatus('error', msg('Enable alerts again to reconnect this device.'));
       } else if (account.state.enabled || account.state.disablePending) {
-        this.setStatus('pending', 'Reconnecting timer alerts…');
+        this.setStatus('pending', msg('Reconnecting timer alerts…'));
         this.schedule(account, 0);
       } else
         this.setStatus(
           'off',
-          'Get timer alerts even when Recipebook is closed. Delivery depends on your device and connection.',
+          msg(
+            'Get timer alerts even when Recipebook is closed. Delivery depends on your device and connection.',
+          ),
         );
     } catch {
       if (this.current(account))
         this.setStatus(
           'error',
-          'Could not check background alerts. Connect to the internet and retry.',
+          msg('Could not check background alerts. Connect to the internet and retry.'),
         );
     }
   }
@@ -471,7 +490,7 @@ export class TimerPushService {
           account.state.disablePending = false;
           this.pendingDisable.set(false);
           this.persist(account);
-          this.setStatus('off', 'Background timer alerts are off.');
+          this.setStatus('off', msg('Background timer alerts are off.'));
           if (!this.publicKey()) void this.loadConfig(account);
           return;
         }
@@ -509,7 +528,7 @@ export class TimerPushService {
           if (!timers.length && !canDeliver) {
             this.setStatus(
               'unavailable',
-              this.unavailable() || 'Enable alerts again to reconnect this device.',
+              this.unavailable() || msg('Enable alerts again to reconnect this device.'),
             );
             return;
           }
@@ -553,7 +572,9 @@ export class TimerPushService {
           if (rejected.size) {
             this.setStatus(
               'pending',
-              'Some timer alerts are waiting for recipe sync. Sync your cookbook, then retry alerts.',
+              msg(
+                'Some timer alerts are waiting for recipe sync. Sync your cookbook, then retry alerts.',
+              ),
             );
             return;
           }
@@ -563,12 +584,14 @@ export class TimerPushService {
           if (canDeliver && !this.unavailable())
             this.setStatus(
               'enabled',
-              'Timer alerts are on for this account and device. Delivery depends on your device and connection.',
+              msg(
+                'Timer alerts are on for this account and device. Delivery depends on your device and connection.',
+              ),
             );
           else
             this.setStatus(
               'unavailable',
-              this.unavailable() || 'Enable alerts again to reconnect this device.',
+              this.unavailable() || msg('Enable alerts again to reconnect this device.'),
             );
         }
       });
@@ -576,7 +599,9 @@ export class TimerPushService {
       if (this.current(account))
         this.setStatus(
           'pending',
-          'Timer alert changes have not reached the server. Keep Recipebook open, check your connection and retry.',
+          msg(
+            'Timer alert changes have not reached the server. Keep Recipebook open, check your connection and retry.',
+          ),
         );
     } finally {
       account.flushing = false;
@@ -585,8 +610,14 @@ export class TimerPushService {
 
   /** Each tab owns a short server lease. Hiding one tab cannot clear a visible sibling. */
   private updatePresence(account: AccountDevice, force = false, leaving = false): void {
-    const active = this.current(account) && account.state.enabled && account.registered &&
-      navigator.onLine && account.state.known.some(timer => timer.deadline !== null && timer.deadline > Date.now() - 360_000);
+    const active =
+      this.current(account) &&
+      account.state.enabled &&
+      account.registered &&
+      navigator.onLine &&
+      account.state.known.some(
+        (timer) => timer.deadline !== null && timer.deadline > Date.now() - 360_000,
+      );
     const visible = !leaving && active && document.visibilityState === 'visible';
     if (visible && this.presenceTimer === undefined)
       this.presenceTimer = setInterval(() => this.updatePresence(account), 10_000);
@@ -595,17 +626,39 @@ export class TimerPushService {
       this.presenceTimer = undefined;
     }
     if (!this.current(account) || !account.registered || !navigator.onLine) return;
-    if ((!visible && !this.lastPresenceVisible) ||
-      (visible && this.lastPresenceVisible && !force && Date.now() - this.lastPresenceAt < 8000)) return;
+    if (
+      (!visible && !this.lastPresenceVisible) ||
+      (visible && this.lastPresenceVisible && !force && Date.now() - this.lastPresenceAt < 8000)
+    )
+      return;
     this.lastPresenceVisible = visible;
     this.lastPresenceAt = Date.now();
-    this.presenceNetwork = this.presenceNetwork.catch(() => undefined).then(async () => {
-      if (!this.current(account) || !account.registered || !navigator.onLine) return;
-      // Recheck at send time so an enqueued heartbeat cannot outlive a hide/reset.
-      const currentlyVisible = !leaving && account.state.enabled && document.visibilityState === 'visible' &&
-        account.state.known.some(timer => timer.deadline !== null && timer.deadline > Date.now() - 360_000);
-      await this.invoke(account, { action:'presence', deviceId:account.state.deviceId, tabId:this.tabId, visible:currentlyVisible }, 3000);
-    }).catch(() => { this.lastPresenceAt = 0; /* Presence is best effort; alerts must remain deliverable. */ });
+    this.presenceNetwork = this.presenceNetwork
+      .catch(() => undefined)
+      .then(async () => {
+        if (!this.current(account) || !account.registered || !navigator.onLine) return;
+        // Recheck at send time so an enqueued heartbeat cannot outlive a hide/reset.
+        const currentlyVisible =
+          !leaving &&
+          account.state.enabled &&
+          document.visibilityState === 'visible' &&
+          account.state.known.some(
+            (timer) => timer.deadline !== null && timer.deadline > Date.now() - 360_000,
+          );
+        await this.invoke(
+          account,
+          {
+            action: 'presence',
+            deviceId: account.state.deviceId,
+            tabId: this.tabId,
+            visible: currentlyVisible,
+          },
+          3000,
+        );
+      })
+      .catch(() => {
+        this.lastPresenceAt = 0; /* Presence is best effort; alerts must remain deliverable. */
+      });
   }
 
   private serial<T>(account: AccountDevice, operation: () => Promise<T>): Promise<T | undefined> {
@@ -686,8 +739,8 @@ export class TimerPushService {
         this.setStatus(
           account.state.disablePending ? 'pending' : 'off',
           account.state.disablePending
-            ? 'Turning off background alerts…'
-            : 'Background timer alerts are off.',
+            ? msg('Turning off background alerts…')
+            : msg('Background timer alerts are off.'),
         );
       }
       this.updatePresence(account);
@@ -702,14 +755,18 @@ export class TimerPushService {
     this.currentStatus.set(this.storageProblem() ? 'error' : status);
     this.currentMessage.set(
       this.storageProblem()
-        ? 'Device storage is full or unavailable. Keep Recipebook open and retry alert changes before closing.'
+        ? msg(
+            'Device storage is full or unavailable. Keep Recipebook open and retry alert changes before closing.',
+          )
         : message,
     );
   }
 }
 
 function permissionHelp(): string {
-  return 'Notifications are blocked. Allow notifications in your browser or device settings, then enable alerts again.';
+  return msg(
+    'Notifications are blocked. Allow notifications in your browser or device settings, then enable alerts again.',
+  );
 }
 function validTimer(timer: AlertTimer): boolean {
   return (

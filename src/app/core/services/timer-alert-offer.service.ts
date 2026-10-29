@@ -2,6 +2,7 @@ import { inject, Service } from '@angular/core';
 import { FeedbackService } from './feedback.service';
 import { SupabaseService } from './supabase.service';
 import { TimerPushService } from './timer-push.service';
+import { t } from '../i18n/i18n';
 
 // Shared with the reminder panel of earlier versions, so a dismissed reminder stays dismissed.
 const offeredKey = 'recipebook:timer-alert-reminder-dismissed:';
@@ -24,15 +25,19 @@ export class TimerAlertOfferService {
     } catch {
       // Without storage the offer may return on a later visit; Settings keeps the control.
     }
-    this.feedback.show('Want an alert when a timer ends while Recipebook is in the background?', {
-      label: 'Enable',
-      pendingLabel: 'Enabling…',
-      successMessage: 'Timer alerts are on.',
-      errorMessage: 'Could not turn on timer alerts. Try again in Settings.',
-      run: async () => {
-        await this.alerts.enable();
-        if (!this.alerts.enabled()) throw new Error('Timer alerts are still off.');
+    this.feedback.show(
+      t('Want an alert when a timer ends while Recipebook is in the background?'),
+      {
+        label: t('Enable'),
+        pendingLabel: t('Enabling…'),
+        successMessage: t('Timer alerts are on.'),
+        errorMessage: t('Could not turn on timer alerts. Try again in Settings.'),
+        run: async () => {
+          await this.alerts.enable();
+          // i18n-ignore: replaced by errorMessage above
+          if (!this.alerts.enabled()) throw new Error('Timer alerts are still off.');
+        },
       },
-    });
+    );
   }
 }

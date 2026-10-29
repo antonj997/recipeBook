@@ -1,10 +1,10 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { Service, effect, inject, signal } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { TitleStrategy, type RouterStateSnapshot } from '@angular/router';
 import { t } from './i18n';
 
 /** Route titles are English keys; the tab shows them in the current language and follows changes. */
-@Injectable({ providedIn: 'root' })
+@Service()
 export class TranslatedTitleStrategy extends TitleStrategy {
   private readonly title = inject(Title);
   private readonly route = signal<string | undefined>(undefined);

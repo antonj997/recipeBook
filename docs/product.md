@@ -463,7 +463,7 @@ Källkopplingen behålls även om receptet senare saknas. Listans produkter ska 
 
 ### 12.5 Automatisk butiksindelning
 
-Produkterna grupperas automatiskt efter avdelningar som är begripliga i en svensk matbutik. Rubrikerna är små och diskreta. Avstånden mellan produktrader ska upplevas jämna även över avdelningsgränser, så att det fortfarande ser ut som en enda lista.
+Produkterna grupperas automatiskt efter avdelningar som är begripliga i en svensk matbutik. Rubrikerna är små och diskreta. Rubrikerna följer appens språk; på svenska heter de som i listan nedan, på engelska till exempel Fruit & veg och Dairy, cheese & eggs. Avstånden mellan produktrader ska upplevas jämna även över avdelningsgränser, så att det fortfarande ser ut som en enda lista.
 
 Den aktuella ordningen är:
 
@@ -549,6 +549,7 @@ Importerad backup valideras före lagring. Säkerhetskopiering ska inte råka ex
 
 App-delen innehåller:
 
+- Språk: Automatiskt (följer enhetens språk), English eller Svenska. Valet gäller den här enheten.
 - På- och avslag för bakgrundsaviseringar samt status och felåterkoppling.
 - Slow motion (test), som spelar all rörelse fem gånger långsammare på den här enheten för att animationer ska kunna bedömas på en telefon.
 - Tillgänglig appuppdatering och omladdning.
@@ -557,6 +558,16 @@ App-delen innehåller:
 - Käll- och licensinformation för produktordlistan.
 
 Det finns inte längre någon inställning för att välja sidbläddringsanimation.
+
+### 13.7 Språk
+
+Appen finns på engelska och svenska. Automatiskt följer enhetens språk: svenska om enheten är inställd på svenska, annars engelska. I Inställningar → Appen → Språk kan man i stället välja English eller Svenska; valet sparas på enheten och byter språk direkt, utan omladdning. Språknamnen står alltid på sitt eget språk så att man hittar tillbaka.
+
+Den svenska texten är inte en ordagrann översättning. Vi väljer det ord en svensk kock skulle använda och det kortare ordet när det säger samma sak, till exempel Gör så här för Instructions, Nytt recept för Add recipe och Spara en kopia för Download a backup. Tider skrivs som 1 tim 15 min och 30 sek, datum och decimaler följer språket.
+
+Allt appen själv skriver översätts: knappar, rubriker, etiketter för skärmläsare, felmeddelanden, sidtitlar och startskärmen. Receptens eget innehåll, som titlar, ingredienser och kategorinamn, är användarens text och översätts inte. Push-aviseringar för timrar skrivs av servern och är tills vidare på engelska.
+
+Ny text i appen skrivs på engelska och får sin svenska formulering samtidigt. En kontroll i bygget (npm run i18n:check) stoppar text som saknar översättning.
 
 ## 14. Designfilosofi och visuell identitet
 

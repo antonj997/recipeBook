@@ -1,15 +1,16 @@
 import { hasPhoto, type PhotoRef } from './recipe-image';
+import { msg } from '../i18n/i18n';
 export const recipeColors = [
-  { id: 'beige', label: 'Oat' },
-  { id: 'butter', label: 'Butter' },
-  { id: 'clay', label: 'Apricot' },
-  { id: 'peach', label: 'Peach' },
-  { id: 'rose', label: 'Rhubarb' },
-  { id: 'accent', label: 'Lavender' },
-  { id: 'sage', label: 'Sage' },
-  { id: 'green', label: 'Pistachio' },
-  { id: 'mint', label: 'Mint' },
-  { id: 'blue', label: 'Duck egg' },
+  { id: 'beige', label: msg('Oat') },
+  { id: 'butter', label: msg('Butter') },
+  { id: 'clay', label: msg('Apricot') },
+  { id: 'peach', label: msg('Peach') },
+  { id: 'rose', label: msg('Rhubarb') },
+  { id: 'accent', label: msg('Lavender') },
+  { id: 'sage', label: msg('Sage') },
+  { id: 'green', label: msg('Pistachio') },
+  { id: 'mint', label: msg('Mint') },
+  { id: 'blue', label: msg('Duck egg') },
 ] as const;
 // Keep older Sky choices valid in local storage, cloud records and backups.
 export type RecipeColor = (typeof recipeColors)[number]['id'] | 'sky';

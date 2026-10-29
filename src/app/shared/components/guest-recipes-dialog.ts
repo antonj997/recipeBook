@@ -1,8 +1,10 @@
-import { Component, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { GuestRecipesService } from '../../core/services/guest-recipes.service';
+import { plural, t, TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-guest-recipes-dialog',
+  imports: [TranslatePipe],
   template: `<dialog
     #dialog
     aria-labelledby="guest-heading"
@@ -12,55 +14,58 @@ import { GuestRecipesService } from '../../core/services/guest-recipes.service';
     [attr.aria-busy]="guest.busy() || guest.checking() ? 'true' : null"
   >
     <h2 id="guest-heading">
-      {{ deleting() ? 'Delete device data?' : 'Saved on this device' }}
+      {{ (deleting() ? 'Delete device data?' : 'Saved on this device') | t }}
     </h2>
     <div id="guest-copy">
       @if (guest.checking()) {
-        <p role="status">Checking data saved without an account…</p>
+        <p role="status">{{ 'Checking data saved without an account…' | t }}</p>
       } @else {
         <p>
-          {{ guest.recipes() }} {{ guest.recipes() === 1 ? 'recipe' : 'recipes' }},
-          {{ guest.categories() }}
-          {{ guest.categories() === 1 ? 'category' : 'categories' }} and {{ guest.shoppingItems() }}
-          {{ guest.shoppingItems() === 1 ? 'shopping item' : 'shopping items' }}
-          were saved while signed out.
+          {{ savedSummary() }}
         </p>
         @if (deleting()) {
           <p>
-            Delete these recipes, their photos, categories and shopping items from this device? This
-            cannot be undone. Data already in your account is kept.
+            {{
+              'Delete these recipes, their photos, categories and shopping items from this device? This cannot be undone. Data already in your account is kept.'
+                | t
+            }}
           </p>
         } @else {
           <p>
-            Add them to {{ guest.auth.user()?.email || 'your account' }}, or delete them from this
-            device before continuing.
+            {{
+              'Add them to {account}, or delete them from this device before continuing.'
+                | t: { account: guest.auth.user()?.email || ('your account' | t) }
+            }}
           </p>
           <p>
-            Adding keeps ingredients, photos, categories and shopping items, including their recipe
-            sources. They are removed from the signed-out data after they are safely saved to your
-            account.
+            {{
+              'Adding keeps ingredients, photos, categories and shopping items, including their recipe sources. They are removed from the signed-out data after they are safely saved to your account.'
+                | t
+            }}
           </p>
         }
       }
     </div>
     @if (guest.error()) {
-      <p class="error" role="alert">{{ guest.error() }}</p>
+      <p class="error" role="alert">{{ guest.error() | t }}</p>
     }
     @if (guest.busy()) {
       <p role="status">
-        {{ guest.busy() === 'add' ? 'Adding saved data…' : 'Deleting device data…' }}
+        {{ (guest.busy() === 'add' ? 'Adding saved data…' : 'Deleting device data…') | t }}
       </p>
     }
     <div class="actions">
       @if (deleting()) {
-        <button type="button" (click)="deleting.set(false)" [disabled]="blocked()">Go back</button>
+        <button type="button" (click)="deleting.set(false)" [disabled]="blocked()">
+          {{ 'Go back' | t }}
+        </button>
         <button
           type="button"
           class="delete-button"
           (click)="guest.choose('delete')"
           [disabled]="blocked()"
         >
-          Delete device data
+          {{ 'Delete device data' | t }}
         </button>
       } @else {
         <button
@@ -70,7 +75,7 @@ import { GuestRecipesService } from '../../core/services/guest-recipes.service';
           (click)="guest.choose('add')"
           [disabled]="blocked() || !hasRecords()"
         >
-          Add to account
+          {{ 'Add to account' | t }}
         </button>
         <button
           type="button"
@@ -78,12 +83,14 @@ import { GuestRecipesService } from '../../core/services/guest-recipes.service';
           (click)="deleting.set(true)"
           [disabled]="blocked() || !hasRecords()"
         >
-          Delete device data
+          {{ 'Delete device data' | t }}
         </button>
       }
     </div>
     @if (guest.error() && !hasRecords()) {
-      <button type="button" (click)="guest.refresh()" [disabled]="blocked()">Try again</button>
+      <button type="button" (click)="guest.refresh()" [disabled]="blocked()">
+        {{ 'Try again' | t }}
+      </button>
     }
   </dialog>`,
   styles: `
@@ -125,6 +132,14 @@ import { GuestRecipesService } from '../../core/services/guest-recipes.service';
   `,
 })
 export class GuestRecipesDialogComponent {
+  /** “2 recipes, 1 category and 3 shopping items were saved while signed out.” */
+  readonly savedSummary = computed(() =>
+    t('{recipes}, {categories} and {items} were saved while signed out.', {
+      recipes: plural(this.guest.recipes(), '{n} recipe', '{n} recipes'),
+      categories: plural(this.guest.categories(), '{n} category', '{n} categories'),
+      items: plural(this.guest.shoppingItems(), '{n} shopping item', '{n} shopping items'),
+    }),
+  );
   readonly guest = inject(GuestRecipesService);
   readonly deleting = signal(false);
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');

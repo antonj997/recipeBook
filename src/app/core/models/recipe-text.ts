@@ -1,4 +1,5 @@
 import type { Recipe } from './recipe.model';
+import { msg } from '../i18n/i18n';
 
 type ParsedRecipe = Omit<Recipe, 'id'>;
 
@@ -81,7 +82,7 @@ export function parseRecipeText(text: string): ParsedRecipe {
     }
   }
   if (!title || !ingredients.length || !instructions.length)
-    throw new Error('Paste the whole recipe, with its ingredients and steps.');
+    throw new Error(msg('Paste the whole recipe, with its ingredients and steps.'));
   return {
     title,
     ...(description.length ? { description: description.join('\n') } : {}),

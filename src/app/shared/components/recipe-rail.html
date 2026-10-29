@@ -4,14 +4,14 @@
       <h2 [id]="railId() + '-heading'">{{ title() }}</h2>
     </ng-content>
     <div class="collection-heading__actions">
-      <span class="recipe-count"
-        >{{ recipes().length }} {{ recipes().length === 1 ? 'recipe' : 'recipes' }}</span
-      >
+      <span class="recipe-count">{{
+        recipes().length | plural: '{n} recipe' : '{n} recipes'
+      }}</span>
       <div class="rail-controls">
         <button
           type="button"
           class="rail-arrow"
-          [attr.aria-label]="'Previous recipe in ' + title()"
+          [attr.aria-label]="'Previous recipe in {name}' | t: { name: title() }"
           [attr.aria-controls]="railId()"
           [disabled]="!canScrollPrevious()"
           (click)="scrollByCard(-1)"
@@ -21,7 +21,7 @@
         <button
           type="button"
           class="rail-arrow"
-          [attr.aria-label]="'Next recipe in ' + title()"
+          [attr.aria-label]="'Next recipe in {name}' | t: { name: title() }"
           [attr.aria-controls]="railId()"
           [disabled]="!canScrollNext()"
           (click)="scrollByCard(1)"
@@ -33,7 +33,9 @@
     </div>
   </div>
   @if (recipes().length === 0) {
-    <ng-content select="[rail-empty]"><p>No recipes found.</p></ng-content>
+    <ng-content select="[rail-empty]"
+      ><p>{{ 'No recipes found.' | t }}</p></ng-content
+    >
   } @else {
     <div
       class="rail-window"
@@ -73,7 +75,7 @@
         [id]="railId()"
         class="recipe-rail"
         role="region"
-        [attr.aria-label]="title() + ', horizontal scrolling'"
+        [attr.aria-label]="'{name}, horizontal scrolling' | t: { name: title() }"
         tabindex="0"
         (scroll)="onScroll()"
         (pointerdown)="interruptScroll()"
@@ -140,7 +142,9 @@
                     </p>
                   }
                   @if (calories(recipe); as energy) {
-                    <span class="card-calories">{{ energy }} <span>/ portion</span></span>
+                    <span class="card-calories"
+                      >{{ energy }} <span>{{ '/ portion' | t }}</span></span
+                    >
                   }
                 </div>
               </div>
@@ -157,7 +161,7 @@
             (click)="addMenuActivate.emit()"
           >
             <app-icon name="plus" />
-            <span>Add recipe</span>
+            <span>{{ 'Add recipe' | t }}</span>
           </button>
         }
       </div>
@@ -186,7 +190,7 @@
       [attr.aria-valuenow]="condensed() ? currentStop() + 1 : null"
       [attr.aria-valuetext]="condensed() ? positionLabel() : null"
       [attr.aria-orientation]="condensed() ? 'horizontal' : null"
-      [attr.aria-label]="title() + ' carousel position'"
+      [attr.aria-label]="'{name} carousel position' | t: { name: title() }"
       [attr.aria-controls]="railId()"
       (keydown)="onProgressKeydown($event)"
       (pointerdown)="startScrub($event)"
@@ -212,7 +216,7 @@
           <button
             type="button"
             class="progress-dot"
-            [attr.aria-label]="'Show ' + recipes()[stop.recipeIndex].title"
+            [attr.aria-label]="'Show {recipe}' | t: { recipe: recipes()[stop.recipeIndex].title }"
             [attr.aria-controls]="railId()"
             [attr.aria-current]="currentStop() === i ? 'true' : null"
             [style.--dot-strength]="dotStrength(i)"
@@ -225,10 +229,10 @@
       }
     </div>
     @if (condensed()) {
-      <span class="sr-only" [id]="railId() + '-progress-help'"
-        >Each dot is one recipe. Drag to browse; hold near either end to keep moving. Use arrow
-        keys, Home or End with a keyboard.</span
-      >
+      <span class="sr-only" [id]="railId() + '-progress-help'">{{
+        'Each dot is one recipe. Drag to browse; hold near either end to keep moving. Use arrow keys, Home or End with a keyboard.'
+          | t
+      }}</span>
       <p class="carousel-position" aria-hidden="true">
         {{ currentStop() + 1 }} / {{ recipes().length }}
       </p>

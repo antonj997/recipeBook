@@ -61,7 +61,7 @@
   @if (loading() || (cloud.syncing() && recipes().length === 0)) {
     <app-loading-state />
   } @else if (error()) {
-    <p role="alert">{{ error() }}</p>
+    <p role="alert">{{ error() | t }}</p>
   } @else if (recipes().length === 0) {
     <div class="empty-state empty-state--library">
       <app-food-doodle />

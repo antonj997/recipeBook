@@ -2,7 +2,8 @@
 
 - Read `docs/product.md` (product description and decisions) and the relevant parts of `DESIGN.md`, `IMPORTING.md`, `SECURITY.md` and `SUPABASE.md` before changing behaviour.
 - A change in behaviour updates the matching text in those documents in the same commit, and removes the text it replaces. Never leave two descriptions of the same behaviour.
-- Use Node.js from `.nvmrc`. Before committing run `npx ng test --watch=false`, `npm run test:importer`, `npm run catalog:test` and `npm run build`.
+- Use Node.js from `.nvmrc`. Before committing run `npx ng test --watch=false`, `npm run test:importer`, `npm run catalog:test`, `npm run i18n:check` and `npm run build`.
+- The app speaks English and Swedish. Write UI text in English and pass it through the `t`/`plural` pipes in templates or `t()`/`plural()`/`msg()` in code, and add its Swedish wording to `src/app/core/i18n/sv.ts`: the word a Swedish cook would use, the shorter one when it says the same, not a word-for-word translation. `npm run i18n:check` fails on untranslated text.
 - Keep screenshots, measurement scripts and other review artefacts out of the repository.
 - Every new animation uses the tokens in `src/styles/_motion.scss` and has an immediate alternative under Reduce Motion.
 

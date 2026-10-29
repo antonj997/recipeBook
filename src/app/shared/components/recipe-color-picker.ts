@@ -5,12 +5,13 @@ import {
   type RecipeColor,
 } from '../../core/models/recipe-color';
 import { IconComponent } from './icon';
+import { TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-color-picker',
-  imports: [IconComponent],
+  imports: [IconComponent, TranslatePipe],
   template: `<fieldset>
-    <legend>Recipe color</legend>
+    <legend>{{ 'Recipe color' | t }}</legend>
     <div class="colors">
       <button
         type="button"
@@ -18,14 +19,14 @@ import { IconComponent } from './icon';
         [attr.aria-pressed]="!color()"
         (click)="color.set(undefined)"
       >
-        Automatic
+        {{ 'Automatic' | t }}
       </button>
       @for (option of colors; track option.id) {
         <button
           type="button"
           class="color-choice"
-          [attr.aria-label]="'Recipe color: ' + option.label"
-          [title]="option.label"
+          [attr.aria-label]="'Recipe color: {name}' | t: { name: option.label | t }"
+          [title]="option.label | t"
           [attr.aria-pressed]="selectedColor() === option.id"
           (click)="color.set(option.id)"
         >

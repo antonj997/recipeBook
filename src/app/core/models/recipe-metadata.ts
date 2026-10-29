@@ -1,9 +1,10 @@
 import { isRecipeColor, type RecipeColor } from './recipe-color';
+import { dateLocale, msg, t } from '../i18n/i18n';
 export const nutritionFields = [
-  { key: 'calories', label: 'Energy', unit: 'kcal' },
-  { key: 'proteinContent', label: 'Protein', unit: 'g' },
-  { key: 'carbohydrateContent', label: 'Carbs', unit: 'g' },
-  { key: 'fatContent', label: 'Fat', unit: 'g' },
+  { key: 'calories', label: msg('Energy'), unit: 'kcal' },
+  { key: 'proteinContent', label: msg('Protein'), unit: 'g' },
+  { key: 'carbohydrateContent', label: msg('Carbs'), unit: 'g' },
+  { key: 'fatContent', label: msg('Fat'), unit: 'g' },
 ] as const;
 
 export type RecipeNutrition = Partial<Record<(typeof nutritionFields)[number]['key'], string>> & {
@@ -56,7 +57,7 @@ export function readRecipeMetadata(value: unknown, strict = false): RecipeMetada
   const result: RecipeMetadata = {};
   if (!object(value)) return result;
   const invalid = () => {
-    if (strict) throw new Error('The backup contains invalid recipe details.');
+    if (strict) throw new Error(msg('The backup contains invalid recipe details.'));
   };
   if (value['color'] != null) {
     if (isRecipeColor(value['color'])) result.color = value['color'];
@@ -163,6 +164,7 @@ export function perPortionNutrition(value: unknown): RecipeNutrition | undefined
   const basis = typeof value['servingSize'] === 'string' ? value['servingSize'] : '';
   if (basis && !/per portion|per serving|per port|^1\s*(serving|portion)|^one serving/i.test(basis))
     return undefined;
+  // i18n-ignore: stored recipe data, not UI text
   const result: RecipeNutrition = { servingSize: 'Per portion' };
   for (const { key, unit } of nutritionFields) {
     const raw = typeof value[key] === 'string' ? value[key].replace(/,/g, '.') : '';
@@ -184,10 +186,15 @@ export function perPortionNutrition(value: unknown): RecipeNutrition | undefined
 }
 
 export function formatRecipeTime(minutes: number): string {
-  if (minutes < 1) return Math.round(minutes * 60) + ' sec';
+  if (minutes < 1) return t('{n} sec', { n: Math.round(minutes * 60) });
   const hours = Math.floor(minutes / 60);
   const rest = Math.round((minutes % 60) * 100) / 100;
-  return [hours ? hours + ' hr' : '', rest ? rest + ' min' : ''].filter(Boolean).join(' ');
+  return [
+    hours ? t('{n} hr', { n: hours }) : '',
+    rest ? t('{n} min', { n: rest.toLocaleString(dateLocale()) }) : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 export function instructionText(text: string, detail?: RecipeStepDetail): string {

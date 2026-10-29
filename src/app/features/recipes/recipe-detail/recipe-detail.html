@@ -396,7 +396,7 @@
           }
           <app-recipe-extra-details [recipe]="selectedRecipe" />
           @if (isDraft && drafts.photoNotice()) {
-            <p role="status">{{ drafts.photoNotice() }}</p>
+            <p role="status">{{ drafts.photoNotice() | t }}</p>
           }
           @if (selectedRecipe.sourceUrl) {
             <a

@@ -1,13 +1,15 @@
 import { assertRecipePhotoDimensions, readRecipePhotoDimensions } from './recipe-photo-header';
 import { anySignal } from '../compat/compat';
+import { msg } from '../i18n/i18n';
 
 const maxBytes = 20 * 1024 * 1024;
 const imageTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
 // Both imported and uploaded photos become compact, independent offline copies.
 export async function prepareRecipePhoto(blob: Blob, maxSize = 1200): Promise<string> {
-  if (!imageTypes.includes(blob.type)) throw new Error('Please select a JPEG, PNG or WebP image.');
-  if (blob.size > maxBytes) throw new Error('The image is too large.');
+  if (!imageTypes.includes(blob.type))
+    throw new Error(msg('Please select a JPEG, PNG or WebP image.'));
+  if (blob.size > maxBytes) throw new Error(msg('The image is too large.'));
   readRecipePhotoDimensions(new Uint8Array(await blob.arrayBuffer()), blob.type);
   const bitmap = await createImageBitmap(blob);
   try {
@@ -17,13 +19,13 @@ export async function prepareRecipePhoto(blob: Blob, maxSize = 1200): Promise<st
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
     const context = canvas.getContext('2d');
-    if (!context) throw new Error('Could not process the image.');
+    if (!context) throw new Error(msg('Could not process the image.'));
     context.fillStyle = '#ffffff';
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     const result = canvas.toDataURL('image/jpeg', maxSize === 800 ? 0.7 : 0.75);
     if (result.length > 1_500_000)
-      throw new Error('The processed image is too large. Choose a smaller photo.');
+      throw new Error(msg('The processed image is too large. Choose a smaller photo.'));
     return result;
   } finally {
     bitmap.close();
@@ -37,7 +39,7 @@ export async function downloadRecipePhoto(
   signal?: AbortSignal,
 ): Promise<string> {
   signal?.throwIfAborted();
-  if (!isSupportedRecipePhotoUrl(url)) throw new Error('This photo URL is not supported.');
+  if (!isSupportedRecipePhotoUrl(url)) throw new Error(msg('This photo URL is not supported.'));
   const downloadSignal = signal
     ? anySignal([signal, AbortSignal.timeout(10_000)])
     : AbortSignal.timeout(10_000);
@@ -54,13 +56,15 @@ export async function downloadRecipePhoto(
         redirect: 'error',
         signal: downloadSignal,
       });
-  if (!response.ok) throw new Error('Photo unavailable.');
+  if (!response.ok) throw new Error(msg('Photo unavailable.'));
   const type = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() ?? '';
   if (!imageTypes.includes(type) || Number(response.headers.get('content-length')) > maxBytes) {
     await response.body?.cancel();
-    throw new Error(imageTypes.includes(type) ? 'The image is too large.' : 'Photo unavailable.');
+    throw new Error(
+      imageTypes.includes(type) ? msg('The image is too large.') : msg('Photo unavailable.'),
+    );
   }
-  if (!response.body) throw new Error('Photo unavailable.');
+  if (!response.body) throw new Error(msg('Photo unavailable.'));
   const reader = response.body.getReader();
   const cancel = () => {
     void reader.cancel().catch(() => {});
@@ -81,7 +85,7 @@ export async function downloadRecipePhoto(
       size += value.byteLength;
       if (size > maxBytes) {
         await reader.cancel();
-        throw new Error('The image is too large.');
+        throw new Error(msg('The image is too large.'));
       }
       chunks.push(new Uint8Array(value));
     }

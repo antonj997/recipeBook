@@ -33,13 +33,17 @@ import { TranslatePipe } from '../../core/i18n/i18n';
   host: { '[hidden]': 'completed()', '[class.is-timing]': 'state().started' },
   styleUrl: './step-timer.scss',
   template: `
-    <div class="timer-row" role="group" [attr.aria-label]="'Timer for step ' + step()">
+    <div class="timer-row" role="group" [attr.aria-label]="'Timer for step {n}' | t: { n: step() }">
       <button
         type="button"
         class="timer-toggle"
         [disabled]="disabled() || (!active() && !state().done && state().remaining === 0)"
-        [attr.aria-label]="(active() ? 'Stop' : 'Start') + ' timer for step ' + step()"
-        [title]="(active() ? 'Stop' : 'Start') + ' timer for step ' + step()"
+        [attr.aria-label]="
+          (active() ? 'Stop timer for step {n}' : 'Start timer for step {n}') | t: { n: step() }
+        "
+        [title]="
+          (active() ? 'Stop timer for step {n}' : 'Start timer for step {n}') | t: { n: step() }
+        "
         (click)="active() ? stop() : start()"
       >
         <app-icon [name]="active() ? 'pause' : 'play'" />
@@ -52,17 +56,17 @@ import { TranslatePipe } from '../../core/i18n/i18n';
           type="button"
           class="timer-add"
           [disabled]="minuteLocked() || state().remaining >= maximum"
-          [attr.aria-label]="'Add one minute to step ' + step() + ' timer'"
+          [attr.aria-label]="'Add one minute to step {n} timer' | t: { n: step() }"
           (click)="adjust(1)"
         >
-          +1 min
+          {{ '+1 min' | t }}
         </button>
       } @else {
         <button
           type="button"
           class="timer-edit"
           [disabled]="locked()"
-          [attr.aria-label]="'Edit time for step ' + step()"
+          [attr.aria-label]="'Edit time for step {n}' | t: { n: step() }"
           [title]="'Edit time' | t"
           (click)="openSheet()"
         >
@@ -74,10 +78,10 @@ import { TranslatePipe } from '../../core/i18n/i18n';
           type="button"
           class="timer-reset"
           [disabled]="disabled()"
-          [attr.aria-label]="'Reset timer for step ' + step()"
+          [attr.aria-label]="'Reset timer for step {n}' | t: { n: step() }"
           (click)="reset()"
         >
-          Reset
+          {{ 'Reset' | t }}
         </button>
       }
     </div>
@@ -89,7 +93,7 @@ import { TranslatePipe } from '../../core/i18n/i18n';
         [totalSeconds]="state().duration"
         [elapsedSeconds]="passed()"
         [identity]="target().key"
-        [label]="'Time remaining for step ' + step()"
+        [label]="'Time remaining for step {n}' | t: { n: step() }"
       />
     }
     <dialog
@@ -104,7 +108,7 @@ import { TranslatePipe } from '../../core/i18n/i18n';
     >
       <!-- Focus lands on the heading so a tap does not open the keyboard. -->
       <h2 [id]="'timer-sheet-' + target().index" tabindex="-1" autofocus>
-        Step {{ step() }} timer
+        {{ 'Step {n} timer' | t: { n: step() } }}
       </h2>
       <div class="sheet-clock">
         <button
@@ -125,7 +129,9 @@ import { TranslatePipe } from '../../core/i18n/i18n';
           maxlength="16"
           [disabled]="locked()"
           [value]="editing() ? draft() : sheetDisplay()"
-          [attr.aria-label]="'Timer duration for step ' + step() + '. Type minutes and seconds'"
+          [attr.aria-label]="
+            'Timer duration for step {n}. Type minutes and seconds' | t: { n: step() }
+          "
           [attr.aria-invalid]="invalid()"
           [attr.aria-describedby]="editing() ? 'timer-help-' + target().index : null"
           (focus)="beginEdit($event)"
@@ -153,11 +159,12 @@ import { TranslatePipe } from '../../core/i18n/i18n';
         [attr.role]="invalid() ? 'alert' : null"
       >
         {{
-          invalid()
+          (invalid()
             ? 'Enter a time from 00:00 to 60:00.'
             : editing()
               ? 'Type minutes and seconds. 3000 = 30 minutes. Enter to set.'
               : 'Drag the wheel or type a time.'
+          ) | t
         }}
       </p>
       @if (sheetOpen()) {
@@ -166,7 +173,7 @@ import { TranslatePipe } from '../../core/i18n/i18n';
           [rotated]="rotated()"
           [seconds]="sheetSeconds()"
           [identity]="target().key"
-          [label]="'Timer duration for step ' + step()"
+          [label]="'Timer duration for step {n}' | t: { n: step() }"
           (durationChange)="pickDuration($event)"
         />
       }
@@ -174,12 +181,16 @@ import { TranslatePipe } from '../../core/i18n/i18n';
         <label class="check-control save-default">
           <input type="checkbox" [checked]="keep()" (change)="keep.set(!keep())" />
           <app-checkbox-mark />
-          <span>Always use this time for step {{ step() }}</span>
+          <span>{{ 'Always use this time for step {n}' | t: { n: step() } }}</span>
         </label>
       }
       <div class="sheet-actions">
-        <button type="button" class="sheet-cancel" (click)="closeSheet()">Cancel</button>
-        <button type="button" class="primary sheet-set" (click)="apply()">Set timer</button>
+        <button type="button" class="sheet-cancel" (click)="closeSheet()">
+          {{ 'Cancel' | t }}
+        </button>
+        <button type="button" class="primary sheet-set" (click)="apply()">
+          {{ 'Set timer' | t }}
+        </button>
       </div>
     </dialog>
   `,

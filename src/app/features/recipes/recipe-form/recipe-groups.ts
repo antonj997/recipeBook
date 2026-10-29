@@ -5,7 +5,7 @@ import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark'
 import { AutoGrowTextareaDirective } from '../../../shared/directives/auto-grow-textarea';
 import { IconComponent } from '../../../shared/components/icon';
 import { animateLayout } from '../../../shared/motion/flip';
-import { TranslatePipe } from '../../../core/i18n/i18n';
+import { plural, t, TranslatePipe } from '../../../core/i18n/i18n';
 
 interface Group {
   id: number;
@@ -103,16 +103,16 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     const group: Group = {
       id,
       ungrouped: false,
-      name: new FormControl('Group ' + id, { nonNullable: true }),
+      name: new FormControl(t('Group {n}', { n: id }), { nonNullable: true }),
       rows: [],
     };
     this.groups.update((groups) =>
       this.kind() === 'ingredient' ? [group, ...groups] : [...groups, group],
     );
-    this.message.set('Group created.');
+    this.message.set(t('Group created.'));
   }
   rename(group: Group) {
-    group.name.setValue(group.name.value.trim() || 'Group ' + group.id);
+    group.name.setValue(group.name.value.trim() || t('Group {n}', { n: group.id }));
     this.sync();
   }
   updateNames() {
@@ -130,7 +130,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     );
     this.addingTo.set(null);
     this.sync();
-    this.message.set('Group removed. Its items are now ungrouped.');
+    this.message.set(t('Group removed. Its items are now ungrouped.'));
   }
   add(id: number, after?: FormControl<string>) {
     const control = new FormControl('', {
@@ -147,7 +147,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     );
     this.addingTo.set(null);
     this.sync();
-    this.message.set(this.kind() + ' added.');
+    this.message.set(t(this.kind() === 'step' ? 'Step added.' : 'Ingredient added.'));
     this.items().markAsDirty();
     this.focusControl(control);
   }
@@ -169,7 +169,13 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     );
     this.details.delete(control);
     this.sync();
-    this.message.set(this.kind() + ' removed. Undo is available.');
+    this.message.set(
+      t(
+        this.kind() === 'step'
+          ? 'Step removed. Undo is available.'
+          : 'Ingredient removed. Undo is available.',
+      ),
+    );
     const neighbour = this.items().controls[Math.min(globalIndex, this.items().length - 1)];
     if (neighbour) this.focusControl(neighbour);
     this.items().markAsDirty();
@@ -188,7 +194,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     );
     this.removed.update((history) => history.slice(0, -1));
     this.sync();
-    this.message.set(this.kind() + ' restored.');
+    this.message.set(t(this.kind() === 'step' ? 'Step restored.' : 'Ingredient restored.'));
     this.focusControl(removed.control);
   }
   private focusControl(control: FormControl<string>): void {
@@ -240,7 +246,9 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     this.sync();
     this.items().markAsDirty();
     this.message.set(
-      lines.length + ' ' + (this.kind() === 'step' ? 'steps' : 'ingredients') + ' pasted.',
+      this.kind() === 'step'
+        ? plural(lines.length, '{n} step pasted.', '{n} steps pasted.')
+        : plural(lines.length, '{n} ingredient pasted.', '{n} ingredients pasted.'),
     );
     this.focusControl(extra.at(-1) ?? control);
   }
@@ -287,7 +295,7 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     const controls = this.candidates(id).filter((item) => this.selected().has(item.control));
     for (const { control } of controls) this.move(control, id);
     this.selected.set(new Set());
-    this.message.set(controls.length + ' items moved.');
+    this.message.set(plural(controls.length, '{n} item moved.', '{n} items moved.'));
   }
   candidates(id: number) {
     return this.groups()
@@ -363,7 +371,14 @@ export class RecipeGroupsComponent implements OnInit, OnDestroy {
     this.addingTo.set(null);
     this.items().markAsDirty();
     this.sync();
-    this.message.set(this.kind() + ' moved to position ' + this.number(control) + '.');
+    this.message.set(
+      t(
+        this.kind() === 'step'
+          ? 'Step moved to position {n}.'
+          : 'Ingredient moved to position {n}.',
+        { n: this.number(control) },
+      ),
+    );
   }
   /** Rows moved between groups are re-created; they travel instead of fading out and in. */
   readonly moving = signal(false);

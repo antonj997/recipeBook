@@ -35,7 +35,7 @@ export function t(text: string, params?: TextParams): string {
 }
 
 /** Marks English text for translation where it is stored and translated later with t(). */
-export function msg<T extends string>(text: T): T {
+export function msg(text: string): string {
   return text;
 }
 

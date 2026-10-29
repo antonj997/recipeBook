@@ -1,5 +1,6 @@
 import { Service, signal } from '@angular/core';
 import type { CanDeactivateFn } from '@angular/router';
+import { msg } from '../i18n/i18n';
 
 export interface ConfirmBeforeLeaving {
   canLeave(): boolean | Promise<boolean>;
@@ -15,9 +16,9 @@ export interface ConfirmationLabels {
   destructive: boolean;
 }
 const discardLabels: ConfirmationLabels = {
-  title: 'Discard changes?',
-  confirm: 'Discard',
-  cancel: 'Keep',
+  title: msg('Discard changes?'),
+  confirm: msg('Discard'),
+  cancel: msg('Keep'),
   destructive: true,
 };
 

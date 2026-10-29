@@ -5,7 +5,7 @@ import type { RecipeCollection } from '../../../core/models/recipe-collection.mo
 import { RecipeService } from '../../../core/services/recipe.service';
 import { CheckboxMarkComponent } from '../../../shared/components/checkbox-mark';
 import { IconComponent } from '../../../shared/components/icon';
-import { TranslatePipe } from '../../../core/i18n/i18n';
+import { msg, TranslatePipe } from '../../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-collections',
@@ -13,9 +13,10 @@ import { TranslatePipe } from '../../../core/i18n/i18n';
   template: `
     <details>
       <summary class="disclosure">
-        Categories
+        {{ 'Categories' | t }}
         <span
-          >{{ selectedCount() ? selectedCount() + ' selected' : 'None' }}<app-icon name="chevron"
+          >{{ selectedCount() ? ('{n} selected' | t: { n: selectedCount() }) : ('None' | t)
+          }}<app-icon name="chevron"
         /></span>
       </summary>
       <div class="choices">
@@ -31,18 +32,21 @@ import { TranslatePipe } from '../../../core/i18n/i18n';
       </div>
       <div class="create">
         <label
-          >New category<input
+          >{{ 'New category' | t
+          }}<input
             #name
             [placeholder]="'Category name' | t"
             [disabled]="creating()"
             (keydown.enter)="$event.preventDefault(); create(name)" /></label
         ><button type="button" [disabled]="creating()" (click)="create(name)">
-          <app-icon name="plus" />Create
+          <app-icon name="plus" />{{ 'Create' | t }}
         </button>
       </div>
-      <p><a routerLink="/categories">Manage categories</a></p>
+      <p>
+        <a routerLink="/categories">{{ 'Manage categories' | t }}</a>
+      </p>
       @if (error()) {
-        <p class="error" role="alert">{{ error() }}</p>
+        <p class="error" role="alert">{{ error() | t }}</p>
       }
     </details>
   `,
@@ -125,7 +129,7 @@ export class RecipeCollectionsComponent {
     if (this.creating()) return;
     const name = input.value.trim();
     if (!name) {
-      this.error.set('Enter a category name.');
+      this.error.set(msg('Enter a category name.'));
       return;
     }
     this.creating.set(true);
@@ -137,7 +141,7 @@ export class RecipeCollectionsComponent {
       if (!this.control().value.includes(collection.id)) this.toggle(collection.id);
       input.value = '';
     } catch {
-      this.error.set('Could not create the category. Please try again.');
+      this.error.set(msg('Could not create the category. Please try again.'));
     } finally {
       this.creating.set(false);
     }

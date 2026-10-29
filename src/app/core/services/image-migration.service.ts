@@ -10,6 +10,7 @@ import {
 } from '../models/recipe-image';
 import type { CookbookDatabase } from './account-database';
 import { CloudCookbookService } from './cloud-cookbook.service';
+import { msg } from '../i18n/i18n';
 
 type MakeThumb = NonNullable<NonNullable<Parameters<typeof prepareImage>[1]>['makeThumb']>;
 export interface ImageMigrationOptions {
@@ -85,7 +86,7 @@ export class ImageMigrationService {
               skipped = true;
               continue;
             }
-            if (signal.aborted) throw new Error('Account changed.');
+            if (signal.aborted) throw new Error(msg('Account changed.'));
             const used = new Set(photoRefs(recipes[index]!).flatMap((ref) => ref.photoId ?? []));
             await putImages(
               database,

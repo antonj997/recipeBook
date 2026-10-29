@@ -1,9 +1,11 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { WakeLockService } from '../../core/services/wake-lock.service';
+import { t, TranslatePipe } from '../../core/i18n/i18n';
 
 // Scoped to a recipe view; the shared lock also serves focus mode and returns after hiding.
 @Component({
   selector: 'app-screen-awake',
+  imports: [TranslatePipe],
   template: `
     @if (supported) {
       <div class="awake-control">
@@ -18,7 +20,7 @@ import { WakeLockService } from '../../core/services/wake-lock.service';
           <span class="switch-track" aria-hidden="true">
             <span class="switch-thumb"></span>
           </span>
-          <span>Keep screen on</span>
+          <span>{{ 'Keep screen on' | t }}</span>
         </button>
         @if (notice()) {
           <p role="status">{{ notice() }}</p>
@@ -112,9 +114,9 @@ export class ScreenAwakeComponent {
   private readonly refused = signal(false);
   readonly notice = computed(() =>
     this.refused()
-      ? 'Could not keep the screen on. Check your device’s battery-saving settings.'
+      ? t('Could not keep the screen on. Check your device’s battery-saving settings.')
       : this.requested() && this.wake.lostWhileVisible()
-        ? 'Screen lock was released. Switch off and on to try again.'
+        ? t('Screen lock was released. Switch off and on to try again.')
         : '',
   );
 

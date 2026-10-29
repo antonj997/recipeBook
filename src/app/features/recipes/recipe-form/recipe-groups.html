@@ -1,32 +1,37 @@
 <section
   class="group-editor"
   [style.--drag-height]="dragHeight() + 'px'"
-  [attr.aria-label]="kind() === 'step' ? 'Instructions editor' : 'Ingredients editor'"
+  [attr.aria-label]="(kind() === 'step' ? 'Instructions editor' : 'Ingredients editor') | t"
   (dragover)="dragOver($event)"
   (dragleave)="dragLeave($event)"
   (drop)="drop($event)"
 >
   <div class="editor-heading">
-    <h2>{{ kind() === 'step' ? 'Instructions' : 'Ingredients' }}</h2>
+    <h2>{{ (kind() === 'step' ? 'Instructions' : 'Ingredients') | t }}</h2>
     @if (removed().length) {
-      <button type="button" class="undo-remove" (click)="undoRemove()">Undo</button>
+      <button type="button" class="undo-remove" (click)="undoRemove()">
+        {{ 'Undo' | t }}
+      </button>
     }
     <button type="button" class="quiet-button" (click)="createGroup()">
-      <app-icon name="plus" />Create group
+      <app-icon name="plus" />{{ 'Create group' | t }}
     </button>
   </div>
   @for (group of groups(); track group.id) {
     <section class="item-group" [attr.data-group-id]="group.id">
       <header>
         @if (group.ungrouped) {
-          <h3>{{ groups().length > 1 ? 'Ungrouped' : '' }}</h3>
+          <h3>{{ groups().length > 1 ? ('Ungrouped' | t) : '' }}</h3>
         } @else {
           <input
             class="group-name"
             [formControl]="group.name"
             (input)="updateNames()"
             (change)="rename(group)"
-            [attr.aria-label]="kind() + ' group name ' + group.id"
+            [attr.aria-label]="
+              (kind() === 'step' ? 'Step group name {n}' : 'Ingredient group name {n}')
+                | t: { n: group.id }
+            "
           />
         }
         <div class="group-actions">
@@ -34,7 +39,10 @@
             <button
               type="button"
               class="icon-button"
-              [attr.aria-label]="'Remove ' + kind() + ' group ' + group.name.value"
+              [attr.aria-label]="
+                (kind() === 'step' ? 'Remove step group {name}' : 'Remove ingredient group {name}')
+                  | t: { name: group.name.value }
+              "
               (click)="removeGroup(group.id)"
             >
               <app-icon name="close" />
@@ -55,7 +63,10 @@
           <button
             type="button"
             class="row-remove"
-            [attr.aria-label]="'Remove ' + kind() + ' ' + number(control)"
+            [attr.aria-label]="
+              (kind() === 'step' ? 'Remove step {n}' : 'Remove ingredient {n}')
+                | t: { n: number(control) }
+            "
             (click)="remove(control)"
           >
             <app-icon name="minus" />
@@ -63,7 +74,7 @@
           <div class="row-content">
             @if (kind() === 'step') {
               <label [for]="rowId(control)"
-                ><span class="sr-only">Step </span>{{ number(control) }}</label
+                ><span class="sr-only">{{ 'Step' | t }} </span>{{ number(control) }}</label
               >
               <textarea
                 [id]="rowId(control)"
@@ -77,7 +88,7 @@
               @if (hasTimer(control)) {
                 <div class="step-timer-editor">
                   <app-icon name="clock" />
-                  <label [for]="rowId(control) + '-timer'">Timer</label>
+                  <label [for]="rowId(control) + '-timer'">{{ 'Timer' | t }}</label>
                   <input
                     [id]="rowId(control) + '-timer'"
                     type="number"
@@ -86,18 +97,18 @@
                     max="60"
                     step="any"
                     [value]="timerMinutes(control)"
-                    [attr.aria-label]="'Timer minutes for step ' + number(control)"
+                    [attr.aria-label]="'Timer minutes for step {n}' | t: { n: number(control) }"
                     [attr.aria-invalid]="timerInvalid(control)"
                     [attr.aria-describedby]="
                       timerInvalid(control) ? rowId(control) + '-timer-error' : null
                     "
                     (input)="changeTimer(control, $event)"
                   />
-                  <span>min</span>
+                  <span>{{ 'min' | t }}</span>
                   <button
                     type="button"
                     class="timer-remove"
-                    [attr.aria-label]="'Remove timer from step ' + number(control)"
+                    [attr.aria-label]="'Remove timer from step {n}' | t: { n: number(control) }"
                     (click)="removeTimer(control)"
                   >
                     <app-icon name="minus" />
@@ -105,7 +116,7 @@
                 </div>
                 @if (timerInvalid(control)) {
                   <p class="timer-error" [id]="rowId(control) + '-timer-error'" role="alert">
-                    Enter a time between 1 second and 60 minutes.
+                    {{ 'Enter a time between 1 second and 60 minutes.' | t }}
                   </p>
                 }
               } @else {
@@ -113,7 +124,7 @@
                   type="button"
                   class="timer-add"
                   [id]="rowId(control) + '-timer-add'"
-                  [attr.aria-label]="'Add timer to step ' + number(control)"
+                  [attr.aria-label]="'Add timer to step {n}' | t: { n: number(control) }"
                   [title]="'Add timer' | t"
                   (click)="addTimer(control)"
                 >
@@ -122,14 +133,14 @@
               }
               @if (photo(control); as photo) {
                 <details class="step-photo">
-                  <summary class="disclosure">Photo<app-icon name="chevron" /></summary>
+                  <summary class="disclosure">{{ 'Photo' | t }}<app-icon name="chevron" /></summary>
                   <img
                     [src]="photo"
-                    [alt]="'Photo for step ' + number(control)"
+                    [alt]="'Photo for step {n}' | t: { n: number(control) }"
                     loading="lazy"
                     referrerpolicy="no-referrer"
                   /><button type="button" [disabled]="photosBusy()" (click)="removePhoto(control)">
-                    Remove photo
+                    {{ 'Remove photo' | t }}
                   </button>
                 </details>
               }
@@ -141,7 +152,7 @@
                 [formControl]="control"
                 (keydown)="ingredientEnter($event, control, group.id)"
                 (paste)="pasteRows($event, control, group.id)"
-                [attr.aria-label]="'Ingredient ' + number(control)"
+                [attr.aria-label]="'Ingredient {n}' | t: { n: number(control) }"
                 [placeholder]="'Add an ingredient' | t"
                 [attr.aria-invalid]="control.touched && control.invalid"
               ></textarea>
@@ -153,13 +164,16 @@
             draggable="true"
             (dragstart)="startDrag($event, control)"
             (dragend)="endDrag()"
-            [title]="'Drag ' + kind()"
+            [title]="(kind() === 'step' ? 'Drag step' : 'Drag ingredient') | t"
             (pointerdown)="touchStart($event, control)"
             (pointermove)="touchMove($event)"
             (pointerup)="touchEnd($event)"
             (pointercancel)="touchCancel()"
             (keydown)="handleKey($event, control)"
-            [attr.aria-label]="'Move ' + kind() + ' ' + number(control)"
+            [attr.aria-label]="
+              (kind() === 'step' ? 'Move step {n}' : 'Move ingredient {n}')
+                | t: { n: number(control) }
+            "
             [attr.aria-describedby]="kind() + '-move-hint'"
           >
             <svg viewBox="0 0 20 24" fill="currentColor">
@@ -175,31 +189,42 @@
       }
       <div class="drop-slot" [class.active]="isSlot(group, null)" aria-hidden="true"></div>
       @if (!group.ungrouped && !group.rows.length && !isSlot(group, null)) {
-        <p class="empty-group">Use Add / move to fill this group.</p>
+        <p class="empty-group">{{ 'Use Add / move to fill this group.' | t }}</p>
       }
       <div class="group-footer">
         <button
           type="button"
           class="add-move"
           [attr.aria-label]="
-            (group.ungrouped ? 'Add ' : 'Add or move ') +
-            kind() +
-            ' to ' +
-            (group.name.value || 'Ungrouped')
+            (group.ungrouped
+              ? kind() === 'step'
+                ? 'Add step to {group}'
+                : 'Add ingredient to {group}'
+              : kind() === 'step'
+                ? 'Add or move steps to {group}'
+                : 'Add or move ingredients to {group}'
+            ) | t: { group: group.name.value || ('Ungrouped' | t) }
           "
           [attr.aria-expanded]="group.ungrouped ? null : addingTo() === group.id"
           (click)="group.ungrouped ? add(group.id) : openMenu(group.id)"
         >
-          <app-icon name="plus" /><span>{{ group.ungrouped ? 'Add' : 'Add / move' }}</span>
+          <app-icon name="plus" /><span>{{ (group.ungrouped ? 'Add' : 'Add / move') | t }}</span>
         </button>
       </div>
       @if (addingTo() === group.id) {
         <div class="add-menu" (keydown.escape)="addingTo.set(null)">
           <button type="button" (click)="add(group.id)">
-            <app-icon name="plus" />New {{ kind() }}
+            <app-icon name="plus" />{{ (kind() === 'step' ? 'New step' : 'New ingredient') | t }}
           </button>
           @if (candidates(group.id).length) {
-            <p>Select {{ kind() === 'step' ? 'steps' : 'ingredients' }} to move here</p>
+            <p>
+              {{
+                (kind() === 'step'
+                  ? 'Select steps to move here'
+                  : 'Select ingredients to move here'
+                ) | t
+              }}
+            </p>
           }
           <div class="candidate-list">
             @for (item of candidates(group.id); track item.control) {
@@ -210,7 +235,10 @@
                   (change)="select(item.control)"
                 />
                 <app-checkbox-mark />
-                <span class="candidate-text">{{ item.control.value || 'Empty ' + kind() }}</span>
+                <span class="candidate-text">{{
+                  item.control.value ||
+                    ((kind() === 'step' ? 'Empty step' : 'Empty ingredient') | t)
+                }}</span>
                 <small>{{ item.group }}</small>
               </label>
             }
@@ -222,17 +250,21 @@
               [disabled]="!selected().size"
               (click)="moveSelected(group.id)"
             >
-              Move selected ({{ selected().size }})
+              {{ 'Move selected ({n})' | t: { n: selected().size } }}
             </button>
-            <button type="button" (click)="addingTo.set(null)">Cancel</button>
+            <button type="button" (click)="addingTo.set(null)">
+              {{ 'Cancel' | t }}
+            </button>
           </div>
         </div>
       }
     </section>
   }
   <p class="move-hint" [id]="kind() + '-move-hint'">
-    Drag the handle to reorder or move between groups. With a keyboard, focus the handle and use the
-    arrow keys.
+    {{
+      'Drag the handle to reorder or move between groups. With a keyboard, focus the handle and use the arrow keys.'
+        | t
+    }}
   </p>
   <p class="sr-only" role="status">{{ message() }}</p>
 </section>

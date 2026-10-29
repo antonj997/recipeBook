@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { IconComponent } from './icon';
+import { TranslatePipe } from '../../core/i18n/i18n';
 
 export interface SelectMenuOption {
   value: string;
@@ -21,7 +22,7 @@ export interface SelectMenuOption {
 // A select-only combobox. Native popover supplies the top layer and light dismissal.
 @Component({
   selector: 'app-select-menu',
-  imports: [IconComponent],
+  imports: [IconComponent, TranslatePipe],
   templateUrl: './select-menu.html',
   styleUrl: './select-menu.scss',
   providers: [

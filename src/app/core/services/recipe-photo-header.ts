@@ -1,3 +1,4 @@
+import { msg } from '../i18n/i18n';
 interface PhotoDimensions {
   width: number;
   height: number;
@@ -15,11 +16,11 @@ export function assertRecipePhotoDimensions({ width, height }: PhotoDimensions):
     height > 8192 ||
     width * height > 16_000_000
   )
-    throw new Error('The image dimensions are too large. Choose a smaller photo.');
+    throw new Error(msg('The image dimensions are too large. Choose a smaller photo.'));
 }
 
 function invalid(): never {
-  throw new Error('The image has an invalid or unsupported JPEG, PNG or WebP header.');
+  throw new Error(msg('The image has an invalid or unsupported JPEG, PNG or WebP header.'));
 }
 function matches(bytes: Uint8Array, offset: number, values: readonly number[]): boolean {
   return values.every((value, i) => bytes[offset + i] === value);
@@ -122,6 +123,7 @@ function webpDimensions(bytes: Uint8Array, view: DataView): PhotoDimensions {
         invalid();
       const uint24 = (at: number) => bytes[at] | (bytes[at + 1] << 8) | (bytes[at + 2] << 16);
       canvas = dimensions(uint24(start + 4) + 1, uint24(start + 7) + 1);
+      // i18n-ignore: a WebP chunk name
     } else if (name === 'VP8 ') {
       if (
         frame ||

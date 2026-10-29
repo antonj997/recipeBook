@@ -7,6 +7,7 @@ import { inlinePhotos } from '../models/recipe-image';
 import { CloudCookbookService } from './cloud-cookbook.service';
 import { readShoppingItem, type ShoppingItem } from '../models/shopping-item';
 import type Dexie from 'dexie';
+import { msg } from '../i18n/i18n';
 
 export type RecipeBackup = {
   app: 'recipiebook';
@@ -46,11 +47,11 @@ export class RecipeService {
   async createCollection(name: string): Promise<RecipeCollection> {
     name = name.trim();
     if (!name || name.length > 80)
-      throw new Error('Use a category name between 1 and 80 characters.');
+      throw new Error(msg('Use a category name between 1 and 80 characters.'));
     const database = this.cloud.database;
     const version = this.accountVersion();
     const collections = await database.collections.toArray();
-    if (version !== this.accountVersion()) throw new Error('Account changed. Try again.');
+    if (version !== this.accountVersion()) throw new Error(msg('Account changed. Try again.'));
     const existing = collections.find(
       (c) => c.name.trim().toLocaleLowerCase() === name.trim().toLocaleLowerCase(),
     );
@@ -66,20 +67,20 @@ export class RecipeService {
   async renameCollection(id: string, name: string): Promise<void> {
     name = name.trim();
     if (!name || name.length > 80)
-      throw new Error('Use a category name between 1 and 80 characters.');
+      throw new Error(msg('Use a category name between 1 and 80 characters.'));
     const database = this.cloud.database;
     const version = this.accountVersion();
     const collections = await database.collections.toArray();
-    if (version !== this.accountVersion()) throw new Error('Account changed. Try again.');
+    if (version !== this.accountVersion()) throw new Error(msg('Account changed. Try again.'));
     const collection = collections.find((item) => item.id === id);
-    if (!collection) throw new Error('Category not found. Reload to try again.');
+    if (!collection) throw new Error(msg('Category not found. Reload to try again.'));
     if (
       collections.some(
         (item) =>
           item.id !== id && item.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase(),
       )
     )
-      throw new Error('A category with that name already exists. Choose another name.');
+      throw new Error(msg('A category with that name already exists. Choose another name.'));
     await this.cloud.put('collections', { ...collection, name }, database);
   }
   async removeCollection(id: string): Promise<void> {
@@ -92,9 +93,9 @@ export class RecipeService {
   ): Promise<void> {
     const database = this.cloud.database;
     const version = this.accountVersion();
-    if (!(await database.collections.get(id))) throw new Error('Category not found.');
+    if (!(await database.collections.get(id))) throw new Error(msg('Category not found.'));
     const recipes = await database.recipes.toArray();
-    if (version !== this.accountVersion()) throw new Error('Account changed. Try again.');
+    if (version !== this.accountVersion()) throw new Error(msg('Account changed. Try again.'));
     const changed = recipes
       .filter(
         (recipe) =>
@@ -129,7 +130,7 @@ export class RecipeService {
   async updateRecipe(id: string, changes: Partial<Omit<Recipe, 'id'>>): Promise<void> {
     const database = this.cloud.database;
     const current = await database.recipes.get(id);
-    if (!current) throw new Error('Recipe not found');
+    if (!current) throw new Error(msg('Recipe not found'));
     const recipe = { ...current, ...changes } as Recipe & Record<string, unknown>;
     // The editor speaks for the cover as a data URL; leaving it out removes the stored photo.
     if ('imageDataUrl' in changes && !('photoId' in changes)) delete recipe.photoId;
@@ -153,16 +154,16 @@ export class RecipeService {
     const database = this.cloud.database,
       version = this.accountVersion();
     const recipe = await database.recipes.get(id);
-    if (!recipe) throw new Error('Recipe not found.');
-    if (version !== this.accountVersion()) throw new Error('Account changed. Try again.');
+    if (!recipe) throw new Error(msg('Recipe not found.'));
+    if (version !== this.accountVersion()) throw new Error(msg('Account changed. Try again.'));
     const snapshot = structuredClone(recipe);
     await this.cloud.remove('recipes', id, database);
     if (version === this.accountVersion()) this.timers.removeRecipe(id);
     return async () => {
-      if (version !== this.accountVersion()) throw new Error('Account changed.');
+      if (version !== this.accountVersion()) throw new Error(msg('Account changed.'));
       const existing = await database.recipes.get(id);
-      if (version !== this.accountVersion()) throw new Error('Account changed.');
-      if (existing) throw new Error('Recipe already exists.');
+      if (version !== this.accountVersion()) throw new Error(msg('Account changed.'));
+      if (existing) throw new Error(msg('Recipe already exists.'));
       await this.cloud.put('recipes', snapshot, database);
     };
   }
@@ -187,7 +188,7 @@ export class RecipeService {
     // Backups carry photo bytes as data URLs, so they restore on any device and older versions.
     const portable = await Promise.all(recipes.map((recipe) => inlinePhotos(database, recipe)));
     if (database !== this.cloud.database || version !== this.accountVersion())
-      throw new Error('Account changed. Try again.');
+      throw new Error(msg('Account changed. Try again.'));
 
     return {
       app: 'recipiebook',
@@ -226,12 +227,13 @@ export class RecipeService {
       Number.isNaN(Date.parse(data['exportedAt'])) ||
       !Array.isArray(data['recipes'])
     ) {
-      throw new Error('Invalid or unsupported backup file.');
+      throw new Error(msg('Invalid or unsupported backup file.'));
     }
 
     const collections: RecipeCollection[] = [];
     if (data['collections'] !== undefined) {
-      if (!Array.isArray(data['collections'])) throw new Error('Invalid collections in backup.');
+      if (!Array.isArray(data['collections']))
+        throw new Error(msg('Invalid collections in backup.'));
       const seen = new Set<string>();
       for (const item of data['collections']) {
         if (
@@ -242,7 +244,7 @@ export class RecipeService {
           !Number.isFinite(item['sortOrder']) ||
           seen.has(item['id'])
         )
-          throw new Error('Invalid collection in backup.');
+          throw new Error(msg('Invalid collection in backup.'));
         seen.add(item['id']);
         collections.push({
           id: item['id'],
@@ -269,7 +271,7 @@ export class RecipeService {
         !item['instructions'].every(isNonEmptyString) ||
         (item['sourceUrl'] !== undefined && !isHttpsUrl(item['sourceUrl']))
       ) {
-        throw new Error('The backup contains an invalid recipe.');
+        throw new Error(msg('The backup contains an invalid recipe.'));
       }
       // Validate the optional photo.
       const imageDataUrl = item['imageDataUrl'];
@@ -280,12 +282,12 @@ export class RecipeService {
           !/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(imageDataUrl) ||
           imageDataUrl.length > 1_500_000)
       ) {
-        throw new Error('The backup contains an invalid recipe image.');
+        throw new Error(msg('The backup contains an invalid recipe image.'));
       }
 
       // Reject duplicate IDs inside the backup.
       if (ids.has(item['id'])) {
-        throw new Error('The backup contains duplicate recipe IDs.');
+        throw new Error(msg('The backup contains duplicate recipe IDs.'));
       }
 
       ids.add(item['id']);
@@ -309,7 +311,7 @@ export class RecipeService {
 
       for (const key of ['notes', 'createdAt', 'updatedAt'] as const) {
         if (item[key] !== undefined) {
-          if (typeof item[key] !== 'string') throw new Error('Invalid recipe details.');
+          if (typeof item[key] !== 'string') throw new Error(msg('Invalid recipe details.'));
           recipe[key] = item[key];
         }
       }
@@ -317,7 +319,7 @@ export class RecipeService {
         const values = item[key];
         if (values !== undefined) {
           if (!Array.isArray(values) || !values.every(isNonEmptyString))
-            throw new Error('Invalid recipe details.');
+            throw new Error(msg('Invalid recipe details.'));
           recipe[key] = values;
         }
       }
@@ -327,11 +329,12 @@ export class RecipeService {
     const shoppingItems: ShoppingItem[] = [];
     if (data['version'] === 2) {
       if (!Array.isArray(data['shoppingItems']))
-        throw new Error('Invalid shopping list in backup.');
+        throw new Error(msg('Invalid shopping list in backup.'));
       const seen = new Set<string>();
       for (const raw of data['shoppingItems']) {
         const item = readShoppingItem(raw);
-        if (seen.has(item.id)) throw new Error('The backup contains duplicate shopping item IDs.');
+        if (seen.has(item.id))
+          throw new Error(msg('The backup contains duplicate shopping item IDs.'));
         seen.add(item.id);
         shoppingItems.push(item);
       }

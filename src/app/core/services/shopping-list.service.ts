@@ -8,6 +8,7 @@ import {
   shoppingLines,
   type ShoppingItem,
 } from '../models/shopping-item';
+import { msg } from '../i18n/i18n';
 
 @Service()
 export class ShoppingListService {
@@ -51,7 +52,9 @@ export class ShoppingListService {
       this.error.set('');
     } catch {
       if (!this.destroyed && request === this.request && version === this.accountVersion())
-        this.error.set('Could not load your shopping list. Your saved items are safe. Try again.');
+        this.error.set(
+          msg('Could not load your shopping list. Your saved items are safe. Try again.'),
+        );
     } finally {
       if (!this.destroyed && request === this.request) this.loading.set(false);
     }
@@ -62,7 +65,7 @@ export class ShoppingListService {
       database = this.cloud.database;
     const assertCurrent = () => {
       if (version !== this.accountVersion() || database !== this.cloud.database)
-        throw new Error('Account changed. Try again.');
+        throw new Error(msg('Account changed. Try again.'));
     };
     return { version, database, assertCurrent };
   }
@@ -135,13 +138,13 @@ export class ShoppingListService {
   ): Promise<number> {
     const context = this.context();
     if (!Number.isSafeInteger(servings) || servings <= 0)
-      throw new Error('Choose a valid number of servings.');
+      throw new Error(msg('Choose a valid number of servings.'));
     if (
       indices.some(
         (index) => !Number.isSafeInteger(index) || index < 0 || index >= recipe.ingredients.length,
       )
     )
-      throw new Error('One of these ingredients is no longer available.');
+      throw new Error(msg('One of these ingredients is no longer available.'));
     // Read durable records before duplicate detection, including changes just committed in another view.
     const current = await context.database.shoppingItems.toArray();
     context.assertCurrent();
@@ -159,7 +162,7 @@ export class ShoppingListService {
         ),
       )
     )
-      throw new Error('These ingredients are already on your list.');
+      throw new Error(msg('These ingredients are already on your list.'));
     const base =
       recipe.servings && Number.isSafeInteger(recipe.servings) && recipe.servings > 0
         ? recipe.servings
@@ -214,7 +217,7 @@ export class ShoppingListService {
       (item): item is ShoppingItem => !!item,
     );
     context.assertCurrent();
-    if (!records.length) throw new Error('This item is no longer on your list.');
+    if (!records.length) throw new Error(msg('This item is no longer on your list.'));
     const [first, ...rest] = records;
     const sources = groupShoppingItems(records).flatMap((group) => group.sources);
     const edited = readShoppingItem({

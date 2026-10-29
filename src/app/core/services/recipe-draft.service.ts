@@ -9,6 +9,7 @@ import {
 } from '../models/recipe-metadata';
 import { RecipeService } from './recipe.service';
 import { downloadRecipePhoto } from './recipe-photo';
+import { msg } from '../i18n/i18n';
 
 export type RecipeDraft = Recipe & { imageUrl?: string };
 const legacyKey = 'recipebook:review-draft';
@@ -103,17 +104,17 @@ export class RecipeDraftService {
     const draft = this.parse(value);
     const category = (value as Record<string, unknown>)['category'];
     if (this.auth.accountVersion() !== version)
-      throw new Error('Account changed. Import the recipe again.');
+      throw new Error(msg('Account changed. Import the recipe again.'));
     draft.collectionIds = recipes.matchCollections(
       typeof category === 'string' ? category : undefined,
       await recipes.getCollections(),
     );
     if (this.auth.accountVersion() !== version)
-      throw new Error('Account changed. Import the recipe again.');
+      throw new Error(msg('Account changed. Import the recipe again.'));
     const assertAccount = () => {
       signal?.throwIfAborted();
       if (this.auth.accountVersion() !== version)
-        throw new Error('Account changed. Import the recipe again.');
+        throw new Error(msg('Account changed. Import the recipe again.'));
     };
     const proxy = this.auth.configured()
       ? (url: string) => {
@@ -153,15 +154,17 @@ export class RecipeDraftService {
       );
     }
     if (this.auth.accountVersion() !== version)
-      throw new Error('Account changed. Import the recipe again.');
+      throw new Error(msg('Account changed. Import the recipe again.'));
     assertAccount();
     if (failed)
-      this.photoNotice.set('Some photos could not be saved offline. You can add them in Edit.');
+      this.photoNotice.set(
+        msg('Some photos could not be saved offline. You can add them in Edit.'),
+      );
     return draft;
   }
 
   private parse(value: unknown): RecipeDraft {
-    if (!value || typeof value !== 'object') throw new Error('Invalid recipe draft.');
+    if (!value || typeof value !== 'object') throw new Error(msg('Invalid recipe draft.'));
     const raw = value as Record<string, unknown>;
     if (
       typeof raw['title'] !== 'string' ||
@@ -170,7 +173,7 @@ export class RecipeDraftService {
       !Array.isArray(raw['instructions']) ||
       !raw['instructions'].every((v) => typeof v === 'string')
     )
-      throw new Error('Incomplete recipe data.');
+      throw new Error(msg('Incomplete recipe data.'));
     const metadata = readRecipeMetadata(value);
     return {
       ...metadata,

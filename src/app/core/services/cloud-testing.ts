@@ -80,6 +80,7 @@ function matches(row: FakeCloudRow, filter: string): boolean {
     /^updated_at\.gt\.("(?:[^"\\]|\\.)*"),and\(updated_at\.eq\.("(?:[^"\\]|\\.)*"),id\.gt\.("(?:[^"\\]|\\.)*")\)$/.exec(
       filter,
     );
+  // i18n-ignore: test helper
   if (!keyset) throw new Error('Unexpected filter: ' + filter);
   const [after, same, id] = keyset.slice(1).map((value) => JSON.parse(value) as string);
   return at > after! || (at === same && row.id > id!);

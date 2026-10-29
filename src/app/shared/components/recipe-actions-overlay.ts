@@ -18,7 +18,7 @@ import { CookingSessionService } from '../../core/services/cooking-session.servi
 import { CheckboxMarkComponent } from './checkbox-mark';
 import { motionMs } from '../../core/motion';
 import { recipeBackground } from '../../core/models/recipe-color';
-import { TranslatePipe } from '../../core/i18n/i18n';
+import { msg, t, TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-actions',
@@ -28,9 +28,9 @@ import { TranslatePipe } from '../../core/i18n/i18n';
   },
   imports: [CheckboxMarkComponent, IconComponent, TranslatePipe],
   template: `
-    <span id="recipe-actions-hint" class="sr-only"
-      >Hold a recipe or right-click for actions. With a keyboard, press Shift F10.</span
-    >
+    <span id="recipe-actions-hint" class="sr-only">{{
+      'Hold a recipe or right-click for actions. With a keyboard, press Shift F10.' | t
+    }}</span>
     <div
       #menu
       id="recipe-actions-menu"
@@ -47,14 +47,14 @@ import { TranslatePipe } from '../../core/i18n/i18n';
         @if (!selected.fromDetail) {
           <p>{{ selected.recipe.title }}</p>
           <button type="button" role="menuitem" (click)="changeCategories()">
-            <app-icon name="category" />Change categories
+            <app-icon name="category" />{{ 'Change categories' | t }}
           </button>
         }
         <button type="button" role="menuitem" (click)="edit()">
-          <app-icon name="pencil" />Edit recipe
+          <app-icon name="pencil" />{{ 'Edit recipe' | t }}
         </button>
         <button type="button" role="menuitem" class="remove-recipe" (click)="requestDelete()">
-          <app-icon name="trash" />Delete recipe
+          <app-icon name="trash" />{{ 'Delete recipe' | t }}
         </button>
       }
     </div>
@@ -65,12 +65,12 @@ import { TranslatePipe } from '../../core/i18n/i18n';
       (cancel)="cancelCategories($event)"
       (close)="closedCategories()"
     >
-      <h2 id="recipe-categories-title">Recipe categories</h2>
+      <h2 id="recipe-categories-title">{{ 'Recipe categories' | t }}</h2>
       @if (categoryRecipe(); as recipe) {
         <p>{{ recipe.title }}</p>
       }
       @if (loadingCategories()) {
-        <p role="status">Loading categories…</p>
+        <p role="status">{{ 'Loading categories…' | t }}</p>
       } @else {
         <div class="category-choices">
           @for (category of collections(); track category.id) {
@@ -84,16 +84,16 @@ import { TranslatePipe } from '../../core/i18n/i18n';
               <app-checkbox-mark />{{ category.name }}</label
             >
           } @empty {
-            <p>No categories yet. Create them from Manage categories.</p>
+            <p>{{ 'No categories yet. Create them from Manage categories.' | t }}</p>
           }
         </div>
       }
       @if (categoryError()) {
-        <p role="alert">{{ categoryError() }}</p>
+        <p role="alert">{{ categoryError() | t }}</p>
       }
       <div class="dialog-actions">
         <button type="button" [disabled]="savingCategories()" (click)="categoryRecipe.set(null)">
-          Cancel
+          {{ 'Cancel' | t }}
         </button>
         <button
           type="button"
@@ -101,7 +101,7 @@ import { TranslatePipe } from '../../core/i18n/i18n';
           [disabled]="savingCategories() || loadingCategories() || !categoriesReady()"
           (click)="saveCategories()"
         >
-          {{ savingCategories() ? 'Saving…' : 'Save' }}
+          {{ (savingCategories() ? 'Saving…' : 'Save') | t }}
         </button>
       </div>
     </dialog>
@@ -126,19 +126,18 @@ import { TranslatePipe } from '../../core/i18n/i18n';
         </div>
       }
       <h2 id="recipe-delete-title">
-        {{ deleteSucceeded() ? 'Recipe deleted' : 'Delete recipe?' }}
+        {{ (deleteSucceeded() ? 'Recipe deleted' : 'Delete recipe?') | t }}
       </h2>
       <p id="recipe-delete-copy" aria-live="polite">
         {{
           deleteSucceeded()
-            ? 'Returning to your recipes…'
-            : '“' +
-              (actions.deletion()?.recipe?.title ?? '') +
-              '” will be removed from your cookbook. You can undo right after.'
+            ? ('Returning to your recipes…' | t)
+            : ('“{recipe}” will be removed from your cookbook. You can undo right after.'
+              | t: { recipe: actions.deletion()?.recipe?.title ?? '' })
         }}
       </p>
       @if (deleteError()) {
-        <p role="alert">{{ deleteError() }}</p>
+        <p role="alert">{{ deleteError() | t }}</p>
       }
       <div class="dialog-actions" [class.is-done]="deleteSucceeded()">
         <button
@@ -147,7 +146,7 @@ import { TranslatePipe } from '../../core/i18n/i18n';
           [disabled]="deleting()"
           (click)="actions.deletion.set(null)"
         >
-          Keep
+          {{ 'Keep' | t }}
         </button>
         <button
           type="button"
@@ -156,7 +155,7 @@ import { TranslatePipe } from '../../core/i18n/i18n';
           [attr.aria-busy]="deleting()"
           (click)="deleteRecipe()"
         >
-          Delete
+          {{ 'Delete' | t }}
         </button>
       </div>
     </dialog>
@@ -519,7 +518,7 @@ export class RecipeActionsOverlayComponent {
       }
     } catch {
       if (this.recipes.accountVersion() === version && load === this.categoryRequest)
-        this.categoryError.set('Could not load categories. Close this window and try again.');
+        this.categoryError.set(msg('Could not load categories. Close this window and try again.'));
     } finally {
       if (this.recipes.accountVersion() === version && load === this.categoryRequest)
         this.loadingCategories.set(false);
@@ -563,11 +562,11 @@ export class RecipeActionsOverlayComponent {
       });
       if (version === this.recipes.accountVersion()) {
         this.categoryRecipe.set(null);
-        this.feedback.show('Categories updated');
+        this.feedback.show(t('Categories updated'));
       }
     } catch {
       if (version === this.recipes.accountVersion())
-        this.categoryError.set('Could not save categories. Please try again.');
+        this.categoryError.set(msg('Could not save categories. Please try again.'));
     } finally {
       if (version === this.recipes.accountVersion() && request === this.categoryRequest)
         this.savingCategories.set(false);
@@ -604,11 +603,11 @@ export class RecipeActionsOverlayComponent {
       this.actions.deletion.set(null);
       await request.afterDelete?.();
       if (version !== this.recipes.accountVersion()) return;
-      this.feedback.show('Recipe deleted', {
-        label: 'Undo',
-        pendingLabel: 'Restoring…',
-        successMessage: 'Recipe restored',
-        errorMessage: 'Could not restore the recipe. Try Undo again.',
+      this.feedback.show(t('Recipe deleted'), {
+        label: t('Undo'),
+        pendingLabel: t('Restoring…'),
+        successMessage: t('Recipe restored'),
+        errorMessage: t('Could not restore the recipe. Try Undo again.'),
         run: async () => {
           await restore();
           if (progress && version === this.recipes.accountVersion())
@@ -617,7 +616,7 @@ export class RecipeActionsOverlayComponent {
       });
     } catch {
       if (version === this.recipes.accountVersion())
-        this.deleteError.set('Could not delete the recipe. Please try again.');
+        this.deleteError.set(msg('Could not delete the recipe. Please try again.'));
     } finally {
       if (
         version === this.recipes.accountVersion() &&

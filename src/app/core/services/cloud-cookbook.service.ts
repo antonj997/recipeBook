@@ -22,6 +22,7 @@ import {
   remoteTable,
 } from './cloud-pull';
 import { extractPhotos, photoRefs, putImages, type PreparedImage } from '../models/recipe-image';
+import { msg } from '../i18n/i18n';
 
 // Server limits stay far away and one request carries a burst of edits.
 const uploadBatchSize = 100;
@@ -130,7 +131,7 @@ export class CloudCookbookService {
     // Validate the entire batch before opening a transaction or queueing any records.
     const values = puts.map(readShoppingItem);
     if (removeIds.some((id) => typeof id !== 'string' || !id.trim() || id.length > 200))
-      throw new Error('Invalid shopping item ID.');
+      throw new Error(msg('Invalid shopping item ID.'));
     await this.write(database, async () => {
       // These conditions must share the write transaction's IndexedDB lock. Reads made by
       // the UI before committing can already be stale after another tab's batch or Undo.
@@ -152,7 +153,7 @@ export class CloudCookbookService {
             item.sources?.some((source) => currentSources.has(sourceKey(source))),
           )
         )
-          throw new Error('These ingredients are already on your list.');
+          throw new Error(msg('These ingredients are already on your list.'));
       }
       let accepted = values;
       if (options.restoreMissingOnly) {
@@ -181,9 +182,9 @@ export class CloudCookbookService {
         ? [database.recipes, database.collections, database.outbox]
         : [database.recipes, database.collections],
       async () => {
-        if (!current()) throw new Error('Account changed. Try again.');
+        if (!current()) throw new Error(msg('Account changed. Try again.'));
         if (!(await database.collections.get(id)))
-          throw new Error('Category not found. Reload to try again.');
+          throw new Error(msg('Category not found. Reload to try again.'));
         const recipes = (await database.recipes.toArray())
           .filter((recipe) => recipe.collectionIds?.includes(id))
           .map((recipe) => ({
@@ -201,7 +202,7 @@ export class CloudCookbookService {
         ];
         // Memberships and the category tombstone commit together, including queued cloud writes.
         for (const change of changes) {
-          if (!current()) throw new Error('Account changed. Try again.');
+          if (!current()) throw new Error(msg('Account changed. Try again.'));
           const table = database.table(change.table);
           if (change.value) await table.put(change.value);
           else await table.delete(change.id);
@@ -212,7 +213,7 @@ export class CloudCookbookService {
               revision: crypto.randomUUID(),
             });
         }
-        if (!current()) throw new Error('Account changed. Try again.');
+        if (!current()) throw new Error(msg('Account changed. Try again.'));
       },
     );
     this.revision.update((value) => value + 1);
@@ -234,7 +235,7 @@ export class CloudCookbookService {
   ): Promise<void> {
     const version = this.auth.accountVersion();
     const current = () => database === this.database && version === this.auth.accountVersion();
-    if (!current()) throw new Error('Account changed. Try again.');
+    if (!current()) throw new Error(msg('Account changed. Try again.'));
     const tables = [
       database.recipes,
       database.collections,
@@ -246,7 +247,7 @@ export class CloudCookbookService {
       'rw',
       database instanceof AccountDatabase ? [...tables, database.outbox] : tables,
       async () => {
-        if (!current()) throw new Error('Account changed. Try again.');
+        if (!current()) throw new Error(msg('Account changed. Try again.'));
         const records = typeof changes === 'function' ? await changes() : changes;
         // Photos commit with the records that reference them; skipped records leave none behind.
         const used = new Set(
@@ -261,7 +262,7 @@ export class CloudCookbookService {
           images.filter((image) => used.has(image.image.id)),
         );
         for (const change of records) {
-          if (!current()) throw new Error('Account changed. Try again.');
+          if (!current()) throw new Error(msg('Account changed. Try again.'));
           const table = database.table(change.table);
           if (change.value) await table.put(change.value);
           else await table.delete(change.id);
@@ -272,7 +273,7 @@ export class CloudCookbookService {
               revision: crypto.randomUUID(),
             });
         }
-        if (!current()) throw new Error('Account changed. Try again.');
+        if (!current()) throw new Error(msg('Account changed. Try again.'));
       },
     );
     if (current()) this.revision.update((value) => value + 1);
@@ -353,10 +354,10 @@ export class CloudCookbookService {
     const database = this.database;
     const userId = this.auth.user()?.id;
     const version = this.auth.accountVersion();
-    if (!(database instanceof AccountDatabase) || !userId) throw new Error('Sign in first.');
+    if (!(database instanceof AccountDatabase) || !userId) throw new Error(msg('Sign in first.'));
     const assertCurrent = () => {
       if (this.auth.user()?.id !== userId || this.auth.accountVersion() !== version)
-        throw new Error('Account changed. Your remaining device recipes are safe. Try again.');
+        throw new Error(msg('Account changed. Your remaining device recipes are safe. Try again.'));
     };
     const source = await this.deviceRecords();
     assertCurrent();
@@ -427,7 +428,7 @@ export class CloudCookbookService {
             const priorCopy = await database.collections.get(id);
             if (priorCopy && !sameDeviceContent(priorCopy, copy))
               throw new Error(
-                'A previously transferred category has changed. Device recipes are kept.',
+                msg('A previously transferred category has changed. Device recipes are kept.'),
               );
             if (!priorCopy) await save('collections', copy);
           }
@@ -447,7 +448,7 @@ export class CloudCookbookService {
             const priorCopy = await database.recipes.get(id);
             if (priorCopy && !sameDeviceContent(priorCopy, copy))
               throw new Error(
-                'A previously transferred recipe has changed. Device recipes are kept.',
+                msg('A previously transferred recipe has changed. Device recipes are kept.'),
               );
             if (!priorCopy) await save('recipes', copy);
           }
@@ -471,7 +472,7 @@ export class CloudCookbookService {
             const priorCopy = await database.shoppingItems.get(id);
             if (priorCopy && !sameDeviceContent(priorCopy, copy))
               throw new Error(
-                'A previously transferred shopping item has changed. Device data is kept.',
+                msg('A previously transferred shopping item has changed. Device data is kept.'),
               );
             if (!priorCopy) await save('shoppingItems', copy);
           }
@@ -522,7 +523,7 @@ export class CloudCookbookService {
     const cache = this.database;
     const version = this.auth.accountVersion();
     await this.sync();
-    if (version !== this.auth.accountVersion()) throw new Error('Account changed. Try again.');
+    if (version !== this.auth.accountVersion()) throw new Error(msg('Account changed. Try again.'));
     return cache instanceof AccountDatabase ? cache.outbox.count() : 0;
   }
 
@@ -612,7 +613,7 @@ export class CloudCookbookService {
         this.lastSuccess = Date.now();
         if (shoppingUnavailable)
           this.error.set(
-            'Shopping list sync is not ready yet. Your items are saved on this device.',
+            msg('Shopping list sync is not ready yet. Your items are saved on this device.'),
           );
         else this.lastSynced.set(new Date().toISOString());
       }
@@ -621,7 +622,7 @@ export class CloudCookbookService {
       console.error('Cloud sync failed:', error instanceof Error ? error.message : 'Unknown error');
       if (current())
         this.error.set(
-          'Could not sync. Your changes are saved on this device. Try again when online.',
+          msg('Could not sync. Your changes are saved on this device. Try again when online.'),
         );
     } finally {
       this.running.delete(cache);

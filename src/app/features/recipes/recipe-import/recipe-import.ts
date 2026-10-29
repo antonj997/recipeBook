@@ -8,7 +8,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { parseRecipeText } from '../../../core/models/recipe-text';
 import { ImportCookingComponent } from '../../../shared/components/import-cooking';
 import { motionMs } from '../../../core/motion';
-import { TranslatePipe } from '../../../core/i18n/i18n';
+import { msg, TranslatePipe } from '../../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-import',
@@ -71,7 +71,7 @@ export class RecipeImportComponent {
     this.controller?.abort();
     this.importing.set(false);
     this.ready.set(false);
-    this.notice.set('Import cancelled. Your link is still here.');
+    this.notice.set(msg('Import cancelled. Your link is still here.'));
     queueMicrotask(() => document.getElementById('recipe-url')?.focus());
   }
 
@@ -91,7 +91,9 @@ export class RecipeImportComponent {
     try {
       pasted = (await navigator.clipboard.readText()).trim();
     } catch {
-      this.error.set('Recipebook could not read the clipboard. Paste the link into the field.');
+      this.error.set(
+        msg('Recipebook could not read the clipboard. Paste the link into the field.'),
+      );
       return;
     }
     if (isLink(pasted)) {
@@ -99,8 +101,8 @@ export class RecipeImportComponent {
       await this.start();
     } else if (pasted.includes('\n')) {
       this.text.set(pasted);
-      this.notice.set('That looks like recipe text. Check it below and choose Use text.');
-    } else this.error.set('There is no link on the clipboard. Copy the recipe link first.');
+      this.notice.set(msg('That looks like recipe text. Check it below and choose Use text.'));
+    } else this.error.set(msg('There is no link on the clipboard. Copy the recipe link first.'));
   }
 
   updateText(event: Event): void {
@@ -121,7 +123,9 @@ export class RecipeImportComponent {
       await this.router.navigate(['/recipes/new']);
     } catch (error) {
       if (this.active)
-        this.error.set(error instanceof Error ? error.message : 'Could not read the recipe text.');
+        this.error.set(
+          error instanceof Error ? error.message : msg('Could not read the recipe text.'),
+        );
     }
   }
 
@@ -162,7 +166,7 @@ export class RecipeImportComponent {
           body: JSON.stringify({ url: this.url.trim() }),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error ?? 'Could not import recipe.');
+        if (!response.ok) throw new Error(data.error ?? msg('Could not import recipe.'));
         draft = data;
       }
       if (!current()) return;
@@ -193,7 +197,7 @@ export class RecipeImportComponent {
     } catch (error) {
       if (!current()) return;
       console.error('Import failed:', error);
-      this.error.set(error instanceof Error ? error.message : 'Could not import the recipe.');
+      this.error.set(error instanceof Error ? error.message : msg('Could not import the recipe.'));
     } finally {
       if (this.controller === controller) this.importing.set(false);
     }

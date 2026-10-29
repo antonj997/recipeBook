@@ -5,6 +5,7 @@ import type { RecipeCollection } from '../models/recipe-collection.model';
 import { RecipeService } from './recipe.service';
 import { RecipeImagesService } from './recipe-images.service';
 import { LibraryViewService } from './library-view.service';
+import { msg } from '../i18n/i18n';
 
 /** The first rows and the cards around the remembered recipe; the rest load after showing. */
 export function libraryPhotoWindow<T extends { id: string }>(
@@ -53,7 +54,7 @@ export const resolveLibraryPage: ResolveFn<LibraryPageData | undefined> = async 
       collections: [],
       accountVersion,
       revision,
-      error: 'Could not load your recipes.',
+      error: msg('Could not load your recipes.'),
     };
   }
 };
@@ -80,7 +81,7 @@ export const resolveRecipePage: ResolveFn<RecipePageData | undefined> = async (r
       collections: [],
       accountVersion,
       revision,
-      error: 'Could not load this recipe.',
+      error: msg('Could not load this recipe.'),
     };
   }
 };

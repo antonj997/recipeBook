@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { t } from '../i18n/i18n';
 export interface FeedbackAction {
   label: string;
   pendingLabel?: string;
@@ -35,7 +36,7 @@ export class FeedbackService {
       }
     } catch {
       if (this.action() === action)
-        this.show(action.errorMessage ?? 'Could not complete that action. Try again.', action);
+        this.show(action.errorMessage ?? t('Could not complete that action. Try again.'), action);
     } finally {
       if (this.action() === action) this.busy.set(false);
     }

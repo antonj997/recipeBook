@@ -3,10 +3,11 @@ import { RouterLink } from '@angular/router';
 import { CloudCookbookService } from '../../core/services/cloud-cookbook.service';
 import { IconComponent } from '../../shared/components/icon';
 import { CategoryManagerComponent } from '../settings/category-manager';
+import { TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-categories',
-  imports: [RouterLink, IconComponent, CategoryManagerComponent],
+  imports: [RouterLink, IconComponent, CategoryManagerComponent, TranslatePipe],
   host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
   templateUrl: './categories.html',
   styleUrl: './categories.scss',

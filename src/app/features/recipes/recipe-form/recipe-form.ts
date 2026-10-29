@@ -33,7 +33,7 @@ import { RecipeImagesService } from '../../../core/services/recipe-images.servic
 
 import { FeedbackService } from '../../../core/services/feedback.service';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
-import { TranslatePipe } from '../../../core/i18n/i18n';
+import { msg, plural, t, TranslatePipe } from '../../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-form',
@@ -66,9 +66,11 @@ export class RecipeFormComponent implements OnInit {
     if (this.saving() || this.processingImage()) return false;
     if (!this.hasUnsavedChanges()) return true;
     const leave = await this.confirmation.confirm(
-      this.editingId
-        ? 'Your changes to this recipe will not be saved.'
-        : 'This recipe has not been saved. Discard it?',
+      t(
+        this.editingId
+          ? 'Your changes to this recipe will not be saved.'
+          : 'This recipe has not been saved. Discard it?',
+      ),
     );
     if (leave && !this.editingId) this.drafts.clear();
     return leave;
@@ -180,7 +182,10 @@ export class RecipeFormComponent implements OnInit {
       ]),
     ]
       .sort((a, b) => a - b)
-      .map((count) => ({ value: String(count), label: count + ' servings' }));
+      .map((count) => ({
+        value: String(count),
+        label: plural(count, '{n} serving', '{n} servings'),
+      }));
   }
 
   form = this.fb.nonNullable.group({
@@ -224,7 +229,7 @@ export class RecipeFormComponent implements OnInit {
     try {
       this.collections.set(await this.recipeService.getCollections());
     } catch {
-      this.loadError.set('Could not load collections. Please reload the page.');
+      this.loadError.set(msg('Could not load collections. Please reload the page.'));
       this.loading.set(false);
       return;
     }
@@ -262,7 +267,7 @@ export class RecipeFormComponent implements OnInit {
       if (this.accountChanged()) return;
 
       if (!recipe) {
-        this.loadError.set('Recipe not found.');
+        this.loadError.set(msg('Recipe not found.'));
         return;
       }
 
@@ -310,7 +315,7 @@ export class RecipeFormComponent implements OnInit {
     } catch (error) {
       console.error('Failed to load recipe:', error);
 
-      this.loadError.set('Could not load the recipe. Please try again.');
+      this.loadError.set(msg('Could not load the recipe. Please try again.'));
     } finally {
       this.loading.set(false);
     }
@@ -378,7 +383,7 @@ export class RecipeFormComponent implements OnInit {
         if (this.accountChanged()) return;
 
         this.leaving = true;
-        this.feedback.show('Recipe updated');
+        this.feedback.show(t('Recipe updated'));
         await this.router.navigate(['/recipes', this.editingId]);
       } else {
         // Review first; only the preview's approval action writes to Dexie.
@@ -394,7 +399,7 @@ export class RecipeFormComponent implements OnInit {
     } catch (error) {
       console.error('Failed to save recipe:', error);
 
-      this.saveError.set('Could not save your recipe. Please try again.');
+      this.saveError.set(msg('Could not save your recipe. Please try again.'));
     } finally {
       this.saving.set(false);
     }
@@ -419,7 +424,7 @@ export class RecipeFormComponent implements OnInit {
       console.error('Image processing failed:', error);
 
       this.imageError.set(
-        error instanceof Error ? error.message : 'Could not process the selected image.',
+        error instanceof Error ? error.message : msg('Could not process the selected image.'),
       );
     } finally {
       this.processingImage.set(false);

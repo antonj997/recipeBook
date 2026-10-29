@@ -15,7 +15,7 @@
           [disabled]="feedback.busy()"
           (click)="feedback.runAction()"
         >
-          {{ feedback.busy() ? (action.pendingLabel ?? 'Working…') : action.label }}
+          {{ feedback.busy() ? (action.pendingLabel ?? ('Working…' | t)) : action.label }}
         </button>
       }
       <button

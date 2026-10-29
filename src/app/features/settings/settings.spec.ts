@@ -8,6 +8,7 @@ import { AppUpdateService } from '../../core/services/app-update.service';
 import { TimerPushService } from '../../core/services/timer-push.service';
 import { StorageDurabilityService } from '../../core/services/storage-durability.service';
 import { RecipeService } from '../../core/services/recipe.service';
+import { language, setLanguagePreference } from '../../core/i18n/i18n';
 
 describe('settings page', () => {
   const user = signal<{ email: string } | null>(null);
@@ -68,7 +69,10 @@ describe('settings page', () => {
       ],
     });
   });
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    setLanguagePreference('auto');
+    TestBed.resetTestingModule();
+  });
 
   function render() {
     const view = TestBed.createComponent(SettingsComponent);
@@ -115,5 +119,25 @@ describe('settings page', () => {
     expect(actions.map(text)).toEqual(['Sync now', 'Reset password', 'Sign out']);
     actions[0].click();
     expect(sync).toHaveBeenCalled();
+  });
+
+  it('offers a language row that switches the whole page', () => {
+    const { view, root } = render();
+    const row = root.querySelector('#language-label')!.closest('.settings-row')!;
+    expect(text(row.querySelector('.row-title'))).toBe('Language');
+    expect(text(row.querySelector('.row-note'))).toBe('Follows this device');
+    const options = [...root.querySelectorAll('#language-menu [role=option]')].map(text);
+    expect(options).toEqual(['Automatic', 'English', 'Svenska']);
+    view.componentInstance.setLanguage('sv');
+    view.detectChanges();
+    expect(language()).toBe('sv');
+    expect(text(root.querySelector('h1'))).toBe('Inställningar');
+    expect(text(row.querySelector('.row-title'))).toBe('Språk');
+    expect(text(row.querySelector('.row-note'))).toBe('Valt för den här enheten');
+    expect([...root.querySelectorAll('.group-label')].map(text)).toEqual([
+      'Konto',
+      'Säkerhetskopior',
+      'Appen',
+    ]);
   });
 });

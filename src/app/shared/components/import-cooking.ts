@@ -1,7 +1,9 @@
 import { Component, input, output } from '@angular/core';
+import { TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-import-cooking',
+  imports: [TranslatePipe],
   host: { '[style.--cooking-background]': 'background' },
   template: `<div class="cooking-card" role="status" [class.ready]="ready()">
     <svg
@@ -33,9 +35,9 @@ import { Component, input, output } from '@angular/core';
         <path class="recipe-check" d="m178 123 7 7 16-15" stroke="var(--color-green)" />
       </g>
     </svg>
-    <span>{{ ready() ? 'Ready to review' : 'Importing recipe…' }}</span>
+    <span>{{ (ready() ? 'Ready to review' : 'Importing recipe…') | t }}</span>
     @if (cancellable()) {
-      <button type="button" (click)="cancelled.emit()">Cancel import</button>
+      <button type="button" (click)="cancelled.emit()">{{ 'Cancel import' | t }}</button>
     }
   </div>`,
   styleUrl: './import-cooking.scss',

@@ -30,6 +30,7 @@ import {
 import { RouterLink } from '@angular/router';
 import type { Recipe } from '../../core/models/recipe.model';
 import { FoodPlaceholderComponent } from './food-placeholder';
+import { PluralPipe, t, TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-rail',
@@ -41,6 +42,8 @@ import { FoodPlaceholderComponent } from './food-placeholder';
     IconComponent,
     CardTiltDirective,
     RecipeContextDirective,
+    TranslatePipe,
+    PluralPipe,
   ],
   templateUrl: './recipe-rail.html',
   styleUrl: './recipe-rail.scss',
@@ -132,7 +135,11 @@ export class RecipeRailComponent implements OnDestroy {
     const stops = this.stops();
     const index = Math.min(stops.length - 1, this.currentStop());
     const title = this.recipes()[stops[index]?.recipeIndex]?.title ?? '';
-    return title + ', position ' + (index + 1) + ' of ' + stops.length;
+    return t('{recipe}, position {n} of {total}', {
+      recipe: title,
+      n: index + 1,
+      total: stops.length,
+    });
   });
   currentStop = computed(() => Math.round(this.progress()));
   private frame = 0;

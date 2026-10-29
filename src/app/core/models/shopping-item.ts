@@ -1,4 +1,5 @@
 import { formatIngredientAmount, readIngredientAmount } from './ingredient-quantity';
+import { msg } from '../i18n/i18n';
 
 export interface ShoppingSource {
   recipeId: string;
@@ -44,7 +45,7 @@ export function readShoppingItem(value: unknown): ShoppingItem {
     !date(value['createdAt']) ||
     !date(value['updatedAt'])
   )
-    throw new Error('Invalid shopping item.');
+    throw new Error(msg('Invalid shopping item.'));
   const item: ShoppingItem = {
     id: value['id'],
     text: value['text'].trim(),
@@ -53,12 +54,12 @@ export function readShoppingItem(value: unknown): ShoppingItem {
     updatedAt: value['updatedAt'],
   };
   if (value['batchId'] !== undefined) {
-    if (!text(value['batchId'], 200)) throw new Error('Invalid shopping batch.');
+    if (!text(value['batchId'], 200)) throw new Error(msg('Invalid shopping batch.'));
     item.batchId = value['batchId'];
   }
   if (value['sources'] !== undefined) {
     if (!Array.isArray(value['sources']) || value['sources'].length > 1000)
-      throw new Error('Invalid shopping sources.');
+      throw new Error(msg('Invalid shopping sources.'));
     item.sources = value['sources'].map((source) => {
       if (
         !record(source) ||
@@ -72,7 +73,7 @@ export function readShoppingItem(value: unknown): ShoppingItem {
         !Number.isSafeInteger(source['ingredientIndex']) ||
         source['ingredientIndex'] < 0
       )
-        throw new Error('Invalid shopping source.');
+        throw new Error(msg('Invalid shopping source.'));
       return {
         recipeId: source['recipeId'],
         recipeTitle: source['recipeTitle'],

@@ -26,7 +26,7 @@ import { CheckboxMarkComponent } from './checkbox-mark';
 import { FoodPlaceholderComponent } from './food-placeholder';
 import { IconComponent } from './icon';
 import { SelectMenuComponent } from './select-menu';
-import { TranslatePipe } from '../../core/i18n/i18n';
+import { msg, plural, PluralPipe, t, TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-recipe-shopping-picker',
@@ -36,6 +36,7 @@ import { TranslatePipe } from '../../core/i18n/i18n';
     IconComponent,
     SelectMenuComponent,
     TranslatePipe,
+    PluralPipe,
   ],
   templateUrl: './recipe-shopping-picker.html',
   styleUrl: './recipe-shopping-picker.scss',
@@ -75,7 +76,10 @@ export class RecipeShoppingPickerComponent {
   readonly servingOptions = computed(() =>
     [...new Set([2, 4, 6, 8, 10, this.baseServings(), this.selectedServings()])]
       .sort((a, b) => a - b)
-      .map((count) => ({ value: String(count), label: count + ' servings' })),
+      .map((count) => ({
+        value: String(count),
+        label: plural(count, '{n} serving', '{n} servings'),
+      })),
   );
   readonly filteredRecipes = computed(() => {
     const words = this.query().trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
@@ -167,7 +171,7 @@ export class RecipeShoppingPickerComponent {
       void this.images.prepare(recipes, 'thumb');
       this.loadedRecipes = true;
     } catch {
-      if (this.current()) this.error.set('Could not load recipes. Try again.');
+      if (this.current()) this.error.set(msg('Could not load recipes. Try again.'));
     } finally {
       if (this.current()) this.loading.set(false);
     }
@@ -247,8 +251,8 @@ export class RecipeShoppingPickerComponent {
           `color-mix(in srgb, ${recipeBackground(recipe)} 52%, var(--color-ink))`,
         );
       const account = this.account;
-      this.feedback.show(count + (count === 1 ? ' item added' : ' items added'), {
-        label: 'View list',
+      this.feedback.show(plural(count, '{n} item added', '{n} items added'), {
+        label: t('View list'),
         run: async () => {
           if (account !== this.shopping.accountVersion()) return;
           this.close();
@@ -258,11 +262,14 @@ export class RecipeShoppingPickerComponent {
       this.close();
     } catch (error) {
       if (!this.current()) return;
+      // i18n-ignore: compares the shopping list's English error key.
       if (error instanceof Error && error.message === 'These ingredients are already on your list.')
         this.confirming.set(true);
       else
         this.error.set(
-          error instanceof Error ? error.message : 'Could not add these ingredients. Try again.',
+          error instanceof Error
+            ? error.message
+            : msg('Could not add these ingredients. Try again.'),
         );
     } finally {
       if (this.active) this.busy.set(false);

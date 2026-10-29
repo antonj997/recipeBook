@@ -9,6 +9,7 @@ import {
 } from '../../../core/models/recipe-metadata';
 import { AutoGrowTextareaDirective } from '../../../shared/directives/auto-grow-textarea';
 import { IconComponent } from '../../../shared/components/icon';
+import { TranslatePipe } from '../../../core/i18n/i18n';
 
 export function createMetadataForm(fb: FormBuilder) {
   const nutrition = Object.fromEntries(
@@ -44,24 +45,27 @@ export function metadataFromForm(form: MetadataForm): RecipeMetadata {
   return {
     totalTime: undefined,
     nutrition: undefined,
+    // i18n-ignore: stored recipe data, not UI text
     ...readRecipeMetadata({ ...v, nutrition: { ...nutrition, servingSize: 'Per portion' } }),
   };
 }
 @Component({
   selector: 'app-recipe-extra-fields',
-  imports: [ReactiveFormsModule, AutoGrowTextareaDirective],
+  imports: [ReactiveFormsModule, AutoGrowTextareaDirective, TranslatePipe],
   template: `
     <div class="details-content" [formGroup]="form()">
       <label
-        >Description<textarea appAutoGrow formControlName="description" rows="2"></textarea>
+        >{{ 'Description' | t
+        }}<textarea appAutoGrow formControlName="description" rows="2"></textarea>
       </label>
       <div class="field-grid">
         <label
-          >Total time (minutes)<input type="number" min="0" step="any" formControlName="totalTime"
+          >{{ 'Total time (minutes)' | t
+          }}<input type="number" min="0" step="any" formControlName="totalTime"
         /></label>
       </div>
       @if (form().controls.totalTime.invalid) {
-        <p class="error" role="alert">Total time must be zero or more.</p>
+        <p class="error" role="alert">{{ 'Total time must be zero or more.' | t }}</p>
       }
     </div>
   `,
@@ -98,19 +102,20 @@ export class RecipeExtraFieldsComponent {
 /** Nutrition per portion, a row of its own beside Categories and Recipe details. */
 @Component({
   selector: 'app-recipe-nutrition-fields',
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent, TranslatePipe],
   template: `
     <details [open]="form().controls.nutrition.invalid" [formGroup]="form()">
       <summary class="disclosure">
-        Nutrition
+        {{ 'Nutrition' | t }}
         <span
-          >{{ calories() === null ? 'Optional' : calories() + ' kcal' }}<app-icon name="chevron"
+          >{{ calories() === null ? ('Optional' | t) : calories() + ' kcal'
+          }}<app-icon name="chevron"
         /></span>
       </summary>
       <div class="field-grid" formGroupName="nutrition">
         @for (field of nutritionFields; track field.key) {
           <label
-            >{{ field.label }} ({{ field.unit }})<input
+            >{{ field.label | t }} ({{ field.unit }})<input
               type="number"
               min="0"
               step="any"
@@ -119,7 +124,7 @@ export class RecipeExtraFieldsComponent {
         }
       </div>
       @if (form().controls.nutrition.invalid) {
-        <p class="error" role="alert">Nutrition values must be zero or more.</p>
+        <p class="error" role="alert">{{ 'Nutrition values must be zero or more.' | t }}</p>
       }
     </details>
   `,

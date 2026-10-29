@@ -8,7 +8,7 @@
 >
   <div class="picker-sheet" [attr.aria-busy]="busy()">
     <header class="picker-header">
-      <h2 id="shopping-picker-heading">Add from recipe</h2>
+      <h2 id="shopping-picker-heading">{{ 'Add from recipe' | t }}</h2>
       <button
         type="button"
         class="close-picker"
@@ -23,16 +23,22 @@
       @if (selectedRecipe(); as chosen) {
         @if (!recipe()) {
           <button type="button" class="change-recipe" [disabled]="busy()" (click)="changeRecipe()">
-            <app-icon name="chevron" />Choose another recipe
+            <app-icon name="chevron" />{{ 'Choose another recipe' | t }}
           </button>
         }
         <h3 #ingredientHeading tabindex="-1" class="recipe-heading">{{ chosen.title }}</h3>
         @if (confirming()) {
           <section class="duplicate-confirmation" aria-labelledby="duplicate-heading">
-            <h3 #confirmHeading id="duplicate-heading" tabindex="-1">Add another batch?</h3>
+            <h3 #confirmHeading id="duplicate-heading" tabindex="-1">
+              {{ 'Add another batch?' | t }}
+            </h3>
             <p>
-              These ingredients are already on your list. Add the selected ingredients again for
-              {{ selectedServings() }} servings?
+              {{
+                selectedServings()
+                  | plural
+                    : 'These ingredients are already on your list. Add the selected ingredients again for {n} serving?'
+                    : 'These ingredients are already on your list. Add the selected ingredients again for {n} servings?'
+              }}
             </p>
           </section>
         } @else if (chosen.ingredients.length) {
@@ -51,10 +57,10 @@
                 [disabled]="busy() || selectedCount() === chosen.ingredients.length"
                 (click)="selectAll()"
               >
-                Select all
+                {{ 'Select all' | t }}
               </button>
               <button type="button" [disabled]="busy() || !selectedCount()" (click)="deselectAll()">
-                Deselect all
+                {{ 'Deselect all' | t }}
               </button>
             </div>
           </div>
@@ -79,11 +85,11 @@
             </ul>
           }
         } @else {
-          <p class="empty-copy">This recipe has no ingredients to add.</p>
+          <p class="empty-copy">{{ 'This recipe has no ingredients to add.' | t }}</p>
         }
       } @else {
         <label class="search-field"
-          ><app-icon name="search" /><span class="sr-only">Search recipes</span>
+          ><app-icon name="search" /><span class="sr-only">{{ 'Search recipes' | t }}</span>
           <input
             #searchInput
             type="search"
@@ -94,7 +100,7 @@
           />
         </label>
         @if (loading()) {
-          <p class="loading-copy" role="status">Loading recipes…</p>
+          <p class="loading-copy" role="status">{{ 'Loading recipes…' | t }}</p>
           <div class="loading-lines" aria-hidden="true">
             <span></span><span></span><span></span>
           </div>
@@ -120,37 +126,45 @@
                 </button>
               </li>
             } @empty {
-              <li class="empty-copy">No recipes match “{{ query() }}”. Try another search.</li>
+              <li class="empty-copy">
+                {{ 'No recipes match “{query}”. Try another search.' | t: { query: query() } }}
+              </li>
             }
           </ul>
         } @else if (!error()) {
           <p class="empty-copy">
-            Your recipes will appear here. Add a recipe to your cookbook first, or add items
-            directly to your shopping list.
+            {{
+              'Your recipes will appear here. Add a recipe to your cookbook first, or add items directly to your shopping list.'
+                | t
+            }}
           </p>
         }
       }
       @if (error()) {
-        <p class="error" role="alert">{{ error() }}</p>
+        <p class="error" role="alert">{{ error() | t }}</p>
         @if (!selectedRecipe()) {
-          <button type="button" [disabled]="loading()" (click)="loadRecipes()">Try again</button>
+          <button type="button" [disabled]="loading()" (click)="loadRecipes()">
+            {{ 'Try again' | t }}
+          </button>
         }
       }
     </div>
     @if (selectedRecipe()) {
       <footer class="picker-footer">
         @if (confirming()) {
-          <button type="button" [disabled]="busy()" (click)="cancelConfirmation()">Cancel</button>
+          <button type="button" [disabled]="busy()" (click)="cancelConfirmation()">
+            {{ 'Cancel' | t }}
+          </button>
           <button
             type="button"
             class="primary add-selected"
             [disabled]="busy()"
             (click)="submit(true)"
           >
-            {{ busy() ? 'Adding…' : 'Add again' }}
+            {{ (busy() ? 'Adding…' : 'Add again') | t }}
           </button>
         } @else {
-          <p aria-live="polite">{{ selectedCount() }} selected</p>
+          <p aria-live="polite">{{ '{n} selected' | t: { n: selectedCount() } }}</p>
           <button
             type="button"
             class="primary add-selected"
@@ -159,8 +173,8 @@
           >
             {{
               busy()
-                ? 'Adding…'
-                : 'Add ' + selectedCount() + (selectedCount() === 1 ? ' item' : ' items')
+                ? ('Adding…' | t)
+                : (selectedCount() | plural: 'Add {n} item' : 'Add {n} items')
             }}
           </button>
         }

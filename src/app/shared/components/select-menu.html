@@ -4,7 +4,7 @@
   class="menu-trigger"
   [class.drag-enabled]="dragSelect()"
   [class.is-dragging]="dragging()"
-  [attr.title]="dragSelect() ? 'Hold and drag to select' : null"
+  [attr.title]="dragSelect() ? ('Hold and drag to select' | t) : null"
   role="combobox"
   [id]="controlId() || menuId() + '-trigger'"
   [attr.aria-label]="label()"

@@ -12,6 +12,7 @@ import {
 import { SupabaseService } from './supabase.service';
 import { FeedbackService } from './feedback.service';
 import { CloudCookbookService } from './cloud-cookbook.service';
+import { t } from '../i18n/i18n';
 export type { StepTimerTarget } from '../models/step-timer';
 
 export interface StepTimerState {
@@ -457,26 +458,34 @@ export class StepTimerService {
     const timer = finished[0];
     const minutes = Math.floor(timer.duration / 60),
       seconds = timer.duration % 60;
-    const elapsed = [minutes && minutes + ' min', seconds && seconds + ' sec']
+    const elapsed = [
+      minutes && t('{n} min', { n: minutes }),
+      seconds && t('{n} sec', { n: seconds }),
+    ]
       .filter(Boolean)
       .join(' ');
     const scope = this.scope(),
       version = this.auth.accountVersion();
     this.feedback.show(
       finished.length === 1
-        ? 'Step ' + (timer.target.index + 1) + ' timer finished · ' + elapsed + ' elapsed'
-        : finished.length + ' step timers finished',
+        ? t('Step {n} timer finished · {time} elapsed', {
+            n: timer.target.index + 1,
+            time: elapsed,
+          })
+        : t('{n} step timers finished', { n: finished.length }),
       {
-        label: 'View step',
-        pendingLabel: 'Opening…',
-        errorMessage: 'Could not open this step. Try again.',
+        label: t('View step'),
+        pendingLabel: t('Opening…'),
+        errorMessage: t('Could not open this step. Try again.'),
         run: async () => {
           const current = () => scope === this.scope() && version === this.auth.accountVersion();
+          // i18n-ignore: replaced by errorMessage above
           if (!current() || !this.entries().has(timer.target.key)) throw new Error('Timer changed');
           const opened = await this.router.navigate(['/recipes', timer.target.recipeId], {
             onSameUrlNavigation: 'reload',
             scroll: 'manual',
           });
+          // i18n-ignore: replaced by errorMessage above
           if (!opened || !current()) throw new Error('Step navigation cancelled');
           this.stepToReveal.set({ ...timer.target });
         },

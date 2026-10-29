@@ -1,6 +1,7 @@
 import { Service, signal } from '@angular/core';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { anySignal } from '../compat/compat';
+import { msg } from '../i18n/i18n';
 
 @Service()
 export class SupabaseService {
@@ -108,7 +109,9 @@ export class SupabaseService {
     });
     const initialized = await this.client.auth.initialize();
     if (initialized.error && authCallback) {
-      this.callbackError.set('This email link has expired or was already used. Request a new one.');
+      this.callbackError.set(
+        msg('This email link has expired or was already used. Request a new one.'),
+      );
       // Never leave an unsuccessful authentication callback in browser history.
       history.replaceState(null, '', new URL('.', document.baseURI).href);
     }
@@ -128,7 +131,7 @@ export class SupabaseService {
         /* Recovery still works without a reload. */
       }
       if (recoveryCallback || savedRecovery) this.setRecovery(data.session.user.id);
-      else if (authCallback) this.callbackNotice.set('Email verified. You are signed in.');
+      else if (authCallback) this.callbackNotice.set(msg('Email verified. You are signed in.'));
     }
   }
 
@@ -152,10 +155,10 @@ export class SupabaseService {
   }
 
   private requireClient(): SupabaseClient {
-    if (!this.client) throw new Error('Cloud sign-in is not set up yet.');
+    if (!this.client) throw new Error(msg('Cloud sign-in is not set up yet.'));
     if (!navigator.onLine)
       throw new Error(
-        'Connect to the internet to manage your account. Your recipes stay on this device.',
+        msg('Connect to the internet to manage your account. Your recipes stay on this device.'),
       );
     return this.client;
   }
@@ -187,12 +190,12 @@ export class SupabaseService {
 
   async resetPassword(password: string): Promise<void> {
     if (!this.passwordRecovery() || !this.user())
-      throw new Error('Open a fresh password reset link from your email first.');
+      throw new Error(msg('Open a fresh password reset link from your email first.'));
     validateNewPassword(password);
     const { error } = await this.requireClient().auth.updateUser({ password });
     if (error) throw accountError(error);
     this.setRecovery(null);
-    this.callbackNotice.set('Password saved.');
+    this.callbackNotice.set(msg('Password saved.'));
   }
 
   cancelPasswordReset(): void {
@@ -221,14 +224,15 @@ export class SupabaseService {
     const version = this.accountVersion();
     const session = await this.client?.auth.getSession();
     if (version !== this.accountVersion())
-      throw new Error('Account changed. Import the recipe again.');
+      throw new Error(msg('Account changed. Import the recipe again.'));
     const token = session?.data.session?.access_token;
-    if (!token) throw new Error('Sign in to import recipe links.');
+    if (!token) throw new Error(msg('Sign in to import recipe links.'));
     const response = await fetch(this.endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         apikey: this.key,
+        // i18n-ignore: an HTTP authorization scheme
         Authorization: 'Bearer ' + token,
       },
       body: JSON.stringify(body),
@@ -238,43 +242,49 @@ export class SupabaseService {
     });
     if (!response.ok) {
       const error = await response.json().catch(() => null);
-      throw new Error(error?.error ?? 'Could not import the recipe.');
+      throw new Error(error?.error ?? msg('Could not import the recipe.'));
     }
     return response;
   }
 }
 
 export function validateNewPassword(password: string): void {
-  if (Array.from(password).length < 8) throw new Error('Use at least 8 characters.');
+  if (Array.from(password).length < 8) throw new Error(msg('Use at least 8 characters.'));
 }
 
 function accountError(error: { code?: string; message: string; status?: number }): Error {
   switch (error.code) {
     case 'invalid_credentials':
-      return new Error('Email or password is incorrect. Try again, or reset your password.');
+      return new Error(msg('Email or password is incorrect. Try again, or reset your password.'));
     case 'email_not_confirmed':
-      return new Error('Confirm your email before signing in. Check your inbox and spam folder.');
+      return new Error(
+        msg('Confirm your email before signing in. Check your inbox and spam folder.'),
+      );
     case 'over_email_send_rate_limit':
       return new Error(
-        'Too many emails were requested. Please wait before trying again. Password sign-in does not need an email.',
+        msg(
+          'Too many emails were requested. Please wait before trying again. Password sign-in does not need an email.',
+        ),
       );
     case 'email_address_not_authorized':
       return new Error(
-        'Email delivery is not available for this address yet. The app owner needs to configure an email sender.',
+        msg(
+          'Email delivery is not available for this address yet. The app owner needs to configure an email sender.',
+        ),
       );
     case 'signup_disabled':
-      return new Error('New accounts are not available right now.');
+      return new Error(msg('New accounts are not available right now.'));
     case 'weak_password':
-      return new Error('The password was not accepted. Use at least 8 characters.');
+      return new Error(msg('The password was not accepted. Use at least 8 characters.'));
     case 'same_password':
-      return new Error('Choose a different password from your current one.');
+      return new Error(msg('Choose a different password from your current one.'));
     case 'reauthentication_needed':
-      return new Error('Request and open a fresh password reset email, then try again.');
+      return new Error(msg('Request and open a fresh password reset email, then try again.'));
     default:
       return new Error(
         error.status === 429
-          ? 'Too many attempts. Please wait before trying again.'
-          : 'Could not complete this account request. Check your connection and try again.',
+          ? msg('Too many attempts. Please wait before trying again.')
+          : msg('Could not complete this account request. Check your connection and try again.'),
       );
   }
 }

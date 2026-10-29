@@ -13,7 +13,7 @@ import {
   untracked,
 } from '@angular/core';
 import { formatCountdown, maxClockSeconds } from '../../core/models/step-timer';
-import { TranslatePipe } from '../../core/i18n/i18n';
+import { msg, TranslatePipe } from '../../core/i18n/i18n';
 
 const pitch = 18;
 const maximum = maxClockSeconds / 60;
@@ -38,7 +38,7 @@ const flywheelWindow = 300;
         [attr.role]="timeline() ? 'progressbar' : null"
         [attr.aria-hidden]="timeline() ? null : true"
         [inert]="!timeline()"
-        [attr.aria-label]="label()"
+        [attr.aria-label]="label() | t"
         aria-valuemin="0"
         [attr.aria-valuemax]="totalSeconds()"
         [attr.aria-valuenow]="progressRemaining()"
@@ -50,7 +50,7 @@ const flywheelWindow = 300;
         [attr.aria-hidden]="timeline() ? true : null"
         [inert]="timeline()"
         [tabIndex]="locked() ? -1 : 0"
-        [attr.aria-label]="label()"
+        [attr.aria-label]="label() | t"
         aria-valuemin="0"
         [attr.aria-valuemax]="maximum"
         [attr.aria-valuenow]="minute()"
@@ -104,7 +104,7 @@ export class MinuteRulerComponent {
   readonly elapsedSeconds = input(0);
   readonly totalSeconds = input(0);
   readonly identity = input('');
-  readonly label = input('Timer duration');
+  readonly label = input(msg('Timer duration'));
   readonly durationChange = output<number>();
   protected readonly maximum = maximum;
   protected readonly pitch = pitch;

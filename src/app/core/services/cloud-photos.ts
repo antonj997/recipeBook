@@ -9,6 +9,7 @@ import {
   type PhotoRef,
   type PreparedImage,
 } from '../models/recipe-image';
+import { msg, t } from '../i18n/i18n';
 
 export interface RecipePhotos {
   cover?: string;
@@ -45,7 +46,8 @@ export async function uploadPhotos(
       contentType: 'image/jpeg',
       upsert: true,
     });
-    if (error) throw new Error('Could not upload a recipe photo. ' + error.message);
+    if (error)
+      throw new Error(t('Could not upload a recipe photo. {reason}', { reason: error.message }));
     synced.add(path);
     return path;
   }
@@ -80,7 +82,7 @@ export async function downloadPhotos(
   async function resolve(target: PhotoRef, path: string, prior?: string, cachedRef?: PhotoRef) {
     delete target.photoId;
     delete target.imageDataUrl;
-    if (!path.startsWith(userId + '/')) throw new Error('Invalid recipe photo path.');
+    if (!path.startsWith(userId + '/')) throw new Error(msg('Invalid recipe photo path.'));
     const name = path.slice(userId.length + 1).replace(/\.jpg$/, '');
     if (isImageId(name) && (downloaded.has(name) || (await images.images.get(name)))) {
       target.photoId = name;
@@ -92,7 +94,7 @@ export async function downloadPhotos(
       return;
     }
     const { data, error } = await client.storage.from(bucket).download(path);
-    if (error || !data) throw new Error('Could not download a recipe photo.');
+    if (error || !data) throw new Error(msg('Could not download a recipe photo.'));
     // The id is the hash of the bytes that arrived, whatever the file is called.
     const prepared = await prepareImage(new Uint8Array(await data.arrayBuffer()));
     downloaded.set(prepared.image.id, prepared);

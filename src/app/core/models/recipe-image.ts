@@ -2,6 +2,7 @@ import type { EntityTable } from 'dexie';
 import { readRecipePhotoDimensions } from '../services/recipe-photo-header';
 import { isRecipeImage } from './recipe-metadata';
 import type { Recipe } from './recipe.model';
+import { msg } from '../i18n/i18n';
 
 /** A recipe or step photo, stored once per device and named by the SHA-256 of its JPEG bytes. */
 export interface StoredImage {
@@ -49,7 +50,7 @@ export async function imageId(bytes: Uint8Array): Promise<string> {
 }
 
 export function dataUrlBytes(dataUrl: string): Uint8Array<ArrayBuffer> {
-  if (!isRecipeImage(dataUrl)) throw new Error('Invalid recipe photo.');
+  if (!isRecipeImage(dataUrl)) throw new Error(msg('Invalid recipe photo.'));
   const binary = atob(dataUrl.slice(dataUrl.indexOf(',') + 1));
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }

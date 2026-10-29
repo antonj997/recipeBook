@@ -17,6 +17,7 @@ export function serviceWorkerUrl(): string {
   if (!factory) return url;
   const policy = factory.createPolicy('recipebook#worker', {
     createScriptURL(value) {
+      // i18n-ignore: an internal guard, never shown
       if (value !== url) throw new Error('Unexpected service worker URL.');
       return url;
     },

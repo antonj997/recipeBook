@@ -1,6 +1,7 @@
 import { computed, effect, inject, Service, signal, untracked } from '@angular/core';
 import { CloudCookbookService } from './cloud-cookbook.service';
 import { FeedbackService } from './feedback.service';
+import { msg, t } from '../i18n/i18n';
 
 @Service()
 export class GuestRecipesService {
@@ -60,7 +61,9 @@ export class GuestRecipesService {
       this.checkedVersion.set(version);
     } catch {
       if (version === this.auth.accountVersion() && request === this.request)
-        this.error.set('Could not check your device data. Your saved data is safe. Try again.');
+        this.error.set(
+          msg('Could not check your device data. Your saved data is safe. Try again.'),
+        );
     } finally {
       if (request === this.request) this.checking.set(false);
     }
@@ -78,16 +81,18 @@ export class GuestRecipesService {
       if (version !== this.auth.accountVersion()) return;
       if (!this.error())
         this.feedback.show(
-          choice === 'add'
-            ? 'Device recipes and shopping items added to your account. Changes will sync when online.'
-            : 'Device recipes and shopping items deleted. Your account data is unchanged.',
+          t(
+            choice === 'add'
+              ? 'Device recipes and shopping items added to your account. Changes will sync when online.'
+              : 'Device recipes and shopping items deleted. Your account data is unchanged.',
+          ),
         );
     } catch (error) {
       if (version === this.auth.accountVersion())
         this.error.set(
           error instanceof Error
             ? error.message
-            : 'Could not finish. Your remaining device recipes are safe. Try again.',
+            : msg('Could not finish. Your remaining device recipes are safe. Try again.'),
         );
     } finally {
       if (version === this.auth.accountVersion()) this.busy.set(null);

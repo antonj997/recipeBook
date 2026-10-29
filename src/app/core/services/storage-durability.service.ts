@@ -1,5 +1,6 @@
 import { computed, inject, Service, signal } from '@angular/core';
 import { SupabaseService } from './supabase.service';
+import { t } from '../i18n/i18n';
 
 export type StorageDurability = 'unknown' | 'persisted' | 'best-effort' | 'unsupported';
 
@@ -8,14 +9,17 @@ export function storageSummary(
   signedIn: boolean,
   browserTab: boolean,
 ): string {
-  if (signedIn) return 'Your cookbook is kept in your account. This device keeps an offline copy.';
+  if (signedIn)
+    return t('Your cookbook is kept in your account. This device keeps an offline copy.');
   if (status === 'persisted')
-    return 'This device keeps the cookbook until you clear its site data.';
+    return t('This device keeps the cookbook until you clear its site data.');
   if (status === 'unsupported' || status === 'unknown')
-    return 'This browser does not say whether it keeps the cookbook. Keep a backup.';
-  return browserTab
-    ? 'This browser may clear the cookbook on this device after a while. Install Recipebook, sign in or keep a backup.'
-    : 'This device may clear the cookbook if storage runs low. Keep a backup.';
+    return t('This browser does not say whether it keeps the cookbook. Keep a backup.');
+  return t(
+    browserTab
+      ? 'This browser may clear the cookbook on this device after a while. Install Recipebook, sign in or keep a backup.'
+      : 'This device may clear the cookbook if storage runs low. Keep a backup.',
+  );
 }
 
 /** Whether the browser may clear this device's cookbook, and when it was last backed up. */

@@ -1,20 +1,22 @@
 <section class="import-page page page--narrow">
-  <a routerLink="/" class="back-link"><app-icon name="chevron" />Recipes</a>
-  <h1>Import Recipe</h1>
+  <a routerLink="/" class="back-link"><app-icon name="chevron" />{{ 'Recipes' | t }}</a>
+  <h1>{{ 'Import Recipe' | t }}</h1>
   <p>
-    Paste a link to a recipe website. Review and edit the ingredients and instructions before saving
-    your copy.
+    {{
+      'Paste a link to a recipe website. Review and edit the ingredients and instructions before saving your copy.'
+        | t
+    }}
   </p>
 
   <div class="recipe-search">
     <a href="https://www.google.com/search?q=recept" target="_blank" rel="noopener noreferrer">
-      <app-icon name="link" />Search with Google
+      <app-icon name="link" />{{ 'Search with Google' | t }}
     </a>
-    <p>Copy the recipe link, then return here and paste it to import.</p>
+    <p>{{ 'Copy the recipe link, then return here and paste it to import.' | t }}</p>
   </div>
 
   <form (submit)="importRecipe($event)">
-    <label for="recipe-url">Recipe URL</label>
+    <label for="recipe-url">{{ 'Recipe URL' | t }}</label>
     <input
       id="recipe-url"
       type="url"
@@ -32,44 +34,50 @@
     />
     @if (canPaste && !localOnly() && !needsSignIn()) {
       <button type="button" class="paste-link" [disabled]="importing()" (click)="pasteLink()">
-        <app-icon name="link" />Paste link and import
+        <app-icon name="link" />{{ 'Paste link and import' | t }}
       </button>
     }
     @if (localOnly()) {
       <p id="import-hint">
-        Link import needs the local import server or a configured cloud account.
+        {{ 'Link import needs the local import server or a configured cloud account.' | t }}
       </p>
       <div class="prerequisite-actions">
-        <a class="button primary" routerLink="/recipes/new/edit">Create recipe</a>
-        <a class="button" routerLink="/settings" fragment="import-cookbook">Import cookbook</a>
+        <a class="button primary" routerLink="/recipes/new/edit">{{ 'Create recipe' | t }}</a>
+        <a class="button" routerLink="/settings" fragment="import-cookbook">{{
+          'Import cookbook' | t
+        }}</a>
       </div>
     } @else if (needsSignIn()) {
-      <p id="import-hint">Sign in to import links. Your link will be waiting when you return.</p>
+      <p id="import-hint">
+        {{ 'Sign in to import links. Your link will be waiting when you return.' | t }}
+      </p>
       <a
         class="button primary sign-in"
         routerLink="/settings"
         [queryParams]="{ returnTo: '/recipes/import' }"
         fragment="account"
         (click)="rememberUrl()"
-        >Sign in to import</a
+        >{{ 'Sign in to import' | t }}</a
       >
     } @else {
-      <p id="import-hint" class="hint">The recipe is saved only after you approve its preview.</p>
+      <p id="import-hint" class="hint">
+        {{ 'The recipe is saved only after you approve its preview.' | t }}
+      </p>
       <button class="primary" [attr.aria-busy]="importing()" type="submit" [disabled]="importing()">
-        {{ importing() ? 'Importing…' : 'Import recipe' }}
+        {{ (importing() ? 'Importing…' : 'Import recipe') | t }}
       </button>
     }
     @if (error()) {
-      <p class="error" role="alert">{{ error() }}</p>
+      <p class="error" role="alert">{{ error() | t }}</p>
     }
     @if (notice()) {
-      <p role="status">{{ notice() }}</p>
+      <p role="status">{{ notice() | t }}</p>
     }
   </form>
   <section class="text-import" aria-labelledby="text-import-heading">
-    <h2 id="text-import-heading">Or paste the recipe text</h2>
+    <h2 id="text-import-heading">{{ 'Or paste the recipe text' | t }}</h2>
     <p class="hint">
-      From a note, a message or a page without a link. The first line becomes the title.
+      {{ 'From a note, a message or a page without a link. The first line becomes the title.' | t }}
     </p>
     <textarea
       id="recipe-text"
@@ -86,7 +94,7 @@
       [disabled]="importing() || !text().trim()"
       (click)="importText()"
     >
-      Use text
+      {{ 'Use text' | t }}
     </button>
   </section>
   @if (importing()) {

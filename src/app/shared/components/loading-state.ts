@@ -9,10 +9,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { tipRecipebookMark, type BrandMarkMotion } from '../../core/brand-mark-motion';
+import { msg, TranslatePipe } from '../../core/i18n/i18n';
 
 @Component({
   selector: 'app-loading-state',
-  imports: [NgOptimizedImage],
+  imports: [NgOptimizedImage, TranslatePipe],
   template: `<div role="status">
     <img
       #mark
@@ -23,7 +24,7 @@ import { tipRecipebookMark, type BrandMarkMotion } from '../../core/brand-mark-m
       alt=""
       aria-hidden="true"
     />
-    <span>{{ label() }}</span>
+    <span>{{ label() | t }}</span>
   </div>`,
   styles: `
     div {
@@ -45,7 +46,7 @@ import { tipRecipebookMark, type BrandMarkMotion } from '../../core/brand-mark-m
   `,
 })
 export class LoadingStateComponent {
-  label = input('Loading recipes…');
+  label = input(msg('Loading recipes…'));
   private readonly mark = viewChild.required<ElementRef<HTMLImageElement>>('mark');
   private motion?: BrandMarkMotion;
 

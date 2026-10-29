@@ -85,17 +85,19 @@ export class RecipeSummaryDetailsComponent {
 
 @Component({
   selector: 'app-recipe-extra-details',
-  imports: [IconComponent],
+  imports: [IconComponent, TranslatePipe],
   template: `
     <div class="additional-details">
       @if (nutrition(); as nutrition) {
         <details>
-          <summary class="disclosure">Nutrition per portion<app-icon name="chevron" /></summary>
+          <summary class="disclosure">
+            {{ 'Nutrition per portion' | t }}<app-icon name="chevron" />
+          </summary>
           <dl class="nutrition-list">
             @for (field of nutritionFields; track field.key) {
               @if (nutrition[field.key]) {
                 <div>
-                  <dt>{{ field.label }}</dt>
+                  <dt>{{ field.label | t }}</dt>
                   <dd>{{ nutrition[field.key] }}</dd>
                 </div>
               }
