@@ -16,6 +16,18 @@ describe('page appearance', () => {
     leaveRecipe();
   });
 
+  it('paints the page behind focus mode in the focus surface, then gives the recipe color back', () => {
+    const appearance = TestBed.inject(PageAppearanceService);
+    const leaveRecipe = appearance.useBackground('#d6e8df');
+    expect(appearance.pageBackground()).toBe('#d6e8df');
+    const leaveFocus = appearance.useBrowserColor('#faf9f5');
+    expect(appearance.pageBackground()).toBe('#faf9f5');
+    leaveFocus();
+    expect(appearance.pageBackground()).toBe('#d6e8df');
+    leaveRecipe();
+    expect(appearance.pageBackground()).toBeNull();
+  });
+
   it('ignores a stale overlay cleanup after a newer browser color takes ownership', () => {
     const appearance = TestBed.inject(PageAppearanceService);
     const leaveOld = appearance.useBrowserColor('#faf9f5');

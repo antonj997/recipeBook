@@ -1,7 +1,10 @@
 :host {
   display: contents;
 }
+// The page behind takes the focus surface for the iOS status bar; the recipe marks in here keep
+// the recipe colour.
 .recipe-focus {
+  --page-background: var(--recipe-background);
   position: fixed;
   inset: 0;
   width: 100dvw;

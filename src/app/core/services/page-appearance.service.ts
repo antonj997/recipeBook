@@ -14,6 +14,9 @@ export class PageAppearanceService {
   private readonly browserTint = signal<string | null>(null);
   readonly browserColor = this.browserTint.asReadonly();
   private browserOwner?: symbol;
+  // iOS tints the status bar from what lies behind a top-layer view, so the locked page takes the
+  // overlay's surface too; the recipe color itself stays put for when the overlay closes.
+  readonly pageBackground = computed(() => this.browserTint() ?? this.color());
 
   // Top-layer views can tint browser chrome without changing the recipe palette.
   useBrowserColor(color: string): () => void {

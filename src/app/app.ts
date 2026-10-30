@@ -57,7 +57,8 @@ import { TranslatePipe } from './core/i18n/i18n';
   selector: 'app-root',
   host: {
     '[class.touch-input]': 'touchInput()',
-    '[style.--page-background]': 'appearance.background()',
+    '[style.--page-background]': 'appearance.pageBackground()',
+    '[style.--recipe-background]': 'appearance.background()',
     '[style.--app-header-height]': 'headerHeight()',
     '[class.recipe-page]': '!!appearance.background()',
     '[class.header-title-shown]': '!!appearance.headerTitle()?.shown',
