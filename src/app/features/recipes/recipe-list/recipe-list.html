@@ -25,13 +25,6 @@
           </button>
         }
       </div>
-      <a
-        routerLink="/discover"
-        class="discover-link"
-        [attr.aria-label]="'Discover' | t"
-        [title]="'Discover recipes from others' | t"
-        ><app-icon name="compass"
-      /></a>
       <div class="add-control">
         <button
           type="button"
@@ -60,6 +53,9 @@
           >
           <a routerLink="/recipes/import" (click)="addOptions.hidePopover()"
             ><app-icon name="link" />{{ 'Import from a link' | t }}</a
+          >
+          <a routerLink="/discover" (click)="addOptions.hidePopover()"
+            ><app-icon name="compass" />{{ 'Discover recipes from others' | t }}</a
           >
         </div>
       </div>

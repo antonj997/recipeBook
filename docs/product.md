@@ -579,7 +579,7 @@ Med en person delar man genom att skriva in personens e-post eller användarnamn
 
 Mottagaren ser alltid ägarens senaste version. Spara i mina recept gör en egen kopia med nytt id, samma ingredienser, steg, portioner, färg och foton men utan ägarens kategorier, och den kopian ändras sedan aldrig av ägaren. Utloggad sparas kopian på enheten. Matlagningsläget för ett delat recept sparas för sig, så att det aldrig blandas med de egna recepten. Öppnar ägaren sin egen länk visas det egna receptet. Ett recept som gjorts privat eller tagits bort visar Receptet är inte längre delat.
 
-Upptäck nås med en kompass bredvid sökfältet på startsidan. Där finns Delat med mig och Publika recept, nyast ändrade först, med sökning på titel och 24 recept i taget. Moderering sköts av admin (appens ägare), som kan dölja ett publikt recept från Upptäck och dess länk. Det finns ingen anmälningsknapp; döljandet gäller inte personer som receptet delats med direkt.
+Upptäck nås från menyn under Nytt recept, som tredje val Upptäck andras recept efter Skriv ett recept och Hämta från en länk, och från den tomma startsidan. Där finns Delat med mig och Publika recept, nyast ändrade först, med sökning på titel och 24 recept i taget. Moderering sköts av admin (appens ägare), som kan dölja ett publikt recept från Upptäck och dess länk. Det finns ingen anmälningsknapp; döljandet gäller inte personer som receptet delats med direkt.
 
 ## 14. Designfilosofi och visuell identitet
 
