@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SwipeRevealDirective } from './swipe-reveal';
@@ -7,7 +7,7 @@ import { SwipeRevealDirective } from './swipe-reveal';
   imports: [SwipeRevealDirective],
   template: `
     @for (id of ['a', 'b']; track id) {
-      <li appSwipeReveal [attr.data-id]="id">
+      <li appSwipeReveal [revealFraction]="fraction()" [attr.data-id]="id">
         <button type="button" (click)="actions = actions + 1">Stop</button>
         <a class="swipe-content" href="#" (click)="$event.preventDefault(); opens = opens + 1"
           >Row</a
@@ -17,6 +17,7 @@ import { SwipeRevealDirective } from './swipe-reveal';
   `,
 })
 class HostComponent {
+  readonly fraction = signal<number | null>(null);
   opens = 0;
   actions = 0;
 }
@@ -101,5 +102,15 @@ describe('swipe reveal', () => {
     drag(content('a'), 300, 180);
     row('a').querySelector('button')!.click();
     expect(row('a').classList.contains('is-open')).toBe(false);
+  });
+
+  it('can slide by a share of the card, leaving most of it in view', () => {
+    const { row, content, offset, fixture } = render();
+    fixture.componentInstance.fraction.set(0.3);
+    fixture.detectChanges();
+    Object.defineProperty(row('a'), 'clientWidth', { value: 300, configurable: true });
+    drag(content('a'), 300, 150);
+    expect(offset('a')).toBe('-90px');
+    expect(row('a').classList.contains('is-open')).toBe(true);
   });
 });

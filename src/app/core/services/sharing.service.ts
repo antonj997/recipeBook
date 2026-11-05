@@ -242,7 +242,7 @@ export class SharingService {
   async recipients(recipeId: string): Promise<Recipient[]> {
     this.signedIn();
     const { data } = await this.call((client) =>
-      client.rpc('recipe_recipients', { recipe_id: recipeId }),
+      client.rpc('recipe_people', { recipe_id: recipeId }),
     );
     type Row = { recipient_id: string; label: string; username: string | null };
     return ((data as Row[] | null) ?? []).map((row) => ({

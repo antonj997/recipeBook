@@ -85,8 +85,10 @@
   color: color-mix(in srgb, var(--color-ink) 78%, var(--recipe-color));
   font-size: 0.85rem;
 }
-// Your own shared recipe: swipe the card left and Stop sharing slides out beside it, the same
-// height as the card. Keyboard focus on the button slides the card aside too.
+// Your own shared recipe: swipe the card left by 30% of its width and Stop sharing slides out in
+// the space it leaves, the same height as the card. About 70% of the card stays in view; the part
+// pushed past the screen's left edge softens into the same progressive glass as the shelf edges.
+// Keyboard focus on the button slides the card aside too.
 .discover-own {
   position: relative;
   border-radius: 12px;
@@ -94,7 +96,7 @@
 .discover-stop {
   position: absolute;
   inset: 0 0 0 auto;
-  width: 96px;
+  width: calc(30% - 8px);
   padding: 8px;
   border: 0;
   border-radius: 12px;
@@ -119,10 +121,27 @@
   transition: none;
 }
 .discover-own:has(.discover-stop:focus-visible) .swipe-content {
-  translate: -104px 0;
+  translate: -30% 0;
+}
+// From the screen edge over the gutter and a little into the column.
+.swipe-edge {
+  position: absolute;
+  inset: 0 auto 0 calc(-1 * var(--page-gutter-left));
+  z-index: 1;
+  width: calc(var(--page-gutter-left) + 32px);
+  --glass-to: to right;
+  --glass-tint: var(--color-canvas);
+}
+.swipe-edge > i {
+  opacity: 0;
+  transition: opacity var(--motion-control);
+}
+.discover-own:is(.is-open, .is-dragging, :has(.discover-stop:focus-visible)) .swipe-edge > i {
+  opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
-  .discover-own .swipe-content {
+  .discover-own .swipe-content,
+  .swipe-edge > i {
     transition: none;
   }
 }

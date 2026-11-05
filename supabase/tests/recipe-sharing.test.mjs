@@ -399,7 +399,7 @@ Deno.test('sharing with a listed account by id, and the owner sees current usern
     const people = await user(
       db,
       owner,
-      `select recipient_id, label, username from public.recipe_recipients('soup')`,
+      `select recipient_id, label, username from public.recipe_people('soup')`,
     );
     assert.deepEqual(
       people.map((row) => [row.recipient_id, row.username, row.label]),

@@ -26,6 +26,10 @@ let openRow: SwipeRevealDirective | null = null;
 export class SwipeRevealDirective {
   /** How far the content slides: the action's width plus the gap beside it. */
   readonly revealWidth = input(104);
+  /** Or a share of the row's width, so most of the card stays in view while it is open. */
+  readonly revealFraction = input<number | null>(null);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private width = 0;
   readonly open = signal(false);
   readonly dragging = signal(false);
   readonly offset = signal(0);
@@ -34,7 +38,7 @@ export class SwipeRevealDirective {
   private suppressClick = false;
 
   constructor() {
-    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    const host = this.host;
     const click = (event: MouseEvent) => {
       if ((event.target as Element | null)?.closest('button')) {
         this.suppressClick = false;
@@ -57,10 +61,11 @@ export class SwipeRevealDirective {
   down(event: PointerEvent): void {
     this.suppressClick = false;
     if (event.button > 0 || (event.target as Element | null)?.closest('button')) return;
+    this.width = this.reach();
     this.start = {
       x: event.clientX,
       y: event.clientY,
-      base: this.open() ? -this.revealWidth() : 0,
+      base: this.open() ? -this.width : 0,
     };
     this.horizontal = null;
   }
@@ -84,7 +89,7 @@ export class SwipeRevealDirective {
         /* Capture only keeps the drag when the finger leaves the row. */
       }
     }
-    this.offset.set(Math.min(0, Math.max(-this.revealWidth(), start.base + dx)));
+    this.offset.set(Math.min(0, Math.max(-this.width, start.base + dx)));
   }
 
   up(): void {
@@ -94,7 +99,7 @@ export class SwipeRevealDirective {
     this.dragging.set(false);
     if (dragged) {
       this.suppressClick = true;
-      this.setOpen(this.offset() < -this.revealWidth() / 2);
+      this.setOpen(this.offset() < -this.width / 2);
     } else if (this.open()) {
       this.suppressClick = true;
       this.setOpen(false);
@@ -111,9 +116,14 @@ export class SwipeRevealDirective {
     this.setOpen(false);
   }
 
+  private reach(): number {
+    const fraction = this.revealFraction();
+    return fraction ? Math.round(this.host.clientWidth * fraction) : this.revealWidth();
+  }
+
   private setOpen(open: boolean): void {
     this.open.set(open);
-    this.offset.set(open ? -this.revealWidth() : 0);
+    this.offset.set(open ? -(this.width || this.reach()) : 0);
     if (open) {
       if (openRow && openRow !== this) openRow.close();
       openRow = this;

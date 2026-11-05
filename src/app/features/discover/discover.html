@@ -29,7 +29,10 @@
       <h2 id="my-shared-title">{{ 'You share' | t }}</h2>
       <ul class="discover-list">
         @for (entry of mine(); track entry.recipe.id) {
-          <li class="discover-own" appSwipeReveal>
+          <li class="discover-own" appSwipeReveal [revealFraction]="0.3">
+            <div class="glass-fade swipe-edge" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
             <button
               type="button"
               class="discover-stop"

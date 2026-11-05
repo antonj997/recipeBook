@@ -259,7 +259,7 @@ describe('sharing', () => {
     const calls: string[] = [];
     const { sharing, rpc } = setup({
       rpc: (name) =>
-        name === 'recipe_recipients'
+        name === 'recipe_people'
           ? { data: [{ recipient_id: 'a', label: '@anna', username: 'anna' }], error: null }
           : { data: name === 'share_recipe_with' ? 'shared' : [], error: null },
       table: (table, steps) => {

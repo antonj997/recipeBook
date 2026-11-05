@@ -59,19 +59,19 @@ $$;
 revoke all on function public.share_recipe_with(text, uuid) from public, anon;
 grant execute on function public.share_recipe_with(text, uuid) to authenticated;
 
--- The owner's list gains each recipient's current username; the label stays what the owner typed.
-drop function public.recipe_recipients(text);
-create function public.recipe_recipients(recipe_id text)
+-- The owner's list with each recipient's current username; the label stays what the owner typed.
+-- A new function beside recipe_recipients, so nothing in use is dropped.
+create function public.recipe_people(recipe_id text)
 returns table (recipient_id uuid, label text, username text, created_at timestamptz)
 language sql stable security invoker set search_path = '' as $$
   select s.recipient_id, s.label, p.username, s.created_at
   from public.recipe_shares s
   left join public.profiles p on p.user_id = s.recipient_id
-  where s.owner_id = (select auth.uid()) and s.recipe_id = recipe_recipients.recipe_id
+  where s.owner_id = (select auth.uid()) and s.recipe_id = recipe_people.recipe_id
   order by s.created_at;
 $$;
-revoke all on function public.recipe_recipients(text) from public, anon;
-grant execute on function public.recipe_recipients(text) to authenticated;
+revoke all on function public.recipe_people(text) from public, anon;
+grant execute on function public.recipe_people(text) to authenticated;
 
 -- Which of your recipes are shared, so menus can say Manage sharing without asking each time.
 create function public.my_shared_recipes()
