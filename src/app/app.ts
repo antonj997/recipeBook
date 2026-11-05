@@ -12,6 +12,7 @@ import { LibraryViewService } from './core/services/library-view.service';
 import { PageTransitionService } from './core/services/page-transition.service';
 import { PageAppearanceService } from './core/services/page-appearance.service';
 import { RecipeActionsOverlayComponent } from './shared/components/recipe-actions-overlay';
+import { RecipeShareDialogComponent } from './shared/components/recipe-share-dialog';
 import { CloudCookbookService } from './core/services/cloud-cookbook.service';
 import { RecipeDraftService } from './core/services/recipe-draft.service';
 import { LeaveConfirmationService } from './core/services/leave-confirmation.service';
@@ -46,6 +47,7 @@ import { TranslatePipe } from './core/i18n/i18n';
     FeedbackToastComponent,
     NgOptimizedImage,
     RecipeActionsOverlayComponent,
+    RecipeShareDialogComponent,
     RouterOutlet,
     RouterLink,
     RouterLinkActive,

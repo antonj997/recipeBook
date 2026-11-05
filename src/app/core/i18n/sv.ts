@@ -849,4 +849,34 @@ export const sv: Record<string, string> = {
   'Use 3–24 letters a–z, numbers, dots or underscores.':
     'Använd 3–24 tecken: a–z, siffror, punkt eller understreck.',
   Available: 'Ledigt',
+  'Share recipe': 'Dela recept',
+  'Loading…': 'Laddar…',
+  Public: 'Publikt',
+  'Anyone with the link can open it, and it appears in Discover.':
+    'Alla med länken kan öppna det, och det syns i Upptäck.',
+  'Share link': 'Dela länk',
+  'Public recipes can be found and read by anyone, even without an account.':
+    'Publika recept kan hittas och läsas av alla, även utan konto.',
+  'Without a name it shows as by a Recipebook cook.':
+    'Utan namn visas det som av en Recipebook-kock.',
+  'Shown as @{name}.': 'Visas som @{name}.',
+  'Share with a person': 'Dela med en person',
+  'Email or username': 'E-post eller användarnamn',
+  'People with this recipe': 'Personer som har receptet',
+  'Remove {name}': 'Ta bort {name}',
+  Done: 'Klar',
+  'Stopping…': 'Avslutar…',
+  'Stop sharing publicly': 'Sluta dela publikt',
+  'Publishing…': 'Publicerar…',
+  Publish: 'Publicera',
+  'Sharing…': 'Delar…',
+  Share: 'Dela',
+  'Shared with {name}.': 'Delat med {name}.',
+  'No one found with that email or username.':
+    'Hittade ingen med den e-posten eller användarnamnet.',
+  'You can’t share with yourself.': 'Du kan inte dela med dig själv.',
+  'Wait a moment before sharing again.': 'Vänta en stund innan du delar igen.',
+  'Link copied': 'Länken kopierad',
+  'Could not copy the link. Select it and copy it yourself.':
+    'Kunde inte kopiera länken. Markera och kopiera den själv.',
 };

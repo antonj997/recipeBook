@@ -53,6 +53,9 @@ import { msg, t, TranslatePipe } from '../../core/i18n/i18n';
         <button type="button" role="menuitem" (click)="edit()">
           <app-icon name="pencil" />{{ 'Edit recipe' | t }}
         </button>
+        <button type="button" role="menuitem" (click)="share()">
+          <app-icon name="share" />{{ 'Share recipe' | t }}
+        </button>
         <button type="button" role="menuitem" class="remove-recipe" (click)="requestDelete()">
           <app-icon name="trash" />{{ 'Delete recipe' | t }}
         </button>
@@ -484,6 +487,12 @@ export class RecipeActionsOverlayComponent {
     this.transferringFocus = true;
     this.actions.menu.set(null);
     void this.router.navigate(['/recipes', recipe.id, 'edit']);
+  }
+  share(): void {
+    const recipe = this.actions.menu()?.recipe;
+    if (!recipe) return;
+    this.transferringFocus = true;
+    this.actions.share(recipe);
   }
   requestDelete(): void {
     const selected = this.actions.menu();

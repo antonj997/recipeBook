@@ -1,0 +1,117 @@
+:host {
+  display: contents;
+}
+// Shares its shape with the step timer sheet: a 400px modal with 14px corners.
+.share-sheet {
+  width: min(400px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+.share-sheet[open] {
+  animation: share-sheet-in var(--motion-reveal) var(--motion-ease-out);
+}
+.share-sheet::backdrop {
+  background: #14141355;
+  backdrop-filter: blur(4px);
+}
+h2 {
+  margin: 0;
+  outline: none;
+  font-size: 1.15rem;
+}
+h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+.share-recipe {
+  margin: 2px 0 16px;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.share-part {
+  display: grid;
+  gap: 10px;
+  padding-block: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.share-note,
+.share-outcome {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+.share-outcome:empty {
+  display: none;
+}
+.share-error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.85rem;
+}
+.share-link {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--color-canvas);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.share-actions,
+.share-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.share-person {
+  display: grid;
+  gap: 6px;
+}
+.share-person label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.share-row input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: 44px;
+}
+.share-recipients {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.share-recipients li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 0.875rem;
+}
+.share-recipients span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.share-done {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+@keyframes share-sheet-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .share-sheet[open] {
+    animation: none;
+  }
+}

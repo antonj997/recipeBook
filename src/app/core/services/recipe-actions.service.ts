@@ -20,6 +20,8 @@ export interface RecipeDeleteRequest {
 export class RecipeActionsService {
   menu = signal<RecipeMenu | null>(null);
   deletion = signal<RecipeDeleteRequest | null>(null);
+  /** The recipe whose share dialog is open. */
+  sharing = signal<Recipe | null>(null);
   private recipes = inject(RecipeService);
   constructor() {
     let version = this.recipes.accountVersion();
@@ -29,6 +31,7 @@ export class RecipeActionsService {
         version = current;
         this.menu.set(null);
         this.deletion.set(null);
+        this.sharing.set(null);
       }
     });
   }
@@ -49,6 +52,10 @@ export class RecipeActionsService {
       fromDetail: true,
       afterDelete,
     });
+  }
+  share(recipe: Recipe): void {
+    this.menu.set(null);
+    this.sharing.set(recipe);
   }
   delete(recipe: Recipe, afterDelete?: () => Promise<unknown>): void {
     this.menu.set(null);

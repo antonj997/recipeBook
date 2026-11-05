@@ -101,6 +101,11 @@ import { Component, input } from '@angular/core';
       @case ('download') {
         <path d="M12 3.5v12M7 11.1l5 4.9 5-4.9M4 20.3c5.3.4 10.7.4 16 0" />
       }
+      @case ('share') {
+        <path
+          d="M12 14.6V3.6M7.8 7.6 12 3.4l4.2 4.2M8.4 10.6H6.2c-.8 3.3-.8 6.7 0 10 3.9.5 7.7.5 11.6 0 .8-3.3.8-6.7 0-10h-2.2"
+        />
+      }
       @case ('upload') {
         <path d="M12 16V4.1M7 8.7l5-5 5 5M4 20.3c5.3.4 10.7.4 16 0" />
       }
@@ -145,6 +150,7 @@ export class IconComponent {
     | 'play'
     | 'pause'
     | 'download'
+    | 'share'
     | 'upload'
     | 'pencil'
     | 'trash'
