@@ -122,8 +122,7 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
    * A shared recipe returns to where it was opened from, such as Discover; opened from its link,
    * it has no page of ours behind it and goes to Discover.
    */
-  leaveShared(event?: Event): Promise<boolean> {
-    event?.preventDefault();
+  leaveShared(): Promise<boolean> {
     const state = this.location.getState() as { navigationId?: number } | null;
     if ((state?.navigationId ?? 1) > 1) {
       this.location.back();

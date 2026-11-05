@@ -197,7 +197,7 @@ describe('shared recipe page', () => {
     vi.spyOn(location, 'getState').mockReturnValue({ navigationId: 4 });
     const back = vi.spyOn(location, 'back').mockImplementation(() => {});
     const { root } = await render();
-    const link = root.querySelector<HTMLAnchorElement>('.back-link')!;
+    const link = root.querySelector<HTMLButtonElement>('.back-link')!;
     expect(link.getAttribute('aria-label')).toBe('Back');
     link.click();
     expect(back).toHaveBeenCalled();
@@ -209,7 +209,7 @@ describe('shared recipe page', () => {
     const back = vi.spyOn(location, 'back').mockImplementation(() => {});
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     const { root } = await render();
-    root.querySelector<HTMLAnchorElement>('.back-link')!.click();
+    root.querySelector<HTMLButtonElement>('.back-link')!.click();
     expect(back).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith('/discover');
   });
