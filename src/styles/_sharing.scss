@@ -1,0 +1,20 @@
+// Shared recipes: the author under the title and the copy button in the navigation strip.
+.shared-author {
+  margin: 10px 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+.shared-moderation {
+  margin-top: 8px;
+  padding-inline: 0;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.recipe-navigation .save-copy {
+  min-height: 40px;
+  margin-left: auto;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}

@@ -879,4 +879,17 @@ export const sv: Record<string, string> = {
   'Link copied': 'Länken kopierad',
   'Could not copy the link. Select it and copy it yourself.':
     'Kunde inte kopiera länken. Markera och kopiera den själv.',
+  'Shared recipe': 'Delat recept',
+  'This recipe is no longer shared.': 'Receptet är inte längre delat.',
+  Discover: 'Upptäck',
+  'by @{name}': 'av @{name}',
+  'by a Recipebook cook': 'av en Recipebook-kock',
+  Saved: 'Sparat',
+  'Save to my recipes': 'Spara i mina recept',
+  'Show in Discover': 'Visa i Upptäck',
+  'Hide from Discover': 'Dölj från Upptäck',
+  View: 'Visa',
+  'Could not save the recipe. Try again.': 'Kunde inte spara receptet. Försök igen.',
+  'Saved without {n} photo.': 'Sparat utan {n} foto.',
+  'Saved without {n} photos.': 'Sparat utan {n} foton.',
 };

@@ -20,7 +20,17 @@
       [title]="'Back to recipes' | t"
       ><app-icon name="chevron"
     /></a>
-    @if (!isDraft && recipe() && !loading() && !error()) {
+    @if (isShared && recipe() && !loading() && !error()) {
+      <button
+        type="button"
+        class="primary save-copy"
+        [disabled]="savingCopy() || !!savedCopy()"
+        (click)="saveCopy()"
+      >
+        {{ (savedCopy() ? 'Saved' : savingCopy() ? 'Saving…' : 'Save to my recipes') | t }}
+      </button>
+    }
+    @if (!isDraft && !isShared && recipe() && !loading() && !error()) {
       <button
         #optionsButton
         type="button"
@@ -47,7 +57,11 @@
       <p [attr.role]="error() ? 'alert' : null">
         {{ error() || 'The requested recipe could not be found.' | t }}
       </p>
-      <a routerLink="/" class="button primary">{{ 'Back to recipes' | t }}</a>
+      @if (isShared) {
+        <a routerLink="/discover" class="button primary">{{ 'Discover' | t }}</a>
+      } @else {
+        <a routerLink="/" class="button primary">{{ 'Back to recipes' | t }}</a>
+      }
     </section>
   } @else {
     @if (recipe(); as selectedRecipe) {
@@ -72,6 +86,25 @@
             <h1 #titleHeading [appRecipeTransition]="selectedRecipe.id" transitionPart="title">
               <app-recipe-title [title]="selectedRecipe.title || ('New recipe' | t)" />
             </h1>
+            @if (isShared) {
+              <p class="shared-author">
+                {{
+                  sharedInfo()?.author
+                    ? ('by @{name}' | t: { name: sharedInfo()?.author ?? '' })
+                    : ('by a Recipebook cook' | t)
+                }}
+              </p>
+              @if (isAdmin() && sharedInfo()?.visibility === 'public') {
+                <button
+                  type="button"
+                  class="quiet-button shared-moderation"
+                  [disabled]="hiding()"
+                  (click)="toggleHidden()"
+                >
+                  {{ (hidden() ? 'Show in Discover' : 'Hide from Discover') | t }}
+                </button>
+              }
+            }
             <app-recipe-summary-details
               [recipe]="selectedRecipe"
               [categories]="collectionNames()"
@@ -363,7 +396,7 @@
                         [rotated]="focusMode() && focusPortrait()"
                         [completed]="isCollapsed($index)"
                         [disabled]="isDraft"
-                        [savable]="!isDraft"
+                        [savable]="!isDraft && !isShared"
                         (saveDuration)="saveStepTimer($index, $event)"
                       />
                     }

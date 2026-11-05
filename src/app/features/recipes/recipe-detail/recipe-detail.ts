@@ -67,6 +67,7 @@ import { PageTransitionService } from '../../../core/services/page-transition.se
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { Recipe } from '../../../core/models/recipe.model';
 import { RecipeService } from '../../../core/services/recipe.service';
+import { SharingService, type SharedRecipe } from '../../../core/services/sharing.service';
 
 import { FeedbackService } from '../../../core/services/feedback.service';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
@@ -110,6 +111,8 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   readonly drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
   readonly isDraft = !!this.route.snapshot.data['draft'];
+  /** Someone else's recipe, read from their cookbook: review it, cook it, save your own copy. */
+  readonly isShared = !!this.route.snapshot.data['shared'];
   /** In the iPhone Home Screen app the edge swipe is ours (taken from iOS where it has one). */
   readonly edgeSwipe =
     !this.isDraft && (navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -180,6 +183,54 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     }
   }
   private recipeService = inject(RecipeService);
+  private readonly sharing = inject(SharingService);
+  readonly sharedInfo = signal<SharedRecipe | null>(null);
+  readonly savingCopy = signal(false);
+  readonly savedCopy = signal<Recipe | null>(null);
+  readonly isAdmin = signal(false);
+  readonly hidden = signal(false);
+  readonly hiding = signal(false);
+  async saveCopy(): Promise<void> {
+    const shared = this.sharedInfo();
+    if (!shared || this.savingCopy() || this.savedCopy() || this.accountChanged()) return;
+    this.savingCopy.set(true);
+    try {
+      const copy = await this.sharing.saveCopy(shared);
+      if (this.sharedInfo() !== shared || this.accountChanged()) return;
+      this.savedCopy.set(copy);
+      const message = shared.missingPhotos
+        ? plural(shared.missingPhotos, 'Saved without {n} photo.', 'Saved without {n} photos.')
+        : t('Saved');
+      this.feedback.show(message, {
+        label: t('View'),
+        run: async () => {
+          await this.router.navigate(['/recipes', copy.id]);
+        },
+      });
+    } catch (error) {
+      this.feedback.show(
+        error instanceof Error ? t(error.message) : t('Could not save the recipe. Try again.'),
+      );
+    } finally {
+      this.savingCopy.set(false);
+    }
+  }
+  async toggleHidden(): Promise<void> {
+    const shared = this.sharedInfo();
+    if (!shared || this.hiding()) return;
+    const hide = !this.hidden();
+    this.hiding.set(true);
+    try {
+      await this.sharing.setHidden(shared.owner, shared.id, hide);
+      if (this.sharedInfo() === shared) this.hidden.set(hide);
+    } catch (error) {
+      this.feedback.show(
+        error instanceof Error ? t(error.message) : t('Something went wrong. Try again.'),
+      );
+    } finally {
+      this.hiding.set(false);
+    }
+  }
   private readonly accountVersion = this.recipeService.accountVersion();
   private accountChanged(): boolean {
     return this.accountVersion !== this.recipeService.accountVersion();
@@ -709,6 +760,11 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   loading = signal(true);
   error = signal('');
   ngOnInit(): void {
+    if (this.isShared)
+      void this.sharing
+        .isAdmin()
+        .then((admin) => this.isAdmin.set(admin))
+        .catch(() => undefined);
     this.focusMedia = window.matchMedia('(orientation: portrait)');
     this.syncFocusOrientation();
     this.focusMedia.addEventListener('change', this.syncFocusOrientation);
@@ -769,7 +825,16 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       return;
     }
     try {
-      const result = ready ? ready.recipe : await this.recipeService.getRecipe(id);
+      let result: Recipe | undefined;
+      if (this.isShared) {
+        const shared = ready
+          ? (ready.shared ?? null)
+          : await this.sharing.open(this.route.snapshot.paramMap.get('owner') ?? '', id);
+        if (!current()) return;
+        this.sharedInfo.set(shared);
+        this.hidden.set(!!shared?.hidden);
+        result = shared?.recipe;
+      } else result = ready ? ready.recipe : await this.recipeService.getRecipe(id);
       if (result) {
         result.instructions = result.instructions.map((step, index) =>
           instructionText(step, result.stepDetails?.[index]),
@@ -779,9 +844,18 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       this.recipe.set(result);
       // Step photos sit below the fold; they need no part in the page capture.
       if (result) void this.images.prepare([result, ...(result.stepDetails ?? [])], 'full');
-      this.error.set(result ? '' : msg('This recipe is no longer available.'));
+      this.error.set(
+        result
+          ? ''
+          : this.isShared
+            ? msg('This recipe is no longer shared.')
+            : msg('This recipe is no longer available.'),
+      );
       this.selectedServings.set(this.baseServings());
-      const collections = ready ? ready.collections : await this.recipeService.getCollections();
+      const collections =
+        ready || this.isShared
+          ? (ready?.collections ?? [])
+          : await this.recipeService.getCollections();
       if (!current()) return;
       this.collectionNames.set(
         collections.filter((c) => result?.collectionIds?.includes(c.id)).map((c) => c.name),
@@ -796,7 +870,12 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
       const recipe = this.recipe();
       if (recipe && !this.accountChanged()) this.restoreCookingSession(recipe);
       // Keep the capture ready, then refresh if sync changed local data while the route chunk loaded.
-      if (ready && ready.revision !== this.recipeService.revision() && !this.accountChanged())
+      if (
+        ready &&
+        !this.isShared &&
+        ready.revision !== this.recipeService.revision() &&
+        !this.accountChanged()
+      )
         void this.loadRecipe(false);
     }
   }

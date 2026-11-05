@@ -1,5 +1,9 @@
 import type { Routes } from '@angular/router';
-import { resolveLibraryPage, resolveRecipePage } from './core/services/recipe-page-resolvers';
+import {
+  resolveLibraryPage,
+  resolveRecipePage,
+  resolveSharedRecipePage,
+} from './core/services/recipe-page-resolvers';
 import { confirmBeforeLeaving } from './core/services/leave-confirmation.service';
 import { msg } from './core/i18n/i18n';
 
@@ -51,6 +55,13 @@ export const routes: Routes = [
     title: msg('Recipe Details'),
     resolve: { recipePage: resolveRecipePage },
     canDeactivate: [confirmBeforeLeaving],
+  },
+  {
+    path: 'shared/:owner/:id',
+    loadComponent: detail,
+    title: msg('Shared recipe'),
+    data: { shared: true },
+    resolve: { recipePage: resolveSharedRecipePage },
   },
   {
     path: 'categories',
