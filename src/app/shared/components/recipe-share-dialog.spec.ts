@@ -19,8 +19,29 @@ describe('share dialog', () => {
   const username = signal<string | null | undefined>(null);
   let visibility: 'private' | 'public' | null;
   let sharing: Record<string, ReturnType<typeof vi.fn> | unknown>;
+  let added: ('showModal' | 'close')[] = [];
 
   beforeEach(() => {
+    // Other specs leave their own dialog stubs behind; this one opens and closes for real.
+    added = (['showModal', 'close'] as const).filter(
+      (method) => !HTMLDialogElement.prototype[method],
+    );
+    for (const method of added)
+      Object.defineProperty(HTMLDialogElement.prototype, method, {
+        configurable: true,
+        value() {},
+      });
+    vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (
+      this: HTMLDialogElement,
+    ) {
+      this.setAttribute('open', '');
+    });
+    vi.spyOn(HTMLDialogElement.prototype, 'close').mockImplementation(function (
+      this: HTMLDialogElement,
+    ) {
+      this.removeAttribute('open');
+      this.dispatchEvent(new Event('close'));
+    });
     user.set({ id: me, email: 'me@example.com' });
     accountVersion.set(0);
     username.set(null);
@@ -48,7 +69,11 @@ describe('share dialog', () => {
       ],
     });
   });
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.restoreAllMocks();
+    for (const method of added) Reflect.deleteProperty(HTMLDialogElement.prototype, method);
+  });
 
   async function render() {
     const view = TestBed.createComponent(RecipeShareDialogComponent);
