@@ -29,24 +29,7 @@
       <h2 id="my-shared-title">{{ 'You share' | t }}</h2>
       <ul class="discover-list">
         @for (entry of mine(); track entry.recipe.id) {
-          <li class="discover-own">
-            <a
-              class="discover-row"
-              [routerLink]="['/recipes', entry.recipe.id]"
-              [style.--recipe-color]="ownBackground(entry.recipe)"
-            >
-              <span class="discover-image" [style.background-color]="ownBackground(entry.recipe)">
-                @if (ownCover(entry.recipe); as photo) {
-                  <img [src]="photo" alt="" loading="lazy" decoding="async" />
-                } @else {
-                  <app-food-placeholder [seed]="entry.recipe.id" [color]="entry.recipe.color" />
-                }
-              </span>
-              <span class="discover-copy">
-                <span class="discover-title">{{ entry.recipe.title }}</span>
-                <span class="discover-author">{{ status(entry.state) }}</span>
-              </span>
-            </a>
+          <li class="discover-own" appSwipeReveal>
             <button
               type="button"
               class="discover-stop"
@@ -56,6 +39,25 @@
             >
               {{ 'Stop sharing' | t }}
             </button>
+            <a
+              class="discover-row swipe-content"
+              draggable="false"
+              [routerLink]="['/recipes', entry.recipe.id]"
+              [style.--recipe-color]="ownBackground(entry.recipe)"
+            >
+              <span class="discover-image" [style.background-color]="ownBackground(entry.recipe)">
+                @if (ownCover(entry.recipe); as photo) {
+                  <img [src]="photo" alt="" loading="lazy" decoding="async" draggable="false" />
+                } @else {
+                  <app-food-placeholder [seed]="entry.recipe.id" [color]="entry.recipe.color" />
+                }
+              </span>
+              <span class="discover-copy">
+                <span class="discover-title">{{ entry.recipe.title }}</span>
+                <span class="discover-author">{{ status(entry.state) }}</span>
+              </span>
+              <app-icon name="chevron" class="discover-chevron" />
+            </a>
           </li>
         }
       </ul>

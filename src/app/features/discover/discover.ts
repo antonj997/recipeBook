@@ -17,6 +17,7 @@ import { SupabaseService } from '../../core/services/supabase.service';
 import { FoodPlaceholderComponent } from '../../shared/components/food-placeholder';
 import { IconComponent } from '../../shared/components/icon';
 import { LoadingStateComponent } from '../../shared/components/loading-state';
+import { SwipeRevealDirective } from '../../shared/directives/swipe-reveal';
 
 /** Public recipes anyone can read, and, signed in, the recipes people shared with you. */
 @Component({
@@ -27,6 +28,7 @@ import { LoadingStateComponent } from '../../shared/components/loading-state';
     IconComponent,
     FoodPlaceholderComponent,
     LoadingStateComponent,
+    SwipeRevealDirective,
     TranslatePipe,
   ],
   templateUrl: './discover.html',

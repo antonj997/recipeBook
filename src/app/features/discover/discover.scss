@@ -85,22 +85,46 @@
   color: color-mix(in srgb, var(--color-ink) 78%, var(--recipe-color));
   font-size: 0.85rem;
 }
-// Your own shared recipe: the row opens it, Stop sharing sits beside it.
+// Your own shared recipe: swipe the card left and Stop sharing slides out beside it, the same
+// height as the card. Keyboard focus on the button slides the card aside too.
 .discover-own {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.discover-own .discover-row {
-  flex: 1;
-  min-width: 0;
+  position: relative;
+  border-radius: 12px;
 }
 .discover-stop {
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 96px;
+  padding: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-danger);
+  color: var(--color-surface);
   font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: normal;
+}
+.discover-own .swipe-content {
+  position: relative;
+  translate: var(--swipe-offset, 0px) 0;
+  transition: translate var(--motion-control) var(--motion-ease-out);
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+.discover-own.is-dragging .swipe-content {
+  transition: none;
+}
+.discover-own:has(.discover-stop:focus-visible) .swipe-content {
+  translate: -104px 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .discover-own .swipe-content {
+    transition: none;
+  }
 }
 .discover-chevron {
   flex: 0 0 auto;
