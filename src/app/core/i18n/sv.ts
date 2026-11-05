@@ -832,4 +832,13 @@ export const sv: Record<string, string> = {
     'För många mejl har begärts. Vänta en stund och försök igen. Inloggning med lösenord behöver inget mejl.',
   'Use a category name between 1 and 80 characters.': 'Kategorinamnet ska vara 1–80 tecken.',
   'Use at least 8 characters.': 'Använd minst 8 tecken.',
+
+  // Sharing
+  'You are offline. Try again when you have a connection.':
+    'Du är offline. Försök igen när du har nät.',
+  'This recipe hasn’t synced yet. Try again in a moment.':
+    'Receptet har inte synkats än. Försök igen om en stund.',
+  'Sign in to share recipes.': 'Logga in för att dela recept.',
+  'Sharing is unavailable right now.': 'Delning går inte att använda just nu.',
+  'Something went wrong. Try again.': 'Något gick fel. Försök igen.',
 };
