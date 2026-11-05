@@ -1,0 +1,60 @@
+// Progressive glass: content softens into ever stronger blur towards an edge instead of fading
+// out, like a sheet over a scrolling feed. Markup is an element with five empty <i> children: the
+// first tints the edge, the rest blur ever narrower bands. --glass-to points from the edge inward
+// and --glass-tint is the surface the edge melts into. Visibility belongs on the layers, never on
+// the element: an ancestor with opacity or a mask would cut the blur off from the content behind.
+.glass-fade {
+  --glass-to: to bottom;
+  --glass-tint: var(--color-surface);
+  pointer-events: none;
+}
+.glass-fade > i {
+  position: absolute;
+  inset: 0;
+}
+// The tint lies over the blur: blur reaches past the edge and would pull in what lies beyond it.
+.glass-fade > i:nth-child(1) {
+  z-index: 1;
+  background: linear-gradient(
+    var(--glass-to),
+    var(--glass-tint),
+    color-mix(in srgb, var(--glass-tint) 55%, transparent) 25%,
+    transparent
+  );
+}
+@each $layer, $blur, $solid, $clear in (2, 1px, 50%, 100%), (3, 2px, 30%, 75%), (4, 4px, 15%, 50%),
+  (5, 8px, 0%, 30%)
+{
+  .glass-fade > i:nth-child(#{$layer}) {
+    -webkit-backdrop-filter: blur($blur);
+    backdrop-filter: blur($blur);
+    -webkit-mask-image: linear-gradient(var(--glass-to), #000 $solid, transparent $clear);
+    mask-image: linear-gradient(var(--glass-to), #000 $solid, transparent $clear);
+  }
+}
+
+// Older iPads stutter under live blur while scrolling, and Reduce Transparency asks for solid
+// surfaces: both keep a plain fade into the surface, with the shelf masking its clipped cards.
+@mixin opaque-glass {
+  .glass-fade > i:not(:first-child) {
+    display: none;
+  }
+  .glass-fade > i:first-child {
+    background: linear-gradient(var(--glass-to), var(--glass-tint) 25%, transparent);
+  }
+  .recipe-rail {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--edge-width),
+      #000 calc(100% - var(--edge-width)),
+      transparent
+    );
+  }
+}
+.lite-effects {
+  @include opaque-glass;
+}
+@media (prefers-reduced-transparency: reduce) {
+  @include opaque-glass;
+}

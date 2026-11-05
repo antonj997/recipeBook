@@ -115,7 +115,7 @@ Titeln prioriteras framför beskrivningen. Beskrivningen reserverar inte ett fas
 
 Kortet har en tunn kant i en mörkare ton av sin egen bakgrundsfärg. Bilden ligger kant i kant med kortets övre del. Kortens storlek och mellanrum anpassas efter skärmen. På mobil ska startsidan kännas luftig men samtidigt kompakt nog att inte kräva onödig vertikal scroll i normala skärmstorlekar. Mycket liten skärm eller förstorad text får däremot ge naturlig scroll i stället för avklippt innehåll.
 
-Karusellen använder naturlig horisontell scroll med tydliga stopp per kort. Mjuka toningar vid skärmkanterna gör delvis synliga grannkort mindre abrupta. På mobil används svepning och indikatorn under korten. På större skärmar finns också diskreta navigationspilar och tangentbordsstöd.
+Karusellen använder naturlig horisontell scroll med tydliga stopp per kort. Vid skärmkanterna blir delvis synliga grannkort gradvis suddigare under ett glas, som innehåll bakom Instagrams kommentarsfält, i stället för att tonas bort. På mobil används svepning och indikatorn under korten. På större skärmar finns också diskreta navigationspilar och tangentbordsstöd.
 
 Första och sista kortet ska kunna ligga centrerade där ett kort fyller skärmen, alltså på mobil och på stående surfplattor. I liggande läge och på bredare skärmar börjar korten vid vänstermarginalen och fyller raden, så att det första kortet inte står ensamt i mitten med tom yta bredvid. På stående surfplattor fyller hyllan skärmens höjd: korten blir bredare och lika höga som utrymmet tillåter, och fotot tar den extra höjden. I listvyn ligger receptraderna i två kolumner från 64rem, så breda skärmar inte visar en enda utdragen rad.
 
@@ -219,7 +219,7 @@ På små skärmar väljer man mellan Ingredients och Instructions i en sticky fl
 
 Övre hörn är rundade och de nedre övergångarna böjer utåt in i läsytan. Den aktiva formen glider mellan alternativen med en kort, flytande rörelse. Nederlinjen finns under den inaktiva fliken men gör ett avbrott under den aktiva, även under animationen.
 
-Under flikarna finns först en liten ogenomskinlig vit zon och sedan en toning mot transparent. Den gör att text som passerar bakom raden försvinner mjukare. Rubrikerna Ingredienser och Instruktioner behöver inte upprepas direkt under flikarna, eftersom flikarna redan namnger innehållet.
+Under flikarna ligger ett smalt glasband där text som scrollar in bakom raden blir allt suddigare och tonas mot den vita läsytan. Rubrikerna Ingredienser och Instruktioner behöver inte upprepas direkt under flikarna, eftersom flikarna redan namnger innehållet.
 
 I den vanliga receptvyn har vi valt sidans normala scroll. Ingredienser och instruktioner har inte separata scrollbehållare eller separata sparade scrollpositioner. Ett flikbyte ska därför inte försöka återställa ett gammalt scrollläge och dra hela sidan uppåt eller nedåt.
 
@@ -646,7 +646,7 @@ Vid laddning tippar R-märket över till bokorienteringen med exakt samma rörel
 
 ### 15.0 Äldre iPads
 
-Appen ska fungera på iPads som inte kan uppdateras förbi iPadOS 16 (Safari 16.6). Bygget riktar sig därför även till Safari 16.4 och senare, så att koden och stilarna anpassas dit. Det som Safari 16 saknar fylls i: menyerna (Popover API) får en polyfill som bara laddas där den behövs, och avbrytbara nätverksanrop klarar sig utan `AbortSignal.any`. Eftersom polyfillens menyer ligger kvar i sidan i stället för i webbläsarens översta lager får ingen förälder till en meny ha en kvarliggande förflyttning eller transform, annars hamnar menyn fel (som portionsmenyn i ingredienskolumnen gjorde). På de här enheterna stängs oskärpa bakom glas och den förvrängande kanten på hyllan av och ersätts av täckande ytor, eftersom de gör scrollning och animationer hackiga på äldre grafikchip. Sidövergångarna mellan kort och recept kräver nyare Safari och byts där mot vanliga sidbyten.
+Appen ska fungera på iPads som inte kan uppdateras förbi iPadOS 16 (Safari 16.6). Bygget riktar sig därför även till Safari 16.4 och senare, så att koden och stilarna anpassas dit. Det som Safari 16 saknar fylls i: menyerna (Popover API) får en polyfill som bara laddas där den behövs, och avbrytbara nätverksanrop klarar sig utan `AbortSignal.any`. Eftersom polyfillens menyer ligger kvar i sidan i stället för i webbläsarens översta lager får ingen förälder till en meny ha en kvarliggande förflyttning eller transform, annars hamnar menyn fel (som portionsmenyn i ingredienskolumnen gjorde). På de här enheterna stängs oskärpa bakom glas av och ersätts av täckande ytor och vanliga toningar (som även används när Minska genomskinlighet är på), eftersom de gör scrollning och animationer hackiga på äldre grafikchip. Sidövergångarna mellan kort och recept kräver nyare Safari och byts där mot vanliga sidbyten.
 
 ### 15.1 Kortet blir receptsidan
 

@@ -5,6 +5,7 @@
 @use './styles/shelf-depth';
 @use './styles/shelf-tablet';
 @use './styles/cooking-steps';
+@use './styles/glass-fade';
 
 :root {
   color-scheme: light;
@@ -709,19 +710,13 @@ main .recipe-detail.empty-recipe-page {
   background: inherit;
 }
 
-/* Older iPads (engines before Safari 17, see markLiteEffects) stutter under live blur and SVG
-   displacement while scrolling: those surfaces become opaque instead. */
+/* Older iPads (engines before Safari 17, see markLiteEffects) stutter under live blur while
+   scrolling: those surfaces become opaque instead (edge glass: see _glass-fade.scss). */
 .lite-effects {
-  .glass-menu,
-  .edge-glass {
+  .glass-menu {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
-  }
-  .glass-menu {
     background: var(--color-surface);
-  }
-  .edge-glass {
-    background: linear-gradient(90deg, var(--color-canvas), transparent);
   }
   dialog::backdrop {
     -webkit-backdrop-filter: none !important;

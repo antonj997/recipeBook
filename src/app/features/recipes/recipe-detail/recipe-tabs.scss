@@ -6,13 +6,11 @@
   border-bottom: 1px solid var(--color-border);
   background: var(--page-background, var(--color-canvas));
 }
-.section-switch::after {
-  content: '';
+// Text scrolling up under the tabs softens into glass beneath the rule.
+.reading-glass {
   position: absolute;
   inset: calc(100% + 1px) 0 auto;
   height: 32px;
-  background: linear-gradient(to bottom, var(--color-surface) 8px, transparent 32px);
-  pointer-events: none;
 }
 .section-tabs {
   position: relative;

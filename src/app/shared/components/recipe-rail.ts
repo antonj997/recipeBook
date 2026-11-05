@@ -99,7 +99,6 @@ export class RecipeRailComponent implements OnDestroy {
     return this.cardMetadata().get(recipe)?.categories ?? [];
   }
   railId = input.required<string>();
-  filterId = computed(() => this.railId() + '-glass');
   rail = viewChild<ElementRef<HTMLDivElement>>('recipeRail');
   canScrollPrevious = signal(false);
   canScrollNext = signal(false);
