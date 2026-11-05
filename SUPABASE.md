@@ -95,7 +95,7 @@ The remote migration history lacks `20261024230433_shopping_items`: the table ex
 
 ## Recipe sharing
 
-`20261105120000_recipe_sharing.sql` adds `public.profiles` (optional public usernames), `recipes.visibility` (`private` by default; sync upserts never send it), `public.recipe_shares`, and in the private schema `admins`, `hidden_recipes` and `share_limits`. Policies let `anon` and signed-in callers read public, unhidden recipes, let recipients read what was shared with them, and let photos follow their recipe. The functions `username_available`, `share_recipe`, `recipe_recipients`, `shared_with_me`, `discover_recipes`, `shared_recipe`, `is_admin` and `set_recipe_hidden` are the app's only entry points (`SharingService`).
+`20261105190657_recipe_sharing.sql` (applied to production on 2026-11-05) adds `public.profiles` (optional public usernames), `recipes.visibility` (`private` by default; sync upserts never send it), `public.recipe_shares`, and in the private schema `admins`, `hidden_recipes` and `share_limits`. Policies let `anon` and signed-in callers read public, unhidden recipes, let recipients read what was shared with them, and let photos follow their recipe. The functions `username_available`, `share_recipe`, `recipe_recipients`, `shared_with_me`, `discover_recipes`, `shared_recipe`, `is_admin` and `set_recipe_hidden` are the app's only entry points (`SharingService`).
 
 Seed the admin outside the migration so no address is committed:
 
