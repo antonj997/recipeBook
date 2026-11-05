@@ -92,3 +92,18 @@ cd supabase/tests && deno test --allow-read --allow-env --allow-net --no-lock co
 ```
 
 The remote migration history lacks `20261024230433_shopping_items`: the table exists, but it was created outside the CLI. Mark it applied with `supabase migration repair --status applied 20261024230433` before the next `supabase db push`, or the push tries to create the table again.
+
+## Recipe sharing
+
+`20261105120000_recipe_sharing.sql` adds `public.profiles` (optional public usernames), `recipes.visibility` (`private` by default; sync upserts never send it), `public.recipe_shares`, and in the private schema `admins`, `hidden_recipes` and `share_limits`. Policies let `anon` and signed-in callers read public, unhidden recipes, let recipients read what was shared with them, and let photos follow their recipe. The functions `username_available`, `share_recipe`, `recipe_recipients`, `shared_with_me`, `discover_recipes`, `shared_recipe`, `is_admin` and `set_recipe_hidden` are the app's only entry points (`SharingService`).
+
+Seed the admin outside the migration so no address is committed:
+
+```sql
+insert into private.admins(user_id) select id from auth.users where lower(email) = lower('<admin email>');
+```
+
+```sh
+cd supabase/tests && deno test --allow-read --allow-env --allow-net --no-lock recipe-sharing.test.mjs
+```
+

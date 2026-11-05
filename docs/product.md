@@ -511,7 +511,7 @@ Offlineändringar sparas på enheten och kan synkas när anslutningen återkomme
 
 ### 13.1 Inställningarnas struktur
 
-Inställningssidan är uppdelad i Account, Backups och App och är byggd som en inbyggd inställningsskärm: rubriken Settings med en bakåtpil, sedan en liten etikett per grupp, ett vitt kort med rader och en kort förklaring under kortet. Varje rad har titel och en rad förklaring till vänster och en enda kompakt kontroll till höger (knapp eller reglage), så att allt går att överblicka på en mobilskärm utan ankarlänkar. Kontokortet överst visar en rund monogram med kontots initial (eller R för kokboken på enheten), e-postadressen och synkstatus med en liten statusprick, och synkstatus på en kort rad (till exempel Synced). En lång e-postadress kortas med … i stället för att brytas mitt i ordet. Sync now, Reset password och Sign out är egna rader i samma kort, så att inget trängs bredvid e-postadressen på en mobil; Sign out i varningsfärg. Utloggad visas This device och inloggningsformuläret i kortet. Den ska bara innehålla sådant som faktiskt är inställningar eller kontohantering. Receptskapande och kategorihantering har flyttats till relevanta innehållsflöden.
+Inställningssidan är uppdelad i Account, Backups och App och är byggd som en inbyggd inställningsskärm: rubriken Settings med en bakåtpil, sedan en liten etikett per grupp, ett vitt kort med rader och en kort förklaring under kortet. Varje rad har titel och en rad förklaring till vänster och en enda kompakt kontroll till höger (knapp eller reglage), så att allt går att överblicka på en mobilskärm utan ankarlänkar. Kontokortet överst visar en rund monogram med kontots initial (eller R för kokboken på enheten), e-postadressen och synkstatus med en liten statusprick, och synkstatus på en kort rad (till exempel Synced). En lång e-postadress kortas med … i stället för att brytas mitt i ordet. Under huvudraden finns raden Användarnamn med @namn eller Inget och Ändra, där det publika användarnamnet sätts, byts eller tas bort direkt i kortet. Sync now, Reset password och Sign out är egna rader i samma kort, så att inget trängs bredvid e-postadressen på en mobil; Sign out i varningsfärg. Utloggad visas This device och inloggningsformuläret i kortet. Den ska bara innehålla sådant som faktiskt är inställningar eller kontohantering. Receptskapande och kategorihantering har flyttats till relevanta innehållsflöden.
 
 ### 13.2 Konto och inloggning
 
@@ -568,6 +568,18 @@ Den svenska texten är inte en ordagrann översättning. Vi väljer det ord en s
 Allt appen själv skriver översätts: knappar, rubriker, etiketter för skärmläsare, felmeddelanden, sidtitlar och startskärmen. Receptens eget innehåll, som titlar, ingredienser och kategorinamn, är användarens text och översätts inte. Push-aviseringar för timrar skrivs av servern och är tills vidare på engelska.
 
 Ny text i appen skrivs på engelska och får sin svenska formulering samtidigt. En kontroll i bygget (npm run i18n:check) stoppar text som saknar översättning.
+
+### 13.8 Dela recept
+
+Ett recept kan delas på två sätt: publikt eller med en viss person. Mottagaren läser receptet i appens vanliga läsvy och kan spara en egen kopia; ingen annan kan ändra originalet. Delningen sker från receptets ⋯-meny med Dela recept och kräver konto, eftersom receptet måste finnas i molnet. Utloggad kommer man till kontoinställningarna.
+
+Publikt betyder helt publikt: receptet kan hittas i Upptäck och läsas av alla, även utan konto. Rutan säger det rakt ut innan man publicerar och erbjuder ett användarnamn som syns för alla. Namnet är frivilligt (3–24 tecken, a–z, siffror, punkt och understreck, utan skillnad på stora och små bokstäver) och kontrolleras medan man skriver; utan namn står det av en Recipebook-kock. Ett publikt recept får en länk som kan delas med telefonens delningsmeny eller kopieras. Sluta dela publikt stänger länken och tar bort receptet från Upptäck direkt.
+
+Med en person delar man genom att skriva in personens e-post eller användarnamn. Bara exakta träffar räknas och varje konto kan försöka 30 gånger i timmen, så att man inte kan pröva sig fram till vilka adresser som har konto. Ingen e-post skickas; mottagaren ser receptet under Delat med mig i Upptäck. Ägarens lista visar det ägaren själv skrev och kan ta bort personer.
+
+Mottagaren ser alltid ägarens senaste version. Spara i mina recept gör en egen kopia med nytt id, samma ingredienser, steg, portioner, färg och foton men utan ägarens kategorier, och den kopian ändras sedan aldrig av ägaren. Utloggad sparas kopian på enheten. Matlagningsläget för ett delat recept sparas för sig, så att det aldrig blandas med de egna recepten. Öppnar ägaren sin egen länk visas det egna receptet. Ett recept som gjorts privat eller tagits bort visar Receptet är inte längre delat.
+
+Upptäck nås med en kompass bredvid sökfältet på startsidan. Där finns Delat med mig och Publika recept, nyast ändrade först, med sökning på titel och 24 recept i taget. Moderering sköts av admin (appens ägare), som kan dölja ett publikt recept från Upptäck och dess länk. Det finns ingen anmälningsknapp; döljandet gäller inte personer som receptet delats med direkt.
 
 ## 14. Designfilosofi och visuell identitet
 
