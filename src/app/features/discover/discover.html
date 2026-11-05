@@ -12,10 +12,51 @@
 
   @if (sharedWithMe().length) {
     <section id="shared-with-me" class="discover-group" aria-labelledby="shared-with-me-title">
-      <h2 id="shared-with-me-title">{{ 'Shared with me' | t }}</h2>
+      <h2 id="shared-with-me-title">{{ 'Shared with you' | t }}</h2>
       <ul class="discover-list">
         @for (item of sharedWithMe(); track item.recipe.id) {
-          <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ $implicit: item }" />
+          <ng-container
+            [ngTemplateOutlet]="row"
+            [ngTemplateOutletContext]="{ $implicit: item, line: sharedBy(item) }"
+          />
+        }
+      </ul>
+    </section>
+  }
+
+  @if (mine().length) {
+    <section id="my-shared" class="discover-group" aria-labelledby="my-shared-title">
+      <h2 id="my-shared-title">{{ 'You share' | t }}</h2>
+      <ul class="discover-list">
+        @for (entry of mine(); track entry.recipe.id) {
+          <li class="discover-own">
+            <a
+              class="discover-row"
+              [routerLink]="['/recipes', entry.recipe.id]"
+              [style.--recipe-color]="ownBackground(entry.recipe)"
+            >
+              <span class="discover-image" [style.background-color]="ownBackground(entry.recipe)">
+                @if (ownCover(entry.recipe); as photo) {
+                  <img [src]="photo" alt="" loading="lazy" decoding="async" />
+                } @else {
+                  <app-food-placeholder [seed]="entry.recipe.id" [color]="entry.recipe.color" />
+                }
+              </span>
+              <span class="discover-copy">
+                <span class="discover-title">{{ entry.recipe.title }}</span>
+                <span class="discover-author">{{ status(entry.state) }}</span>
+              </span>
+            </a>
+            <button
+              type="button"
+              class="discover-stop"
+              [disabled]="stopping() === entry.recipe.id"
+              [attr.aria-label]="'Stop sharing {title}' | t: { title: entry.recipe.title }"
+              (click)="stopSharing(entry)"
+            >
+              {{ 'Stop sharing' | t }}
+            </button>
+          </li>
         }
       </ul>
     </section>
@@ -59,7 +100,7 @@
   </section>
 </section>
 
-<ng-template #row let-item>
+<ng-template #row let-item let-line="line">
   <li>
     <a
       class="discover-row"
@@ -75,7 +116,7 @@
       </span>
       <span class="discover-copy">
         <span class="discover-title">{{ item.recipe.title }}</span>
-        <span class="discover-author">{{ author(item) }}</span>
+        <span class="discover-author">{{ line ?? author(item) }}</span>
       </span>
       <app-icon name="chevron" class="discover-chevron" />
     </a>

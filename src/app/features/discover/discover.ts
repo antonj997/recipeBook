@@ -1,12 +1,17 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { t, TranslatePipe } from '../../core/i18n/i18n';
+import { plural, t, TranslatePipe } from '../../core/i18n/i18n';
+import type { Recipe } from '../../core/models/recipe.model';
+import { FeedbackService } from '../../core/services/feedback.service';
+import { RecipeImagesService } from '../../core/services/recipe-images.service';
+import { RecipeService } from '../../core/services/recipe.service';
 import { recipeBackground } from '../../core/models/recipe-color';
 import {
   SharingService,
   type DiscoverCursor,
   type SharedRecipe,
+  type SharedState,
 } from '../../core/services/sharing.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { FoodPlaceholderComponent } from '../../shared/components/food-placeholder';
@@ -30,6 +35,12 @@ import { LoadingStateComponent } from '../../shared/components/loading-state';
 export class DiscoverComponent implements OnInit {
   private readonly sharing = inject(SharingService);
   private readonly auth = inject(SupabaseService);
+  private readonly recipes = inject(RecipeService);
+  private readonly images = inject(RecipeImagesService);
+  private readonly feedback = inject(FeedbackService);
+  /** Your own recipes that are public or shared with someone, with how they are shared. */
+  readonly mine = signal<{ recipe: Recipe; state: SharedState }[]>([]);
+  readonly stopping = signal<string | null>(null);
   readonly query = signal('');
   readonly items = signal<SharedRecipe[]>([]);
   readonly next = signal<DiscoverCursor | undefined>(undefined);
@@ -39,6 +50,7 @@ export class DiscoverComponent implements OnInit {
   readonly sharedWithMe = signal<SharedRecipe[]>([]);
   private readonly covers = signal<Record<string, string>>({});
   readonly background = (item: SharedRecipe) => recipeBackground(item.recipe);
+  readonly ownBackground = (recipe: Recipe) => recipeBackground(recipe);
   private request = 0;
   private timer?: ReturnType<typeof setTimeout>;
   private active = true;
@@ -61,6 +73,66 @@ export class DiscoverComponent implements OnInit {
           void this.loadCovers(items);
         })
         .catch(() => undefined);
+    if (this.auth.user()) void this.loadMine();
+  }
+
+  private async loadMine(): Promise<void> {
+    try {
+      await this.sharing.refreshShared();
+      const shared = this.sharing.shared();
+      const recipes = (await this.recipes.getRecipes()).filter((recipe) => shared.has(recipe.id));
+      if (!this.active) return;
+      await this.images.prepare(recipes, 'thumb').catch(() => undefined);
+      this.mine.set(
+        recipes
+          .map((recipe) => ({ recipe, state: shared.get(recipe.id)! }))
+          .sort((a, b) => a.recipe.title.localeCompare(b.recipe.title)),
+      );
+    } catch {
+      /* The section stays away offline; the recipes themselves are untouched. */
+    }
+  }
+
+  status(state: SharedState): string {
+    if (state.visibility === 'public')
+      return state.recipients
+        ? plural(state.recipients, 'Public · with {n} person', 'Public · with {n} people')
+        : t('Public');
+    return plural(state.recipients, 'With {n} person', 'With {n} people');
+  }
+
+  ownCover(recipe: Recipe): string | undefined {
+    return this.images.peek(recipe, 'thumb');
+  }
+
+  /** Stops all sharing at once (public and people); Undo puts every part back. */
+  async stopSharing(entry: { recipe: Recipe; state: SharedState }): Promise<void> {
+    if (this.stopping()) return;
+    this.stopping.set(entry.recipe.id);
+    try {
+      const before = await this.sharing.stopSharing(entry.recipe.id);
+      if (!this.active) return;
+      this.mine.update((list) => list.filter((item) => item.recipe.id !== entry.recipe.id));
+      this.feedback.show(t('Stopped sharing {title}', { title: entry.recipe.title }), {
+        label: t('Undo'),
+        run: async () => {
+          await this.sharing.restoreSharing(entry.recipe.id, before);
+          if (this.active) void this.loadMine();
+        },
+      });
+    } catch (error) {
+      this.feedback.show(
+        error instanceof Error ? t(error.message) : t('Something went wrong. Try again.'),
+      );
+    } finally {
+      if (this.active) this.stopping.set(null);
+    }
+  }
+
+  sharedBy(item: SharedRecipe): string {
+    return item.author
+      ? t('Shared by @{name}', { name: item.author })
+      : t('Shared by a Recipebook cook');
   }
 
   search(value: string): void {

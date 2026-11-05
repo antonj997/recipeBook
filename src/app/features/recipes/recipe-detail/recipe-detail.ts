@@ -1,4 +1,4 @@
-import { NgTemplateOutlet } from '@angular/common';
+import { Location, NgTemplateOutlet } from '@angular/common';
 import { RecipeFocusComponent } from './recipe-focus';
 import { IngredientCheckComponent } from './ingredient-check';
 import { EdgeSwipeBackDirective } from '../../../shared/directives/edge-swipe-back';
@@ -105,6 +105,7 @@ import { msg, plural, PluralPipe, t, TranslatePipe } from '../../../core/i18n/i1
 })
 export class RecipeDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
+  private readonly location = inject(Location);
   private readonly destroyRef = inject(DestroyRef);
   private readonly pageMotion = inject(PageTransitionService);
   private loadRequest = 0;
@@ -117,9 +118,25 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
   readonly edgeSwipe =
     !this.isDraft && (navigator as Navigator & { standalone?: boolean }).standalone === true;
   private readonly edgeSwipeBack = viewChild(EdgeSwipeBackDirective);
+  /**
+   * A shared recipe returns to where it was opened from, such as Discover; opened from its link,
+   * it has no page of ours behind it and goes to Discover.
+   */
+  leaveShared(event?: Event): Promise<boolean> {
+    event?.preventDefault();
+    const state = this.location.getState() as { navigationId?: number } | null;
+    if ((state?.navigationId ?? 1) > 1) {
+      this.location.back();
+      return Promise.resolve(true);
+    }
+    return this.router.navigateByUrl('/discover');
+  }
   async swipeHome(): Promise<void> {
     const left =
-      !this.accountChanged() && (await this.router.navigateByUrl('/').catch(() => false));
+      !this.accountChanged() &&
+      (await (this.isShared ? this.leaveShared() : this.router.navigateByUrl('/')).catch(
+        () => false,
+      ));
     // A navigation that was cancelled or failed leaves the page where the finger let go.
     if (!left) this.edgeSwipeBack()?.reset();
   }

@@ -14,10 +14,11 @@
     transitionPart="navigation"
   >
     <a
-      routerLink="/"
+      [routerLink]="isShared ? '/discover' : '/'"
       class="back-link"
-      [attr.aria-label]="'Back to recipes' | t"
-      [title]="'Back to recipes' | t"
+      [attr.aria-label]="(isShared ? 'Back' : 'Back to recipes') | t"
+      [title]="(isShared ? 'Back' : 'Back to recipes') | t"
+      (click)="isShared && leaveShared($event)"
       ><app-icon name="chevron"
     /></a>
     @if (isShared && recipe() && !loading() && !error()) {

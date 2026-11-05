@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { Location } from '@angular/common';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StepTimerTarget } from '../../../core/models/step-timer';
@@ -189,5 +190,27 @@ describe('shared recipe page', () => {
     view.host.detectChanges();
     expect(sharing.setHidden).toHaveBeenCalledWith(owner, 'abc', true);
     expect(view.button('Show in Discover')).toBeTruthy();
+  });
+
+  it('goes back to the page you came from, such as Discover', async () => {
+    const location = TestBed.inject(Location);
+    vi.spyOn(location, 'getState').mockReturnValue({ navigationId: 4 });
+    const back = vi.spyOn(location, 'back').mockImplementation(() => {});
+    const { root } = await render();
+    const link = root.querySelector<HTMLAnchorElement>('.back-link')!;
+    expect(link.getAttribute('aria-label')).toBe('Back');
+    link.click();
+    expect(back).toHaveBeenCalled();
+  });
+
+  it('goes to Discover when the shared link opened the app', async () => {
+    const location = TestBed.inject(Location);
+    vi.spyOn(location, 'getState').mockReturnValue({ navigationId: 1 });
+    const back = vi.spyOn(location, 'back').mockImplementation(() => {});
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const { root } = await render();
+    root.querySelector<HTMLAnchorElement>('.back-link')!.click();
+    expect(back).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('/discover');
   });
 });

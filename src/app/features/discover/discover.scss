@@ -85,6 +85,23 @@
   color: color-mix(in srgb, var(--color-ink) 78%, var(--recipe-color));
   font-size: 0.85rem;
 }
+// Your own shared recipe: the row opens it, Stop sharing sits beside it.
+.discover-own {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.discover-own .discover-row {
+  flex: 1;
+  min-width: 0;
+}
+.discover-stop {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
 .discover-chevron {
   flex: 0 0 auto;
   width: 20px;

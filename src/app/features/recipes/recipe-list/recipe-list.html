@@ -55,7 +55,7 @@
             ><app-icon name="link" />{{ 'Import from a link' | t }}</a
           >
           <a routerLink="/discover" (click)="addOptions.hidePopover()"
-            ><app-icon name="compass" />{{ 'Discover recipes from others' | t }}</a
+            ><app-icon name="compass" />{{ 'Discover shared recipes' | t }}</a
           >
         </div>
       </div>
@@ -80,7 +80,7 @@
           'Import cookbook' | t
         }}</a>
       </div>
-      <a routerLink="/discover">{{ 'Discover recipes from others' | t }}</a>
+      <a routerLink="/discover">{{ 'Discover shared recipes' | t }}</a>
       <a routerLink="/categories">{{ 'Manage categories' | t }}</a>
     </div>
   } @else {

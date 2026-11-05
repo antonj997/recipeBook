@@ -8,6 +8,9 @@ import {
   type SharedRecipe,
 } from '../../core/services/sharing.service';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { RecipeService } from '../../core/services/recipe.service';
+import { RecipeImagesService } from '../../core/services/recipe-images.service';
+import { FeedbackService } from '../../core/services/feedback.service';
 import { DiscoverComponent } from './discover';
 
 const owner = '11111111-1111-4111-8111-111111111111';
@@ -28,7 +31,21 @@ describe('discover', () => {
   const user = signal<{ id: string } | null>(null);
   let discover: ReturnType<typeof vi.fn>;
   let sharedWithMe: ReturnType<typeof vi.fn>;
+  let shared: Map<string, { visibility: 'private' | 'public'; recipients: number }>;
+  let stopSharing: ReturnType<typeof vi.fn>;
+  let restoreSharing: ReturnType<typeof vi.fn>;
   beforeEach(() => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false,
+      addEventListener() {},
+      removeEventListener() {},
+    }));
+    shared = new Map();
+    stopSharing = vi.fn(async (id: string) => {
+      shared.delete(id);
+      return { visibility: 'public', recipients: ['a'] };
+    });
+    restoreSharing = vi.fn(async () => undefined);
     vi.useFakeTimers();
     user.set(null);
     discover = vi.fn(async () => ({ items: [item('a'), item('b', null)] }));
@@ -39,12 +56,35 @@ describe('discover', () => {
         { provide: SupabaseService, useValue: { user, accountVersion: signal(0) } },
         {
           provide: SharingService,
-          useValue: { discover, sharedWithMe, photo: vi.fn(async () => undefined) },
+          useValue: {
+            discover,
+            sharedWithMe,
+            photo: vi.fn(async () => undefined),
+            shared: () => shared,
+            refreshShared: vi.fn(async () => undefined),
+            stopSharing,
+            restoreSharing,
+          },
+        },
+        {
+          provide: RecipeService,
+          useValue: {
+            getRecipes: async () => [
+              { id: 'soup', title: 'My soup', ingredients: [], instructions: [] },
+              { id: 'bread', title: 'My bread', ingredients: [], instructions: [] },
+              { id: 'cake', title: 'My cake', ingredients: [], instructions: [] },
+            ],
+          },
+        },
+        {
+          provide: RecipeImagesService,
+          useValue: { prepare: async () => undefined, peek: () => undefined },
         },
       ],
     });
   });
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.useRealTimers();
     TestBed.resetTestingModule();
   });
@@ -79,15 +119,18 @@ describe('discover', () => {
     expect(discover).toHaveBeenCalledWith('', undefined);
   });
 
-  it('shows Shared with me only for a signed-in cook with recipes there', async () => {
+  it('shows Shared with you only for a signed-in cook with recipes there, naming who shared', async () => {
     let view = await render();
     expect(view.root.querySelector('#shared-with-me')).toBeNull();
     expect(sharedWithMe).not.toHaveBeenCalled();
     view.view.destroy();
     user.set({ id: 'me' });
     view = await render();
-    expect(view.root.querySelector('#shared-with-me a.discover-row')?.getAttribute('href')).toBe(
-      `/shared/${owner}/s`,
+    const row = view.root.querySelector('#shared-with-me a.discover-row');
+    expect(row?.getAttribute('href')).toBe(`/shared/${owner}/s`);
+    expect(row?.textContent).toContain('Shared by @anna');
+    expect(view.root.querySelector('#shared-with-me h2')?.textContent?.trim()).toBe(
+      'Shared with you',
     );
     view.view.destroy();
     sharedWithMe.mockResolvedValue([]);
@@ -141,5 +184,44 @@ describe('discover', () => {
     button('Try again')!.click();
     await settle();
     expect(text()).toContain('Recipe a');
+  });
+
+  it('lists your own shared recipes, and stops sharing one with Undo', async () => {
+    user.set({ id: 'me' });
+    shared.set('soup', { visibility: 'public', recipients: 0 });
+    shared.set('bread', { visibility: 'private', recipients: 2 });
+    shared.set('cake', { visibility: 'public', recipients: 1 });
+    const { root, settle } = await render();
+    const section = root.querySelector('#my-shared')!;
+    expect(section.querySelector('h2')?.textContent?.trim()).toBe('You share');
+    const rows = [...section.querySelectorAll('li')];
+    expect(rows.map((row) => row.querySelector('.discover-title')?.textContent?.trim())).toEqual([
+      'My bread',
+      'My cake',
+      'My soup',
+    ]);
+    expect(rows.map((row) => row.querySelector('.discover-author')?.textContent?.trim())).toEqual([
+      'With 2 people',
+      'Public · with 1 person',
+      'Public',
+    ]);
+    expect(rows[2].querySelector('a')?.getAttribute('href')).toBe('/recipes/soup');
+    rows[2].querySelector<HTMLButtonElement>('button')!.click();
+    await settle();
+    expect(stopSharing).toHaveBeenCalledWith('soup');
+    expect([...root.querySelectorAll('#my-shared li')].length).toBe(2);
+    const feedback = TestBed.inject(FeedbackService);
+    expect(feedback.message()).toBe('Stopped sharing My soup');
+    await feedback.action()!.run();
+    expect(restoreSharing).toHaveBeenCalledWith('soup', {
+      visibility: 'public',
+      recipients: ['a'],
+    });
+  });
+
+  it('has no You share section without shared recipes', async () => {
+    user.set({ id: 'me' });
+    const { root } = await render();
+    expect(root.querySelector('#my-shared')).toBeNull();
   });
 });
