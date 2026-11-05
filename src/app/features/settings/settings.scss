@@ -190,3 +190,16 @@
     margin-bottom: 28px;
   }
 }
+
+// The public username, edited in place.
+.username-editor {
+  flex: 1;
+  display: grid;
+  gap: 8px;
+  padding-block: 4px;
+}
+.username-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

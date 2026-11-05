@@ -55,6 +55,48 @@
             }
           </div>
         }
+        <div class="settings-row username-row" [class.is-editing]="editingUsername()">
+          @if (editingUsername()) {
+            <div class="username-editor">
+              <app-username-field [(value)]="usernameDraft" (status)="usernameStatus.set($event)" />
+              @if (usernameError()) {
+                <p class="error" role="alert">{{ usernameError() }}</p>
+              }
+              <div class="username-actions">
+                <button
+                  type="button"
+                  class="primary"
+                  [disabled]="
+                    savingUsername() ||
+                    usernameStatus() === 'invalid' ||
+                    usernameStatus() === 'taken'
+                  "
+                  (click)="saveUsername()"
+                >
+                  {{ (savingUsername() ? 'Saving…' : 'Save') | t }}
+                </button>
+                @if (sharing.username()) {
+                  <button type="button" [disabled]="savingUsername()" (click)="saveUsername(true)">
+                    {{ 'Remove' | t }}
+                  </button>
+                }
+                <button type="button" class="quiet-button" (click)="editingUsername.set(false)">
+                  {{ 'Cancel' | t }}
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="row-copy">
+              <p class="row-title">{{ 'Username' | t }}</p>
+              <p class="row-note">
+                {{ sharing.username() ? '@' + sharing.username() : ('None' | t) }}
+              </p>
+            </div>
+            <button type="button" class="row-action" (click)="editUsername()">
+              {{ 'Change' | t }}
+            </button>
+          }
+        </div>
         <div class="settings-row">
           <button
             type="button"

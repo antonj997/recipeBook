@@ -16,6 +16,11 @@ import {
 } from '../../core/services/storage-durability.service';
 import { SlowMotionSwitchComponent } from '../../shared/components/slow-motion-switch';
 import { SelectMenuComponent } from '../../shared/components/select-menu';
+import { SharingService, normalizeUsername } from '../../core/services/sharing.service';
+import {
+  UsernameFieldComponent,
+  type UsernameStatus,
+} from '../../shared/components/username-field';
 import {
   dateLocale,
   languagePreference,
@@ -35,6 +40,7 @@ import {
     RouterLink,
     AccountAccessComponent,
     TimerAlertPreferencesComponent,
+    UsernameFieldComponent,
     TranslatePipe,
   ],
   templateUrl: './settings.html',
@@ -89,6 +95,44 @@ export class SettingsComponent {
   setLanguage(value: string): void {
     if (value === 'auto' || value === 'en' || value === 'sv') setLanguagePreference(value);
   }
+  // The public username shown with shared recipes.
+  readonly sharing = inject(SharingService);
+  readonly editingUsername = signal(false);
+  readonly usernameDraft = signal('');
+  readonly usernameStatus = signal<UsernameStatus>('empty');
+  readonly usernameError = signal('');
+  readonly savingUsername = signal(false);
+  private readonly loadUsername = effect(() => {
+    if (this.auth.user() && this.sharing.username() === undefined)
+      void this.sharing.loadProfile().catch(() => undefined);
+  });
+
+  editUsername(): void {
+    this.usernameDraft.set(this.sharing.username() ?? '');
+    this.usernameError.set('');
+    this.editingUsername.set(true);
+  }
+
+  async saveUsername(remove = false): Promise<void> {
+    const version = this.auth.accountVersion();
+    const name = remove ? '' : normalizeUsername(this.usernameDraft());
+    this.savingUsername.set(true);
+    this.usernameError.set('');
+    try {
+      const outcome = await this.sharing.setUsername(name || null);
+      if (!this.current(version)) return;
+      if (outcome === 'taken') this.usernameError.set(t('Taken'));
+      else this.editingUsername.set(false);
+    } catch (error) {
+      if (this.current(version))
+        this.usernameError.set(
+          error instanceof Error ? error.message : t('Something went wrong. Try again.'),
+        );
+    } finally {
+      this.savingUsername.set(false);
+    }
+  }
+
   /** The account card's monogram: the first letter of the email address. */
   initial(email?: string | null): string {
     return (email?.trim()[0] ?? '?').toLocaleUpperCase();

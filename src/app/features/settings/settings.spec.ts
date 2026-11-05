@@ -9,12 +9,20 @@ import { TimerPushService } from '../../core/services/timer-push.service';
 import { StorageDurabilityService } from '../../core/services/storage-durability.service';
 import { RecipeService } from '../../core/services/recipe.service';
 import { language, setLanguagePreference } from '../../core/i18n/i18n';
+import { SharingService } from '../../core/services/sharing.service';
 
 describe('settings page', () => {
   const user = signal<{ email: string } | null>(null);
   const sync = vi.fn();
+  const username = signal<string | null | undefined>(null);
+  const setUsername = vi.fn(async (name: string | null) => {
+    username.set(name);
+    return 'saved' as const;
+  });
   beforeEach(() => {
     user.set(null);
+    username.set(null);
+    setUsername.mockClear();
     const auth = {
       configured: signal(true),
       user,
@@ -27,6 +35,15 @@ describe('settings page', () => {
       providers: [
         provideRouter([]),
         { provide: RecipeService, useValue: {} },
+        {
+          provide: SharingService,
+          useValue: {
+            username,
+            loadProfile: vi.fn(async () => undefined),
+            isUsernameAvailable: vi.fn(async () => true),
+            setUsername,
+          },
+        },
         {
           provide: CloudCookbookService,
           useValue: {
@@ -139,5 +156,33 @@ describe('settings page', () => {
       'Säkerhetskopior',
       'Appen',
     ]);
+  });
+
+  it('shows the public username in the account card and changes it there', async () => {
+    user.set({ email: 'anna@example.com' });
+    const { view, root } = render();
+    const row = () => root.querySelector('#account .username-row')!;
+    expect(text(row().querySelector('.row-title'))).toBe('Username');
+    expect(text(row().querySelector('.row-note'))).toBe('None');
+    username.set('anna');
+    view.detectChanges();
+    expect(text(row().querySelector('.row-note'))).toBe('@anna');
+    row().querySelector<HTMLButtonElement>('.row-action')!.click();
+    view.detectChanges();
+    const input = row().querySelector<HTMLInputElement>('app-username-field input')!;
+    expect(input.value).toBe('anna');
+    input.value = '@Anna.B';
+    input.dispatchEvent(new Event('input'));
+    view.detectChanges();
+    [...row().querySelectorAll<HTMLButtonElement>('button')]
+      .find((b) => text(b) === 'Save')!
+      .click();
+    await view.whenStable();
+    expect(setUsername).toHaveBeenCalledWith('anna.b');
+  });
+
+  it('has no username row when signed out', () => {
+    const { root } = render();
+    expect(root.querySelector('.username-row')).toBeNull();
   });
 });

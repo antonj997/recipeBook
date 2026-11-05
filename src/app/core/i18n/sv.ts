@@ -841,4 +841,12 @@ export const sv: Record<string, string> = {
   'Sign in to share recipes.': 'Logga in för att dela recept.',
   'Sharing is unavailable right now.': 'Delning går inte att använda just nu.',
   'Something went wrong. Try again.': 'Något gick fel. Försök igen.',
+  Remove: 'Ta bort',
+  Username: 'Användarnamn',
+  Change: 'Ändra',
+  Taken: 'Upptaget',
+  'Username (shown to everyone)': 'Användarnamn (syns för alla)',
+  'Use 3–24 letters a–z, numbers, dots or underscores.':
+    'Använd 3–24 tecken: a–z, siffror, punkt eller understreck.',
+  Available: 'Ledigt',
 };
