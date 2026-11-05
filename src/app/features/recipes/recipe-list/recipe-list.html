@@ -25,6 +25,13 @@
           </button>
         }
       </div>
+      <a
+        routerLink="/discover"
+        class="discover-link"
+        [attr.aria-label]="'Discover' | t"
+        [title]="'Discover recipes from others' | t"
+        ><app-icon name="compass"
+      /></a>
       <div class="add-control">
         <button
           type="button"
@@ -77,6 +84,7 @@
           'Import cookbook' | t
         }}</a>
       </div>
+      <a routerLink="/discover">{{ 'Discover recipes from others' | t }}</a>
       <a routerLink="/categories">{{ 'Manage categories' | t }}</a>
     </div>
   } @else {

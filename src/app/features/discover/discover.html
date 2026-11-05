@@ -1,0 +1,83 @@
+<section class="discover page">
+  <header class="discover-header">
+    <a
+      routerLink="/"
+      class="back-link"
+      [attr.aria-label]="'Back to recipes' | t"
+      [title]="'Back to recipes' | t"
+      ><app-icon name="chevron"
+    /></a>
+    <h1>{{ 'Discover' | t }}</h1>
+  </header>
+
+  @if (sharedWithMe().length) {
+    <section id="shared-with-me" class="discover-group" aria-labelledby="shared-with-me-title">
+      <h2 id="shared-with-me-title">{{ 'Shared with me' | t }}</h2>
+      <ul class="discover-list">
+        @for (item of sharedWithMe(); track item.recipe.id) {
+          <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ $implicit: item }" />
+        }
+      </ul>
+    </section>
+  }
+
+  <section id="public-recipes" class="discover-group" aria-labelledby="public-recipes-title">
+    <h2 id="public-recipes-title">{{ 'Public recipes' | t }}</h2>
+    <div class="search-field" role="search">
+      <app-icon name="search" />
+      <input
+        type="search"
+        [attr.aria-label]="'Search public recipes' | t"
+        [placeholder]="'Search public recipes' | t"
+        [value]="query()"
+        (input)="search($any($event.target).value)"
+      />
+    </div>
+    @if (loading()) {
+      <app-loading-state [label]="'Loading recipes…' | t" />
+    } @else if (error()) {
+      <div class="discover-message">
+        <p role="alert">{{ error() }}</p>
+        <button type="button" (click)="load()">{{ 'Try again' | t }}</button>
+      </div>
+    } @else if (!items().length) {
+      <p class="discover-message" role="status">{{ emptyMessage() }}</p>
+    } @else {
+      <ul class="discover-list">
+        @for (item of items(); track item.recipe.id) {
+          <ng-container [ngTemplateOutlet]="row" [ngTemplateOutletContext]="{ $implicit: item }" />
+        }
+      </ul>
+      @if (next()) {
+        <div class="discover-more">
+          <button type="button" [disabled]="loadingMore()" (click)="load(true)">
+            {{ (loadingMore() ? 'Loading…' : 'Show more') | t }}
+          </button>
+        </div>
+      }
+    }
+  </section>
+</section>
+
+<ng-template #row let-item>
+  <li>
+    <a
+      class="discover-row"
+      [routerLink]="['/shared', item.owner, item.id]"
+      [style.--recipe-color]="background(item)"
+    >
+      <span class="discover-image" [style.background-color]="background(item)">
+        @if (cover(item); as photo) {
+          <img [src]="photo" alt="" loading="lazy" decoding="async" />
+        } @else {
+          <app-food-placeholder [seed]="item.id" [color]="item.recipe.color" />
+        }
+      </span>
+      <span class="discover-copy">
+        <span class="discover-title">{{ item.recipe.title }}</span>
+        <span class="discover-author">{{ author(item) }}</span>
+      </span>
+      <app-icon name="chevron" class="discover-chevron" />
+    </a>
+  </li>
+</ng-template>

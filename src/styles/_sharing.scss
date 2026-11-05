@@ -18,3 +18,16 @@
   border-radius: 8px;
   font-size: 0.9rem;
 }
+// Discover from the home tools: a quiet 44px icon link between search and Add recipe.
+.home-tools .discover-link {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--color-ink);
+}
+.home-tools .discover-link app-icon {
+  width: 24px;
+  height: 24px;
+}

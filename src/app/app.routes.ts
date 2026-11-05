@@ -57,6 +57,11 @@ export const routes: Routes = [
     canDeactivate: [confirmBeforeLeaving],
   },
   {
+    path: 'discover',
+    loadComponent: () => import('./features/discover/discover').then((m) => m.DiscoverComponent),
+    title: msg('Discover'),
+  },
+  {
     path: 'shared/:owner/:id',
     loadComponent: detail,
     title: msg('Shared recipe'),

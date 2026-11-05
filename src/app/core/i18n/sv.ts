@@ -892,4 +892,12 @@ export const sv: Record<string, string> = {
   'Could not save the recipe. Try again.': 'Kunde inte spara receptet. Försök igen.',
   'Saved without {n} photo.': 'Sparat utan {n} foto.',
   'Saved without {n} photos.': 'Sparat utan {n} foton.',
+  'Shared with me': 'Delat med mig',
+  'Public recipes': 'Publika recept',
+  'Search public recipes': 'Sök bland publika recept',
+  'Show more': 'Visa fler',
+  'No recipes match “{query}”.': 'Inga recept matchar ”{query}”.',
+  'No public recipes yet.': 'Inga publika recept än.',
+  'Could not load recipes.': 'Kunde inte ladda recepten.',
+  'Discover recipes from others': 'Upptäck andras recept',
 };

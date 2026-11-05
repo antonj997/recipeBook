@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Recipe } from '../models/recipe.model';
 import { isRecipeImage } from '../models/recipe-metadata';
 import { msg } from '../i18n/i18n';
+import { runtimeConfig } from '../runtime-config';
 import { readCloudRecipe } from './cloud-pull';
 import { RecipeService } from './recipe.service';
 import { SupabaseService } from './supabase.service';
@@ -249,8 +250,10 @@ export class SharingService {
     return this.recipes.addRecipe(content);
   }
 
+  /** The page's address, in the router's own form (GitHub Pages routes after a #). */
   link(owner: string, id: string): string {
-    return new URL('shared/' + owner + '/' + encodeURIComponent(id), document.baseURI).href;
+    const path = 'shared/' + owner + '/' + encodeURIComponent(id);
+    return new URL(runtimeConfig.pages ? '#/' + path : path, document.baseURI).href;
   }
 
   private readRows(data: unknown): SharedRecipe[] {
