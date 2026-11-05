@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import type { Recipe } from '../../core/models/recipe.model';
 import type { RecipeCollection } from '../../core/models/recipe-collection.model';
 import { RecipeActionsService } from '../../core/services/recipe-actions.service';
+import { SharingService } from '../../core/services/sharing.service';
 import { RecipeService } from '../../core/services/recipe.service';
 import { FeedbackService } from '../../core/services/feedback.service';
 import { CookingSessionService } from '../../core/services/cooking-session.service';
@@ -54,7 +55,9 @@ import { msg, t, TranslatePipe } from '../../core/i18n/i18n';
           <app-icon name="pencil" />{{ 'Edit recipe' | t }}
         </button>
         <button type="button" role="menuitem" (click)="share()">
-          <app-icon name="share" />{{ 'Share recipe' | t }}
+          <app-icon name="share" />{{
+            (sharing.isShared(selected.recipe.id) ? 'Manage sharing' : 'Share recipe') | t
+          }}
         </button>
         <button type="button" role="menuitem" class="remove-recipe" (click)="requestDelete()">
           <app-icon name="trash" />{{ 'Delete recipe' | t }}
@@ -372,6 +375,7 @@ import { msg, t, TranslatePipe } from '../../core/i18n/i18n';
 })
 export class RecipeActionsOverlayComponent {
   readonly actions = inject(RecipeActionsService);
+  readonly sharing = inject(SharingService);
   private recipes = inject(RecipeService);
   private router = inject(Router);
   private feedback = inject(FeedbackService);

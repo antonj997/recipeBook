@@ -2,98 +2,118 @@
   #dialog
   class="share-sheet"
   aria-labelledby="share-sheet-title"
+  [style.--keyboard.px]="keyboard()"
   (close)="close()"
   (pointerdown)="backdropPressed = $event.target === $event.currentTarget"
   (click)="backdropClick($event)"
 >
   @if (recipe(); as selected) {
-    <!-- Focus lands on the heading so a tap does not open the keyboard. -->
-    <h2 id="share-sheet-title" tabindex="-1" autofocus>{{ 'Share recipe' | t }}</h2>
-    <p class="share-recipe">{{ selected.title }}</p>
-    @if (error()) {
-      <p class="share-error" role="alert">{{ error() }}</p>
-    }
-    @if (loading()) {
-      <p class="share-note" role="status">{{ 'Loading…' | t }}</p>
-    } @else if (visibility() === null) {
-      @if (!error()) {
-        <p class="share-note">{{ 'This recipe hasn’t synced yet. Try again in a moment.' | t }}</p>
+    <header class="share-head">
+      <div class="share-heading">
+        <!-- Focus lands on the heading so a tap does not open the keyboard. -->
+        <h2 id="share-sheet-title" tabindex="-1" autofocus>{{ title() | t }}</h2>
+        <p class="share-recipe">{{ selected.title }}</p>
+      </div>
+      <button
+        type="button"
+        class="share-close"
+        [attr.aria-label]="'Close' | t"
+        [title]="'Close' | t"
+        (click)="close()"
+      >
+        <app-icon name="close" />
+      </button>
+    </header>
+
+    <div class="share-body">
+      @if (error()) {
+        <p class="share-error" role="alert">{{ error() }}</p>
       }
-    } @else {
-      <section class="share-part" aria-labelledby="share-public-title">
-        <h3 id="share-public-title">{{ 'Public' | t }}</h3>
-        @if (visibility() === 'public') {
+      @if (loading()) {
+        <p class="share-note" role="status">{{ 'Loading…' | t }}</p>
+      } @else if (visibility() === null) {
+        @if (!error()) {
           <p class="share-note">
-            {{ 'Anyone with the link can open it, and it appears in Discover.' | t }}
+            {{ 'This recipe hasn’t synced yet. Try again in a moment.' | t }}
           </p>
-          <p class="share-link">{{ link() }}</p>
-          <div class="share-actions">
-            <button type="button" class="primary" (click)="shareLink()">
-              <app-icon name="share" />{{ 'Share link' | t }}
-            </button>
-            <button type="button" [disabled]="!!busy()" (click)="makePrivate()">
-              {{ (busy() === 'private' ? 'Stopping…' : 'Stop sharing publicly') | t }}
-            </button>
-          </div>
-        } @else {
-          <p class="share-note">
-            {{ 'Public recipes can be found and read by anyone, even without an account.' | t }}
-          </p>
-          @if (sharing.username() === null) {
-            <app-username-field [(value)]="draftName" (status)="nameStatus.set($event)" />
-            @if (nameError()) {
-              <p class="share-error" role="alert">{{ nameError() }}</p>
-            } @else if (!draftName().trim()) {
-              <p class="share-note">{{ 'Without a name it shows as by a Recipebook cook.' | t }}</p>
-            }
-          } @else if (sharing.username()) {
-            <p class="share-note">
-              {{ 'Shown as @{name}.' | t: { name: sharing.username() ?? '' } }}
-            </p>
-          }
-          <div class="share-actions">
-            <button
-              type="button"
-              class="primary"
-              [disabled]="!!busy() || nameStatus() === 'invalid' || nameStatus() === 'taken'"
-              (click)="publish()"
-            >
-              {{ (busy() === 'publish' ? 'Publishing…' : 'Publish') | t }}
-            </button>
-          </div>
         }
-      </section>
-      <section class="share-part" aria-labelledby="share-person-title">
-        <h3 id="share-person-title">{{ 'Share with a person' | t }}</h3>
-        <form class="share-person" (submit)="$event.preventDefault(); shareWithPerson()">
-          <label for="share-recipient">{{ 'Email or username' | t }}</label>
-          <div class="share-row">
+      } @else {
+        <section class="share-part" aria-labelledby="share-people-title">
+          <h3 id="share-people-title">{{ 'People with access' | t }}</h3>
+          <div class="share-search">
+            <app-icon name="search" />
             <input
-              id="share-recipient"
-              type="text"
-              inputmode="email"
+              id="share-search"
+              type="search"
               autocomplete="off"
               autocapitalize="none"
               spellcheck="false"
+              enterkeyhint="search"
               maxlength="320"
-              [value]="recipient()"
-              (input)="recipient.set($any($event.target).value)"
+              [attr.aria-label]="'Add people by username or email' | t"
+              [placeholder]="'Add people by username or email' | t"
+              aria-controls="share-results"
+              [value]="query()"
+              (input)="search($any($event.target).value)"
             />
-            <button type="submit" [disabled]="!!busy() || !recipient().trim()">
-              {{ (busy() === 'share' ? 'Sharing…' : 'Share') | t }}
-            </button>
           </div>
-        </form>
-        <p class="share-outcome" role="status">{{ outcome() }}</p>
-        @if (recipients().length) {
-          <ul class="share-recipients" [attr.aria-label]="'People with this recipe' | t">
+          @if (query().trim()) {
+            <ul
+              id="share-results"
+              class="share-list share-results"
+              [attr.aria-label]="'Search results' | t"
+            >
+              @if (emailMatch(); as email) {
+                <li>
+                  <span class="share-avatar" aria-hidden="true">@</span>
+                  <span class="share-name">{{ email }}</span>
+                  <button type="button" [disabled]="!!busy()" (click)="addEmail(email)">
+                    {{ 'Share' | t }}
+                  </button>
+                </li>
+              } @else {
+                @for (person of results(); track person.id) {
+                  <li>
+                    <span class="share-avatar" aria-hidden="true">{{
+                      initial(person.username)
+                    }}</span>
+                    <span class="share-name">&#64;{{ person.username }}</span>
+                    <button
+                      type="button"
+                      [disabled]="!!busy()"
+                      [attr.aria-label]="'Add @{name}' | t: { name: person.username }"
+                      (click)="addPerson(person)"
+                    >
+                      {{ 'Add' | t }}
+                    </button>
+                  </li>
+                } @empty {
+                  <li class="share-empty">
+                    {{ (searching() ? 'Searching…' : 'No one found with that username.') | t }}
+                  </li>
+                }
+              }
+            </ul>
+          }
+          <p class="share-outcome" role="status">{{ outcome() }}</p>
+          <ul class="share-list" [attr.aria-label]="'People with this recipe' | t">
+            <li>
+              <span class="share-avatar is-owner" aria-hidden="true">{{
+                initial(sharing.username() ?? 'R')
+              }}</span>
+              <span class="share-name">
+                {{ sharing.username() ? '@' + sharing.username() : ('You' | t) }}
+              </span>
+              <span class="share-role">{{ 'Owner' | t }}</span>
+            </li>
             @for (person of recipients(); track person.id) {
               <li>
-                <span>{{ person.label }}</span>
+                <span class="share-avatar" aria-hidden="true">{{ initial(person.name) }}</span>
+                <span class="share-name">{{ person.name }}</span>
                 <button
                   type="button"
                   class="quiet-button"
-                  [attr.aria-label]="'Remove {name}' | t: { name: person.label }"
+                  [attr.aria-label]="'Remove {name}' | t: { name: person.name }"
                   (click)="remove(person)"
                 >
                   {{ 'Remove' | t }}
@@ -101,11 +121,72 @@
               </li>
             }
           </ul>
-        }
-      </section>
-    }
-    <div class="share-done">
-      <button type="button" (click)="close()">{{ 'Done' | t }}</button>
+        </section>
+
+        <section class="share-part" aria-labelledby="share-access-title">
+          <h3 id="share-access-title">{{ 'General access' | t }}</h3>
+          <div class="share-access">
+            <span class="share-avatar is-access" aria-hidden="true"
+              ><app-icon [name]="access() === 'public' ? 'globe' : 'lock'"
+            /></span>
+            <div class="share-access-copy">
+              <app-select-menu
+                menuId="share-access-menu"
+                [label]="'General access' | t"
+                [value]="access()"
+                [options]="accessOptions()"
+                [disabled]="!!busy()"
+                (valueChange)="chooseAccess($event)"
+              />
+              <p class="share-note">
+                {{
+                  (access() === 'public'
+                    ? 'Anyone can find it in Discover and read it, even without an account.'
+                    : 'Only people you add can open it.'
+                  ) | t
+                }}
+              </p>
+            </div>
+          </div>
+          @if (choosingPublic()) {
+            <div class="share-publish">
+              <app-username-field [(value)]="draftName" (status)="nameStatus.set($event)" />
+              @if (nameError()) {
+                <p class="share-error" role="alert">{{ nameError() }}</p>
+              } @else {
+                <p class="share-note">
+                  {{
+                    'Public recipes show your username. Without one they show as by a Recipebook cook.'
+                      | t
+                  }}
+                </p>
+              }
+              <div class="share-actions">
+                <button
+                  type="button"
+                  class="primary"
+                  [disabled]="!!busy() || nameStatus() === 'invalid' || nameStatus() === 'taken'"
+                  (click)="publish()"
+                >
+                  {{ (busy() === 'publish' ? 'Publishing…' : 'Publish') | t }}
+                </button>
+                <button type="button" class="quiet-button" (click)="chooseAccess('private')">
+                  {{ 'Cancel' | t }}
+                </button>
+              </div>
+            </div>
+          }
+        </section>
+      }
     </div>
+
+    <footer class="share-foot">
+      @if (visibility() !== null && !loading()) {
+        <button type="button" class="share-link-button" (click)="shareLink()">
+          <app-icon name="link" />{{ 'Copy link' | t }}
+        </button>
+      }
+      <button type="button" class="primary" (click)="close()">{{ 'Done' | t }}</button>
+    </footer>
   }
 </dialog>

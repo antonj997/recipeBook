@@ -206,4 +206,74 @@ describe('sharing', () => {
       new URL(`shared/${owner}/soup`, document.baseURI).href,
     );
   });
+
+  it('finds people by username and shares with one by id', async () => {
+    const { sharing, rpc } = setup({
+      rpc: (name) =>
+        name === 'search_usernames'
+          ? { data: [{ user_id: owner, username: 'anna' }], error: null }
+          : name === 'share_recipe_with'
+            ? { data: 'shared', error: null }
+            : { data: [], error: null },
+    });
+    expect(await sharing.searchPeople(' @An ')).toEqual([{ id: owner, username: 'anna' }]);
+    expect(rpc).toHaveBeenCalledWith('search_usernames', { query: 'an' });
+    expect(await sharing.searchPeople('  ')).toEqual([]);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(await sharing.shareWith('soup', owner)).toBe('shared');
+    expect(rpc).toHaveBeenCalledWith('share_recipe_with', { recipe_id: 'soup', recipient: owner });
+  });
+
+  it('names recipients by their current username, else by what the owner typed', async () => {
+    const { sharing } = setup({
+      rpc: () => ({
+        data: [
+          { recipient_id: 'a', label: '@anna', username: 'anna.b' },
+          { recipient_id: 'b', label: 'bo@example.com', username: null },
+        ],
+        error: null,
+      }),
+    });
+    expect(await sharing.recipients('soup')).toEqual([
+      { id: 'a', name: '@anna.b' },
+      { id: 'b', name: 'bo@example.com' },
+    ]);
+  });
+
+  it('keeps track of which of your recipes are shared', async () => {
+    let rows = [{ recipe_id: 'soup', visibility: 'public', recipients: 0 }];
+    const { sharing } = setup({
+      rpc: (name) =>
+        name === 'my_shared_recipes' ? { data: rows, error: null } : { data: [], error: null },
+    });
+    await sharing.refreshShared();
+    expect(sharing.isShared('soup')).toBe(true);
+    expect(sharing.isShared('bread')).toBe(false);
+    expect(sharing.shared().get('soup')).toEqual({ visibility: 'public', recipients: 0 });
+    rows = [];
+    await sharing.refreshShared();
+    expect(sharing.isShared('soup')).toBe(false);
+  });
+
+  it('stops sharing completely and can put it back', async () => {
+    const calls: string[] = [];
+    const { sharing, rpc } = setup({
+      rpc: (name) =>
+        name === 'recipe_recipients'
+          ? { data: [{ recipient_id: 'a', label: '@anna', username: 'anna' }], error: null }
+          : { data: name === 'share_recipe_with' ? 'shared' : [], error: null },
+      table: (table, steps) => {
+        calls.push(table + ':' + steps.map((step) => step[0]).join('.'));
+        if (steps.some((step) => step[0] === 'maybeSingle'))
+          return { data: { visibility: 'public' }, error: null };
+        return { data: [{ id: 'soup' }], error: null };
+      },
+    });
+    const before = await sharing.stopSharing('soup');
+    expect(before).toEqual({ visibility: 'public', recipients: ['a'] });
+    expect(calls).toContain('recipes:update.eq.eq.select');
+    expect(calls).toContain('recipe_shares:delete.eq.eq');
+    await sharing.restoreSharing('soup', before);
+    expect(rpc).toHaveBeenCalledWith('share_recipe_with', { recipe_id: 'soup', recipient: 'a' });
+  });
 });

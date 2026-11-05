@@ -33,6 +33,7 @@ import {
   ElementRef,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -40,6 +41,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IconComponent } from './shared/components/icon';
 import { FeedbackService } from './core/services/feedback.service';
+import { SharingService } from './core/services/sharing.service';
 import { TranslatePipe } from './core/i18n/i18n';
 
 @Component({
@@ -94,6 +96,7 @@ export class App {
 
   readonly updates = inject(AppUpdateService);
   private cloud = inject(CloudCookbookService);
+  private readonly sharing = inject(SharingService);
   private drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
   private guestRecipes = inject(GuestRecipesService);
@@ -201,6 +204,11 @@ export class App {
         cancelAnimationFrame(themeFrame);
         if (themeColor && originalThemeColor) themeColor.content = originalThemeColor;
       });
+    });
+    // Menus say Manage sharing for recipes already shared; know which ones from sign-in on.
+    effect(() => {
+      if (this.cloud.auth.user())
+        untracked(() => void this.sharing.refreshShared().catch(() => undefined));
     });
     let version = this.cloud.auth.accountVersion();
     effect(() => {

@@ -10,6 +10,19 @@ import { SupabaseService } from './supabase.service';
 
 export type RecipeVisibility = 'private' | 'public';
 export type ShareOutcome = 'shared' | 'not_found' | 'self' | 'limited';
+export interface SharedState {
+  visibility: RecipeVisibility;
+  recipients: number;
+}
+export interface Person {
+  id: string;
+  username: string;
+}
+export interface Recipient {
+  id: string;
+  /** @username when the account has one now, else what the owner typed. */
+  name: string;
+}
 export interface DiscoverCursor {
   at: string;
   owner: string;
@@ -65,12 +78,83 @@ export class SharingService {
   private readonly name = signal<string | null | undefined>(undefined);
   /** The signed-in account's username: undefined until loaded, null when it has none. */
   readonly username = this.name.asReadonly();
+  private readonly sharedMap = signal<ReadonlyMap<string, SharedState>>(new Map());
+  /** Your recipes that are public or shared with someone, refreshed after every change. */
+  readonly shared = this.sharedMap.asReadonly();
 
   constructor() {
     effect(() => {
       this.supabase.accountVersion();
       this.name.set(undefined);
+      this.sharedMap.set(new Map());
     });
+  }
+
+  isShared(recipeId: string): boolean {
+    return this.sharedMap().has(recipeId);
+  }
+
+  async refreshShared(): Promise<void> {
+    if (!this.supabase.user()) return this.sharedMap.set(new Map());
+    const { data } = await this.call((client) => client.rpc('my_shared_recipes'));
+    const rows =
+      (data as { recipe_id: string; visibility: RecipeVisibility; recipients: number }[]) ?? [];
+    this.sharedMap.set(
+      new Map(
+        rows.map((row) => [
+          row.recipe_id,
+          { visibility: row.visibility, recipients: Number(row.recipients) },
+        ]),
+      ),
+    );
+  }
+
+  async searchPeople(query: string): Promise<Person[]> {
+    const cleaned = normalizeUsername(query);
+    if (!cleaned) return [];
+    this.signedIn();
+    const { data } = await this.call((client) =>
+      client.rpc('search_usernames', { query: cleaned }),
+    );
+    return ((data as { user_id: string; username: string }[] | null) ?? []).map((row) => ({
+      id: row.user_id,
+      username: row.username,
+    }));
+  }
+
+  async shareWith(recipeId: string, recipientId: string): Promise<ShareOutcome> {
+    this.signedIn();
+    const { data } = await this.call((client) =>
+      client.rpc('share_recipe_with', { recipe_id: recipeId, recipient: recipientId }),
+    );
+    void this.refreshShared().catch(() => undefined);
+    return data as ShareOutcome;
+  }
+
+  /** Makes the recipe private and removes everyone; the answer can put it all back. */
+  async stopSharing(
+    recipeId: string,
+  ): Promise<{ visibility: RecipeVisibility; recipients: string[] }> {
+    const user = this.signedIn();
+    const [visibility, people] = await Promise.all([
+      this.visibility(recipeId),
+      this.recipients(recipeId),
+    ]);
+    await this.setVisibility(recipeId, 'private');
+    await this.call(async (client) =>
+      client.from('recipe_shares').delete().eq('owner_id', user.id).eq('recipe_id', recipeId),
+    );
+    void this.refreshShared().catch(() => undefined);
+    return { visibility: visibility ?? 'private', recipients: people.map((person) => person.id) };
+  }
+
+  async restoreSharing(
+    recipeId: string,
+    before: { visibility: RecipeVisibility; recipients: string[] },
+  ): Promise<void> {
+    if (before.visibility === 'public') await this.setVisibility(recipeId, 'public');
+    for (const id of before.recipients) await this.shareWith(recipeId, id);
+    void this.refreshShared().catch(() => undefined);
   }
 
   async loadProfile(): Promise<void> {
@@ -130,6 +214,7 @@ export class SharingService {
     );
     if (!(data as unknown[] | null)?.length)
       throw new Error(msg('This recipe hasn’t synced yet. Try again in a moment.'));
+    void this.refreshShared().catch(() => undefined);
   }
 
   async share(recipeId: string, recipient: string): Promise<ShareOutcome> {
@@ -137,6 +222,7 @@ export class SharingService {
     const { data } = await this.call((client) =>
       client.rpc('share_recipe', { recipe_id: recipeId, recipient }),
     );
+    void this.refreshShared().catch(() => undefined);
     return data as ShareOutcome;
   }
 
@@ -150,16 +236,18 @@ export class SharingService {
         .eq('recipe_id', recipeId)
         .eq('recipient_id', recipientId),
     );
+    void this.refreshShared().catch(() => undefined);
   }
 
-  async recipients(recipeId: string): Promise<{ id: string; label: string }[]> {
+  async recipients(recipeId: string): Promise<Recipient[]> {
     this.signedIn();
     const { data } = await this.call((client) =>
       client.rpc('recipe_recipients', { recipe_id: recipeId }),
     );
-    return ((data as { recipient_id: string; label: string }[] | null) ?? []).map((row) => ({
+    type Row = { recipient_id: string; label: string; username: string | null };
+    return ((data as Row[] | null) ?? []).map((row) => ({
       id: row.recipient_id,
-      label: row.label,
+      name: row.username ? '@' + row.username : row.label,
     }));
   }
 

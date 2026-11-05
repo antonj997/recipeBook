@@ -32,7 +32,9 @@ async function database() {
     .map((entry) => entry.name)
     // Timer alerts need Supabase's own auth tables; sharing builds on the cookbook alone.
     .filter((name) =>
-      /_(private_cookbooks|shopping_items|cookbook_updated_at|recipe_sharing|sharing_people)\.sql$/.test(name),
+      /_(private_cookbooks|shopping_items|cookbook_updated_at|recipe_sharing|sharing_people)\.sql$/.test(
+        name,
+      ),
     )
     .sort();
   for (const file of files) await db.exec(await Deno.readTextFile(new URL(file, migrations)));
@@ -355,25 +357,30 @@ Deno.test('a sync upsert keeps visibility, and shared_recipe returns the author'
   }
 });
 
-Deno.test('people search lists every username but never yourself or accounts without one', async () => {
-  const db = await database();
-  try {
-    await db.exec(`insert into public.profiles(user_id, username) values
+Deno.test(
+  'people search lists every username but never yourself or accounts without one',
+  async () => {
+    const db = await database();
+    try {
+      await db.exec(`insert into public.profiles(user_id, username) values
       ('${friend}', 'anna'), ('${stranger}', 'annika'), ('${owner}', 'anders')`);
-    const found = async (query, uid = owner) =>
-      (await user(db, uid, 'select username from public.search_usernames($1)', [query])).map((row) => row.username);
-    assert.deepEqual(await found('ann'), ['anna', 'annika']);
-    assert.deepEqual(await found('@NIK'), ['annika']);
-    assert.deepEqual(await found('and'), []);
-    assert.deepEqual(await found(''), []);
-    assert.deepEqual(await found('%'), []);
-    // The admin has no username and is never listed.
-    assert.equal((await found('a')).length, 2);
-    await rejects(anon(db, `select * from public.search_usernames('ann')`), /permission denied/);
-  } finally {
-    await db.close();
-  }
-});
+      const found = async (query, uid = owner) =>
+        (await user(db, uid, 'select username from public.search_usernames($1)', [query])).map(
+          (row) => row.username,
+        );
+      assert.deepEqual(await found('ann'), ['anna', 'annika']);
+      assert.deepEqual(await found('@NIK'), ['annika']);
+      assert.deepEqual(await found('and'), []);
+      assert.deepEqual(await found(''), []);
+      assert.deepEqual(await found('%'), []);
+      // The admin has no username and is never listed.
+      assert.equal((await found('a')).length, 2);
+      await rejects(anon(db, `select * from public.search_usernames('ann')`), /permission denied/);
+    } finally {
+      await db.close();
+    }
+  },
+);
 
 Deno.test('sharing with a listed account by id, and the owner sees current usernames', async () => {
   const db = await database();
@@ -389,7 +396,11 @@ Deno.test('sharing with a listed account by id, and the owner sees current usern
     assert.deepEqual(ids(await user(db, friend, 'select id from public.recipes')), ['soup']);
     await user(db, owner, `select public.share_recipe('soup', 'stranger@example.com')`);
     await db.exec(`update public.profiles set username = 'anna.b' where user_id = '${friend}'`);
-    const people = await user(db, owner, `select recipient_id, label, username from public.recipe_recipients('soup')`);
+    const people = await user(
+      db,
+      owner,
+      `select recipient_id, label, username from public.recipe_recipients('soup')`,
+    );
     assert.deepEqual(
       people.map((row) => [row.recipient_id, row.username, row.label]),
       [
@@ -411,14 +422,20 @@ Deno.test('my shared recipes lists public ones and those shared with people', as
     await recipe(db, 'gone', { visibility: 'public', deleted: true });
     await recipe(db, 'theirs', { by: stranger, visibility: 'public' });
     await user(db, owner, `select public.share_recipe('people', 'friend@example.com')`);
-    const rows = await user(db, owner, 'select recipe_id, visibility, recipients from public.my_shared_recipes() order by recipe_id');
-    assert.deepEqual(rows.map((row) => [row.recipe_id, row.visibility, Number(row.recipients)]), [
-      ['people', 'private', 1],
-      ['public', 'public', 0],
-    ]);
+    const rows = await user(
+      db,
+      owner,
+      'select recipe_id, visibility, recipients from public.my_shared_recipes() order by recipe_id',
+    );
+    assert.deepEqual(
+      rows.map((row) => [row.recipe_id, row.visibility, Number(row.recipients)]),
+      [
+        ['people', 'private', 1],
+        ['public', 'public', 0],
+      ],
+    );
     await rejects(anon(db, 'select * from public.my_shared_recipes()'), /permission denied/);
   } finally {
     await db.close();
   }
 });
-

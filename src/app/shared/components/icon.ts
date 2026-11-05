@@ -101,6 +101,17 @@ import { Component, input } from '@angular/core';
       @case ('download') {
         <path d="M12 3.5v12M7 11.1l5 4.9 5-4.9M4 20.3c5.3.4 10.7.4 16 0" />
       }
+      @case ('lock') {
+        <path
+          d="M6.2 10.6c3.9-.4 7.7-.4 11.6 0 .5 3.2.5 6.4 0 9.6-3.9.4-7.7.4-11.6 0-.5-3.2-.5-6.4 0-9.6ZM8.6 10.5V8a3.4 3.4 0 0 1 6.8 0v2.5"
+        />
+      }
+      @case ('globe') {
+        <circle cx="12" cy="12" r="9" />
+        <path
+          d="M3.4 9.2h17.2M3.4 14.8h17.2M12 3c-2.4 2.6-3.6 5.6-3.6 9s1.2 6.4 3.6 9c2.4-2.6 3.6-5.6 3.6-9S14.4 5.6 12 3Z"
+        />
+      }
       @case ('compass') {
         <circle cx="12" cy="12" r="9" />
         <path d="m15.6 8.4-2.2 5-5 2.2 2.2-5Z" />
@@ -154,6 +165,8 @@ export class IconComponent {
     | 'play'
     | 'pause'
     | 'download'
+    | 'lock'
+    | 'globe'
     | 'compass'
     | 'share'
     | 'upload'

@@ -1,43 +1,172 @@
 :host {
   display: contents;
 }
-// Shares its shape with the step timer sheet: a 400px modal with 14px corners.
+// A bottom sheet on phones: it rises above the keyboard (--keyboard) and scrolls inside itself.
 .share-sheet {
-  width: min(400px, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  padding: 24px;
+  inset: auto 0 var(--keyboard, 0px);
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100dvh - var(--app-top-inset, 0px) - 16px - var(--keyboard, 0px));
+  margin: 0;
+  padding: 0;
   border: 1px solid var(--color-border);
-  border-radius: 14px;
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
   background: var(--color-surface);
   color: var(--color-ink);
+  overscroll-behavior: contain;
 }
 .share-sheet[open] {
+  display: flex;
+  flex-direction: column;
   animation: share-sheet-in var(--motion-reveal) var(--motion-ease-out);
 }
 .share-sheet::backdrop {
   background: #14141355;
   backdrop-filter: blur(4px);
 }
+.share-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 12px 12px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.share-heading {
+  flex: 1;
+  min-width: 0;
+}
 h2 {
   margin: 0;
   outline: none;
   font-size: 1.15rem;
 }
-h3 {
-  margin: 0 0 6px;
-  font-size: 0.95rem;
-}
 .share-recipe {
-  margin: 2px 0 16px;
+  margin: 2px 0 0;
   color: var(--color-muted);
   font-size: 0.875rem;
   overflow-wrap: anywhere;
+}
+.share-close {
+  flex: 0 0 44px;
+  height: 44px;
+  margin-top: -10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.share-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 20px 16px;
 }
 .share-part {
   display: grid;
   gap: 10px;
   padding-block: 16px;
+}
+.share-part + .share-part {
   border-top: 1px solid var(--color-border);
+}
+h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.share-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 12px;
+  border: 1px solid var(--color-control-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+.share-search:focus-within {
+  border-color: var(--color-ink);
+}
+.share-search app-icon {
+  flex: 0 0 20px;
+  height: 20px;
+  color: var(--color-muted);
+}
+// 16px keeps iOS from zooming in on focus.
+.share-search input {
+  min-height: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+}
+.share-search input:focus {
+  outline: none;
+}
+.share-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.share-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+}
+.share-results {
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: var(--color-canvas);
+}
+.share-empty {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+.share-avatar {
+  flex: 0 0 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-beige);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.share-avatar.is-owner {
+  background: color-mix(in srgb, var(--color-green) 70%, var(--color-ink));
+  color: var(--color-surface);
+}
+.share-avatar app-icon {
+  width: 20px;
+  height: 20px;
+}
+.share-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+}
+.share-role {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+.share-list button {
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+.share-access {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.share-access-copy {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
 }
 .share-note,
 .share-outcome {
@@ -53,61 +182,49 @@ h3 {
   color: var(--color-danger);
   font-size: 0.85rem;
 }
-.share-link {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
+.share-publish {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
   background: var(--color-canvas);
-  font-size: 0.8rem;
-  overflow-wrap: anywhere;
-  user-select: all;
 }
 .share-actions,
-.share-row {
+.share-foot {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-.share-person {
-  display: grid;
-  gap: 6px;
-}
-.share-person label {
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-.share-row input {
-  flex: 1 1 12rem;
-  min-width: 0;
-  min-height: 44px;
-}
-.share-recipients {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.share-recipients li {
-  display: flex;
-  align-items: center;
+.share-foot {
   justify-content: space-between;
-  gap: 8px;
-  min-height: 44px;
-  font-size: 0.875rem;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
 }
-.share-recipients span {
-  min-width: 0;
-  overflow-wrap: anywhere;
+.share-foot .primary {
+  margin-left: auto;
 }
-.share-done {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 8px;
+.share-link-button app-icon {
+  width: 18px;
+  height: 18px;
+}
+// Wider screens: a centred dialog.
+@media (min-width: 40rem) {
+  .share-sheet {
+    inset: 0;
+    width: min(460px, calc(100vw - 48px));
+    max-height: min(680px, calc(100dvh - 48px));
+    margin: auto;
+    border-bottom: 1px solid var(--color-border);
+    border-radius: 14px;
+  }
+  .share-foot {
+    padding-bottom: 12px;
+  }
 }
 @keyframes share-sheet-in {
   from {
+    translate: 0 24px;
     opacity: 0;
-    translate: 0 8px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
