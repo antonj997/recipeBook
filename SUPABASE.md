@@ -107,3 +107,4 @@ insert into private.admins(user_id) select id from auth.users where lower(email)
 cd supabase/tests && deno test --allow-read --allow-env --allow-net --no-lock recipe-sharing.test.mjs
 ```
 
+`20261106000000_sharing_people.sql` adds `search_usernames` (signed-in only, up to ten usernames containing the query, never the caller), `share_recipe_with` (share by account id, counted against the same 30 per hour), `my_shared_recipes` (which of the caller's recipes are public or shared, for Manage sharing and Discover's You share), and replaces `recipe_recipients` so it also returns each recipient's current username.

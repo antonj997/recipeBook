@@ -102,6 +102,9 @@ h3 {
 .share-search input:focus {
   outline: none;
 }
+.share-search input::-webkit-search-cancel-button {
+  appearance: none;
+}
 .share-list {
   display: grid;
   margin: 0;

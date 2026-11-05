@@ -18,7 +18,7 @@ Recipebook is a static Angular application on GitHub Pages, with Supabase Auth, 
 - A recipe is readable by someone other than its owner only when it is public (then also by `anon`) and not hidden by an admin, or when a `recipe_shares` row names the reader; deleted recipes are never readable. Writes stay owner-only, and sync pulls filter on the caller's own `user_id`, so shared recipes never enter another account's cookbook.
 - Photos follow their recipe: a storage object is readable when a readable recipe's `photos` points at exactly that path. Unreferenced files in the same folder stay private.
 - Sharing with a person runs in a security-definer function that matches an exact, case-insensitive email or a username. Every attempt counts towards 30 per account per hour, limiting account discovery by email. The owner's list stores and shows only what the owner typed; no one else's email is ever returned.
-- Usernames and user IDs are public by design. Public recipes, their author's username and their photos can be read without signing in.
+- Usernames and user IDs are public by design, and signed-in callers can search usernames (`search_usernames`, at most 10 matches, never the caller); accounts without a username are never listed. Sharing with a listed account goes by its id (`share_recipe_with`) under the same hourly limit. Public recipes, their author's username and their photos can be read without signing in.
 - The admin list, hidden recipes and share limits live in the private schema with no API grants. Hiding is checked server-side (`forbidden` for anyone else).
 - Someone else's recipe is validated like a synced one before it is shown or copied, and photo paths outside the owner's folder are ignored.
 

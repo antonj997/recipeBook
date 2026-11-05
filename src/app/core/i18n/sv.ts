@@ -887,7 +887,7 @@ export const sv: Record<string, string> = {
   'Manage sharing': 'Hantera delning',
   Close: 'Stäng',
   'People with access': 'Personer med åtkomst',
-  'Add people by username or email': 'Lägg till med användarnamn eller e-post',
+  'Add people by username or email': 'Sök namn eller e-post',
   'Search results': 'Sökträffar',
   'Add @{name}': 'Lägg till @{name}',
   You: 'Du',
