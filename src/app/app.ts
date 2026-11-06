@@ -42,6 +42,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IconComponent } from './shared/components/icon';
 import { FeedbackService } from './core/services/feedback.service';
 import { SharingService } from './core/services/sharing.service';
+import { NavigationHistoryService } from './core/services/navigation-history.service';
 import { TranslatePipe } from './core/i18n/i18n';
 
 @Component({
@@ -97,6 +98,8 @@ export class App {
   readonly updates = inject(AppUpdateService);
   private cloud = inject(CloudCookbookService);
   private readonly sharing = inject(SharingService);
+  // Starts recording from the first page, so back controls know where a page was opened from.
+  private readonly history = inject(NavigationHistoryService);
   private drafts = inject(RecipeDraftService);
   private confirmation = inject(LeaveConfirmationService);
   private guestRecipes = inject(GuestRecipesService);

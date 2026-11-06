@@ -13,23 +13,23 @@
     [appRecipeTransition]="recipe()?.id ?? ''"
     transitionPart="navigation"
   >
-    @if (isShared) {
-      <!-- A shared recipe goes back to where it was opened from, so this is not a fixed link. -->
+    <!-- One control or the other, never both: a tap navigates exactly once. -->
+    @if (backInHistory()) {
       <button
         type="button"
         class="back-link"
         [attr.aria-label]="'Back' | t"
         [title]="'Back' | t"
-        (click)="leaveShared()"
+        (click)="goBack()"
       >
         <app-icon name="chevron" />
       </button>
     } @else {
       <a
-        routerLink="/"
+        [routerLink]="isShared ? '/discover' : '/'"
         class="back-link"
-        [attr.aria-label]="'Back to recipes' | t"
-        [title]="'Back to recipes' | t"
+        [attr.aria-label]="(isShared ? 'Back' : 'Back to recipes') | t"
+        [title]="(isShared ? 'Back' : 'Back to recipes') | t"
         ><app-icon name="chevron"
       /></a>
     }

@@ -9,6 +9,8 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RecipeDetailComponent } from './recipe-detail';
+import { NavigationHistoryService } from '../../../core/services/navigation-history.service';
+import { Location } from '@angular/common';
 import { RecipeService } from '../../../core/services/recipe.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
 import { StepTimerService } from '../../../core/services/step-timer.service';
@@ -107,6 +109,22 @@ describe('recipe detail', () => {
     const instructions = host.nativeElement.querySelector('#instructions-panel') as HTMLElement;
     return { host, tabs, ingredients, instructions };
   }
+
+  it('goes back to Discover when your recipe was opened from there, else links home', async () => {
+    const previous = signal<string | null>('/discover');
+    TestBed.overrideProvider(NavigationHistoryService, { useValue: { previousPath: previous } });
+    const back = vi.spyOn(TestBed.inject(Location), 'back').mockImplementation(() => {});
+    const { host } = await fixture();
+    const control = () => host.nativeElement.querySelector('.back-link') as HTMLElement;
+    expect(control().tagName).toBe('BUTTON');
+    control().click();
+    expect(back).toHaveBeenCalledTimes(1);
+    previous.set('/');
+    host.detectChanges();
+    expect(control().tagName).toBe('A');
+    expect(control().getAttribute('href')).toBe('/');
+    expect(control().getAttribute('aria-label')).toBe('Back to recipes');
+  });
 
   async function timerFixture(
     instructions = [

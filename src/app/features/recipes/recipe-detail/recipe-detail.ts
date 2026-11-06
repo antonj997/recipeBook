@@ -68,6 +68,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type { Recipe } from '../../../core/models/recipe.model';
 import { RecipeService } from '../../../core/services/recipe.service';
 import { SharingService, type SharedRecipe } from '../../../core/services/sharing.service';
+import { NavigationHistoryService } from '../../../core/services/navigation-history.service';
 
 import { FeedbackService } from '../../../core/services/feedback.service';
 import { LoadingStateComponent } from '../../../shared/components/loading-state';
@@ -106,6 +107,7 @@ import { msg, plural, PluralPipe, t, TranslatePipe } from '../../../core/i18n/i1
 export class RecipeDetailComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private readonly location = inject(Location);
+  private readonly history = inject(NavigationHistoryService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly pageMotion = inject(PageTransitionService);
   private loadRequest = 0;
@@ -119,23 +121,19 @@ export class RecipeDetailComponent implements OnInit, OnDestroy {
     !this.isDraft && (navigator as Navigator & { standalone?: boolean }).standalone === true;
   private readonly edgeSwipeBack = viewChild(EdgeSwipeBackDirective);
   /**
-   * A shared recipe returns to where it was opened from, such as Discover; opened from its link,
-   * it has no page of ours behind it and goes to Discover.
+   * Opened from Discover, back returns there in history; otherwise it is a plain link home (or to
+   * Discover for a shared recipe). The template renders one or the other, never both, so a tap
+   * navigates exactly once.
    */
-  leaveShared(): Promise<boolean> {
-    const state = this.location.getState() as { navigationId?: number } | null;
-    if ((state?.navigationId ?? 1) > 1) {
-      this.location.back();
-      return Promise.resolve(true);
-    }
-    return this.router.navigateByUrl('/discover');
+  readonly backInHistory = computed(() => this.history.previousPath() === '/discover');
+  goBack(): void {
+    this.location.back();
   }
   async swipeHome(): Promise<void> {
+    if (this.backInHistory() && !this.accountChanged()) return this.goBack();
     const left =
       !this.accountChanged() &&
-      (await (this.isShared ? this.leaveShared() : this.router.navigateByUrl('/')).catch(
-        () => false,
-      ));
+      (await this.router.navigateByUrl(this.isShared ? '/discover' : '/').catch(() => false));
     // A navigation that was cancelled or failed leaves the page where the finger let go.
     if (!left) this.edgeSwipeBack()?.reset();
   }

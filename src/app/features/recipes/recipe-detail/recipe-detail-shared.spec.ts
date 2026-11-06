@@ -17,6 +17,7 @@ import {
 import { ShoppingListService } from '../../../core/services/shopping-list.service';
 import { StepTimerService } from '../../../core/services/step-timer.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
+import { NavigationHistoryService } from '../../../core/services/navigation-history.service';
 import { RecipeDetailComponent } from './recipe-detail';
 
 const owner = '11111111-1111-4111-8111-111111111111';
@@ -192,25 +193,29 @@ describe('shared recipe page', () => {
     expect(view.button('Show in Discover')).toBeTruthy();
   });
 
-  it('goes back to the page you came from, such as Discover', async () => {
+  it('goes back to Discover in history when opened from there, with one navigation', async () => {
+    TestBed.overrideProvider(NavigationHistoryService, {
+      useValue: { previousPath: signal('/discover') },
+    });
     const location = TestBed.inject(Location);
-    vi.spyOn(location, 'getState').mockReturnValue({ navigationId: 4 });
     const back = vi.spyOn(location, 'back').mockImplementation(() => {});
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
     const { root } = await render();
-    const link = root.querySelector<HTMLButtonElement>('.back-link')!;
-    expect(link.getAttribute('aria-label')).toBe('Back');
-    link.click();
-    expect(back).toHaveBeenCalled();
+    const control = root.querySelector<HTMLElement>('.back-link')!;
+    expect(control.tagName).toBe('BUTTON');
+    expect(control.getAttribute('aria-label')).toBe('Back');
+    control.click();
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('goes to Discover when the shared link opened the app', async () => {
-    const location = TestBed.inject(Location);
-    vi.spyOn(location, 'getState').mockReturnValue({ navigationId: 1 });
-    const back = vi.spyOn(location, 'back').mockImplementation(() => {});
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+  it('links to Discover when the shared link opened the app', async () => {
+    TestBed.overrideProvider(NavigationHistoryService, {
+      useValue: { previousPath: signal(null) },
+    });
     const { root } = await render();
-    root.querySelector<HTMLButtonElement>('.back-link')!.click();
-    expect(back).not.toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith('/discover');
+    const control = root.querySelector<HTMLAnchorElement>('.back-link')!;
+    expect(control.tagName).toBe('A');
+    expect(control.getAttribute('href')).toBe('/discover');
   });
 });
