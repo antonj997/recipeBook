@@ -276,4 +276,25 @@ describe('sharing', () => {
     await sharing.restoreSharing('soup', before);
     expect(rpc).toHaveBeenCalledWith('share_recipe_with', { recipe_id: 'soup', recipient: 'a' });
   });
+
+  it('leaves your own recipes out of the public list, which shows them under You share', async () => {
+    const page = (ids: string[], by: string) =>
+      ids.map((id, i) => ({
+        ...row,
+        owner_id: by,
+        recipe_id: id,
+        updated_at: `2026-11-0${9 - i}T00:00:00Z`,
+      }));
+    const answers = [
+      // A full page of only your own recipes is skipped rather than shown as empty.
+      Array.from({ length: 24 }, (_, i) => ({ ...page(['x'], me)[0], recipe_id: 'mine' + i })),
+      [...page(['a'], owner), ...page(['b'], me), ...page(['c'], owner)],
+    ];
+    const { sharing, rpc } = setup({ rpc: () => ({ data: answers.shift() ?? [], error: null }) });
+    const result = await sharing.discover('');
+    expect(result.items.map((item) => item.id)).toEqual(['a', 'c']);
+    expect(result.next).toBeUndefined();
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc.mock.calls[1][1]).toMatchObject({ after_owner: me, after_id: 'mine23' });
+  });
 });

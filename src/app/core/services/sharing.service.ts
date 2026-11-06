@@ -257,27 +257,35 @@ export class SharingService {
     return this.readRows(data);
   }
 
+  /**
+   * A page of public recipes from other cooks. Your own are left out (Discover lists them under
+   * You share); a page of only your own is skipped, so a later page is never hidden behind it.
+   */
   async discover(
     query: string,
     after?: DiscoverCursor,
   ): Promise<{ items: SharedRecipe[]; next?: DiscoverCursor }> {
-    const { data } = await this.call((client) =>
-      client.rpc('discover_recipes', {
-        query: query.trim(),
-        after_at: after?.at ?? null,
-        after_owner: after?.owner ?? null,
-        after_id: after?.id ?? null,
-      }),
-    );
-    const rows = (data as SharedRow[] | null) ?? [];
-    const last = rows.at(-1);
-    return {
-      items: this.readRows(rows),
-      next:
+    const me = this.supabase.user()?.id;
+    let cursor = after;
+    for (let page = 0; page < 5; page++) {
+      const { data } = await this.call((client) =>
+        client.rpc('discover_recipes', {
+          query: query.trim(),
+          after_at: cursor?.at ?? null,
+          after_owner: cursor?.owner ?? null,
+          after_id: cursor?.id ?? null,
+        }),
+      );
+      const rows = (data as SharedRow[] | null) ?? [];
+      const last = rows.at(-1);
+      cursor =
         rows.length === discoverPageSize && last?.updated_at
           ? { at: last.updated_at, owner: last.owner_id, id: last.recipe_id }
-          : undefined,
-    };
+          : undefined;
+      const items = this.readRows(rows.filter((row) => row.owner_id !== me));
+      if (items.length || !cursor) return { items, next: cursor };
+    }
+    return { items: [], next: cursor };
   }
 
   async open(owner: string, id: string): Promise<SharedRecipe | null> {
